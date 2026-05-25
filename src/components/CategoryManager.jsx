@@ -47,10 +47,9 @@ export default function CategoryManager({ categories, onEdit, onDelete, onReorde
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {catsToShow.length === 0 && <div style={{ color: 'var(--text3)', padding: 20 }}>No categories yet. Add one!</div>}
         {catsToShow.map((cat, idx) => (
-          <div key={cat.id} style={{
-            background: 'var(--surface2)', border: reordering ? '1px dashed var(--accent)' : '1px solid var(--border)',
-            borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
-            transition: 'border 0.2s',
+          <div key={cat.id} className="category-item" style={{
+            borderStyle: reordering ? 'dashed' : 'solid',
+            borderColor: reordering ? 'var(--accent)' : 'var(--border)'
           }}>
             {/* Reorder arrows — only in reorder mode */}
             {reordering && (
@@ -61,16 +60,13 @@ export default function CategoryManager({ categories, onEdit, onDelete, onReorde
                   disabled={idx === catsToShow.length - 1} onClick={() => moveItem(idx, idx + 1)} title="Move down">▼</button>
               </div>
             )}
-            {/* Color dot */}
             <div style={{ width: 36, height: 36, borderRadius: 8, background: (cat.color||'#6c8fff')+'33', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
               <div style={{ width: 14, height: 14, borderRadius: '50%', background: cat.color || '#6c8fff' }} />
             </div>
-            {/* Name + type */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 14, wordBreak: 'break-word' }}>{cat.name}</div>
               <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 }}>{cat.type}</div>
             </div>
-            {/* Edit / Delete — hidden during reorder */}
             {canEdit && !reordering && (
               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                 <button className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => onEdit(cat)}>✏️</button>

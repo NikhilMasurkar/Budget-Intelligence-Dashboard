@@ -36,7 +36,7 @@ export default function ExpenseTable({ expenses, categories, onEdit, onDelete, c
         <input type="text" placeholder="Search expenses…" value={search} onChange={e => setSearch(e.target.value)} style={{ maxWidth: 240 }} />
         <span style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--text2)' }}>{filtered.length} items · Total: <strong style={{ color: 'var(--text)' }}>{fmt(total)}</strong></span>
       </div>
-      <div style={{ overflowX: 'auto' }}>
+      <div className="table-wrap">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>

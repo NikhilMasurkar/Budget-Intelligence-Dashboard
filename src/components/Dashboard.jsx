@@ -24,6 +24,14 @@ function defaultMonths(year) {
 export default function Dashboard({ expenses, income, categories, year, month, filterMonth, onMonthChange }) {
   const [selMonths, setSelMonths] = useState(() => defaultMonths(year))
   const [detailModal, setDetailModal] = useState(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // When year changes → reset to smart default for that year
   useEffect(() => {
@@ -159,7 +167,7 @@ export default function Dashboard({ expenses, income, categories, year, month, f
       </div>
 
       {/* KPI Row 1 — Core financials */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginBottom: 14 }}>
+      <div className="db-kpi-grid">
         {[
           { label: 'Total Income',    value: fmt(selIncome),  sub: `${selMonths.length} month${selMonths.length>1?'s':''}`, color: '#5b7fff', icon: '💵' },
           { label: 'Total Expenses',  value: fmt(selExpense), sub: `${expRate}% of income`,     color: '#ff5f5f', icon: '💸' },
@@ -177,7 +185,7 @@ export default function Dashboard({ expenses, income, categories, year, month, f
       </div>
 
       {/* KPI Row 2 — Wealth / Investment section */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 24 }}>
+      <div className="db-wealth-grid">
         {/* Investments card */}
         <div style={{ background: 'linear-gradient(135deg,#1a1f3a,#0f1629)', border: '1px solid rgba(91,127,255,0.3)', borderRadius: 12, padding: 20, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg,#5b7fff,#a78bfa)' }} />
@@ -228,7 +236,7 @@ export default function Dashboard({ expenses, income, categories, year, month, f
       </div>
 
       {/* Charts Row 1 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="db-charts-grid">
         {/* Income vs Expenses — Mixed Bar + Line chart */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
           <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>Income vs Expenses — Monthly Trend</div>
@@ -265,7 +273,7 @@ export default function Dashboard({ expenses, income, categories, year, month, f
           <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 16 }}>Share of total spend</div>
           <div style={{ height: 260, position: 'relative' }}>
             <Doughnut data={{ labels: catTotals.map(([k])=>k), datasets: [{ data: catTotals.map(([,v])=>v), backgroundColor: catColors, borderWidth: 2, borderColor: '#13151f' }] }}
-              options={{ responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'right', labels: { color: '#8891b8', font: { size: 11 }, boxWidth: 10 } }, tooltip: { callbacks: { label: c => `${c.label}: ${fmt(c.raw)}` } } } }} />
+              options={{ responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: isMobile ? 'bottom' : 'right', labels: { color: '#8891b8', font: { size: 11 }, boxWidth: 10 } }, tooltip: { callbacks: { label: c => `${c.label}: ${fmt(c.raw)}` } } } }} />
           </div>
         </div>
       </div>
@@ -320,7 +328,7 @@ export default function Dashboard({ expenses, income, categories, year, month, f
       </div>
 
       {/* Net Savings + Expense Ratio — 2 column row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="db-savings-grid">
 
         {/* Net Savings Per Month */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
@@ -391,7 +399,7 @@ export default function Dashboard({ expenses, income, categories, year, month, f
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
         <div style={{ fontWeight: 700, marginBottom: 4 }}>Top Expense Items</div>
         <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 16 }}>All items for selected period · Click to see details</div>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr>{['Item','Category','Total','Avg/Month','% of Spend'].map(h => (
               <th key={h} style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.7, color: 'var(--text3)', fontWeight: 600, padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>{h}</th>
