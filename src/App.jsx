@@ -3,7 +3,7 @@ import { Toaster, toast } from 'react-hot-toast'
 import {
   fetchCategories, fetchExpenses, fetchIncome,
   saveExpense, deleteExpense, saveIncome, deleteIncome,
-  saveCategory, deleteCategory, copyFixedToNextMonth,
+  saveCategory, deleteCategory, copyExpensesToNextMonth,
   signInWithGoogle, signOut, isSignedIn, getToken,
   getUserProfile, findUserSpreadsheet, createUserSpreadsheet, setSheetId, setupSheet,
   DEFAULT_CATEGORIES, TABS, silentReauth, getSavedUserName, downloadExcelFromDrive
@@ -34,6 +34,7 @@ export default function App() {
   const [year, setYear] = useState(YEAR_NOW)
   const [month, setMonth] = useState(MONTH_NOW)
   const [dashFilterMonth, setDashFilterMonth] = useState(null)  // null = all months
+  const [selectedExpenseIds, setSelectedExpenseIds] = useState([])
   const [categories, setCategories] = useState([])
   const [expenses, setExpenses] = useState([])
   const [income, setIncome] = useState([])
@@ -160,6 +161,10 @@ export default function App() {
   }, [year, missingConfig])
 
   useEffect(() => { loadAll() }, [loadAll])
+
+  useEffect(() => {
+    setSelectedExpenseIds([])
+  }, [year, month, view])
 
   // ── SCAN ALL YEARS on login ───────────────────────────────────
   useEffect(() => {
@@ -491,16 +496,22 @@ export default function App() {
     } catch (e) { toast.error('Reorder failed: ' + e.message); loadAll({ skipExcel: true }) }
   }
 
-  // ── COPY FIXED ───────────────────────────────────────────────
-  const handleCopyFixed = async () => {
+  // ── COPY SELECTED ─────────────────────────────────────────────
+  const handleCopySelected = async () => {
+    if (selectedExpenseIds.length === 0) {
+      toast.error('No expenses selected')
+      return
+    }
     const t = getToken()
     if (!t) { toast.error('Sign in required'); return }
     try {
-      const r = await copyFixedToNextMonth(year, month, t)
-      toast.success(`Copied ${r.copied} fixed expenses to ${MONTHS[r.toMonth - 1]} ${r.toYear}`)
+      toast.loading('Copying selected expenses...', { id: 'copy-selected' })
+      const r = await copyExpensesToNextMonth(year, month, selectedExpenseIds, t)
+      toast.success(`Copied ${r.copied} expenses to ${MONTHS[r.toMonth - 1]} ${r.toYear}`, { id: 'copy-selected' })
+      setSelectedExpenseIds([])
       loadAll({ skipExcel: true })
       autoSyncToDrive()
-    } catch (e) { toast.error(e.message) }
+    } catch (e) { toast.error(e.message, { id: 'copy-selected' }) }
   }
 
   // ── CONFIG SCREEN ─────────────────────────────────────────────
@@ -721,7 +732,11 @@ export default function App() {
                   </select>
                   <div style={{ flex: 1 }} />
                   {authd && <>
-                    <button className="btn btn-ghost" onClick={handleCopyFixed} title="Copy all fixed expenses to next month">📋 Copy Fixed → Next Month</button>
+                    {selectedExpenseIds.length > 0 && (
+                      <button className="btn btn-primary" onClick={handleCopySelected} title="Copy selected expenses to next month" style={{ background: 'var(--accent)' }}>
+                        📋 Copy Selected ({selectedExpenseIds.length}) → Next Month
+                      </button>
+                    )}
                     <button className="btn btn-primary" onClick={() => { setEditRow(null); setModal('add-expense') }}>+ Add Expense</button>
                   </>}
                 </div>
@@ -731,6 +746,8 @@ export default function App() {
                   onEdit={row => { setEditRow(row); setModal('add-expense') }}
                   onDelete={handleDeleteExpense}
                   canEdit={authd}
+                  selectedIds={selectedExpenseIds}
+                  onSelectionChange={setSelectedExpenseIds}
                 />
               </>
             )}

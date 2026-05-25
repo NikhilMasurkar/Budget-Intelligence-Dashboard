@@ -319,15 +319,15 @@ export async function deleteExpense(expId, token) {
   await clearAndWrite(TABS.EXPENSES, all.filter(e => e.id !== expId).map(e => [e.id, e.year, e.month, e.categoryId, e.itemName, e.amount, e.isFixed, e.note || '']), token)
 }
 
-export async function copyFixedToNextMonth(fromYear, fromMonth, token) {
+export async function copyExpensesToNextMonth(fromYear, fromMonth, selectedIds, token) {
   const all    = rowsToObjects(await readRange(TABS.EXPENSES, '', token))
-  const fixed  = all.filter(e => e.year === String(fromYear) && e.month === String(fromMonth) && e.isFixed === 'TRUE')
+  const selected = all.filter(e => selectedIds.includes(e.id))
   let toYear   = parseInt(fromYear), toMonth = parseInt(fromMonth) + 1
   if (toMonth > 12) { toMonth = 1; toYear++ }
   const exist  = all.filter(e => e.year === String(toYear) && e.month === String(toMonth))
-  const newRows = fixed
+  const newRows = selected
     .filter(f => !exist.some(x => x.categoryId === f.categoryId && x.itemName === f.itemName))
-    .map(f => [uid(), toYear, toMonth, f.categoryId, f.itemName, f.amount, 'TRUE', f.note || ''])
+    .map(f => [uid(), toYear, toMonth, f.categoryId, f.itemName, f.amount, 'FALSE', f.note || ''])
   if (newRows.length) await appendRows(TABS.EXPENSES, newRows, token)
   return { copied: newRows.length, toYear, toMonth }
 }

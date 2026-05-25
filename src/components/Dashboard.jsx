@@ -202,11 +202,11 @@ export default function Dashboard({ expenses, income, categories, year, month, f
         </div>
 
         {/* True Savings card (income minus pure spending, investments count as savings) */}
-        <div style={{ background: 'linear-gradient(135deg,#0d2318,#0a1a10)', border: '1px solid rgba(61,232,160,0.3)', borderRadius: 12, padding: 20, position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg,#3de8a0,#22c55e)' }} />
+        <div style={{ background: selNetSav >= 0 ? 'linear-gradient(135deg,#0d2318,#0a1a10)' : 'linear-gradient(135deg,#230d0d,#1a0a0a)', border: `1px solid ${selNetSav >= 0 ? 'rgba(61,232,160,0.3)' : 'rgba(255,95,95,0.3)'}`, borderRadius: 12, padding: 20, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: selNetSav >= 0 ? 'linear-gradient(90deg,#3de8a0,#22c55e)' : 'linear-gradient(90deg,#ff5f5f,#e83d3d)' }} />
           <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, color: '#8891b8', marginBottom: 8, fontWeight: 700 }}>🏦 Cash Savings</div>
-          <div style={{ fontSize: 28, fontWeight: 900, color: '#3de8a0', marginBottom: 4 }}>{fmt(selNetSav)}</div>
-          <div style={{ fontSize: 12, color: '#4a8a6a' }}>{savRate}% of income remaining</div>
+          <div style={{ fontSize: 28, fontWeight: 900, color: selNetSav >= 0 ? '#3de8a0' : '#ff5f5f', marginBottom: 4 }}>{fmt(selNetSav)}</div>
+          <div style={{ fontSize: 12, color: selNetSav >= 0 ? '#4a8a6a' : '#8a4a4a' }}>{savRate}% of income remaining</div>
           {selNetSav !== 0 && (
             <div style={{ marginTop: 10, fontSize: 11, color: '#8891b8', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10 }}>
               After all expenses incl. investments

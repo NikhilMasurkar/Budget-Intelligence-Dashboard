@@ -53,14 +53,6 @@ export default function AddExpenseModal({ initial, categories, year, month, onSa
             <label style={lbl}>Note (Optional - Exported as Excel comment)</label>
             <input type="text" value={form.note} onChange={e => set('note', e.target.value)} placeholder="e.g. 20k given to Ramesh" />
           </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', background: 'var(--surface2)', borderRadius: 8, border: '1px solid var(--border)' }}>
-            <input type="checkbox" checked={form.isFixed} onChange={e => set('isFixed', e.target.checked)}
-              style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }} />
-            <div>
-              <div style={{ fontWeight: 600, fontSize: 13 }}>🔒 Fixed Expense</div>
-              <div style={{ fontSize: 11, color: 'var(--text3)' }}>Auto-copy to next month</div>
-            </div>
-          </label>
           <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
             <button className="btn btn-primary" style={{ flex: 1 }} disabled={!valid} onClick={() => onSave(form)}>
               {form.id ? 'Update' : 'Add Expense'}
