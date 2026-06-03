@@ -102,7 +102,8 @@ export function signInWithGoogle() {
       callback:  r => {
         if (r.error) { reject(r.error); return }
         _token = r.access_token
-        _exp   = Date.now() + (r.expires_in - 60) * 1000
+        const expiresIn = parseInt(r.expires_in, 10) || 3600
+        _exp   = Date.now() + expiresIn * 1000
         _persist()
         resolve(_token)
       }
@@ -121,7 +122,8 @@ export function silentReauth() {
       callback:  r => {
         if (r.error) { reject(r.error); return }
         _token = r.access_token
-        _exp   = Date.now() + (r.expires_in - 60) * 1000
+        const expiresIn = parseInt(r.expires_in, 10) || 3600
+        _exp   = Date.now() + expiresIn * 1000
         _persist()
         resolve(_token)
       }

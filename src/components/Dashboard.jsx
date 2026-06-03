@@ -126,8 +126,36 @@ export default function Dashboard({ expenses, income, categories, year, month, f
   const filteredLabels = selMonths.map(i => MONTHS[i])
   const catColors = ['#5b7fff','#3de8a0','#ff5f5f','#b97fff','#ffb347','#ff6eb4','#60c0ff','#ffd700','#ff8c69','#7fffd4']
 
+  const curYear = new Date().getFullYear()
+  const displayMonth = (year === curYear) ? (new Date().getMonth() + 1) : month
+  const displayMonthName = MONTHS[displayMonth - 1]
+
+  const curMonthInc = income.filter(i => String(i.month) === String(displayMonth)).reduce((s, i) => s + (+i.amount || 0), 0)
+  const curMonthExp = expenses.filter(e => String(e.month) === String(displayMonth)).reduce((s, e) => s + (+e.amount || 0), 0)
+  const curMonthSav = curMonthInc - curMonthExp
+
   return (
     <div className="fade-in">
+      <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 12, padding: 18, marginBottom: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>📅</span>
+          <span>{displayMonthName} {year} Summary (Current Month)</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14 }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 8, padding: '12px 16px', borderLeft: '3px solid var(--accent)', position: 'relative' }}>
+            <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text3)', fontWeight: 700, letterSpacing: 0.5 }}>Total Income</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent)', marginTop: 4 }}>{fmt(curMonthInc)}</div>
+          </div>
+          <div style={{ background: 'var(--surface)', borderRadius: 8, padding: '12px 16px', borderLeft: '3px solid var(--danger)', position: 'relative' }}>
+            <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text3)', fontWeight: 700, letterSpacing: 0.5 }}>Total Expenses</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--danger)', marginTop: 4 }}>{fmt(curMonthExp)}</div>
+          </div>
+          <div style={{ background: 'var(--surface)', borderRadius: 8, padding: '12px 16px', borderLeft: `3px solid ${curMonthSav >= 0 ? 'var(--accent2)' : 'var(--danger)'}`, position: 'relative' }}>
+            <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text3)', fontWeight: 700, letterSpacing: 0.5 }}>Net Savings</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: curMonthSav >= 0 ? 'var(--accent2)' : 'var(--danger)', marginTop: 4 }}>{fmt(curMonthSav)}</div>
+          </div>
+        </div>
+      </div>
       {/* Month Chips */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20, alignItems: 'center' }}>
         <span style={{ fontSize: 12, color: 'var(--text3)', marginRight: 4 }}>Filter:</span>
