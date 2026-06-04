@@ -415,7 +415,11 @@ export default function App() {
   const handleSaveExpense = async (exp, applyMode = 'single') => {
     exp.itemName = toSentenceCase(exp.itemName)
     const t = getToken()
-    if (!t) { toast.error('Please sign in to save changes'); return }
+    if (!t) {
+      const err = new Error('Please sign in to save changes')
+      toast.error(err.message)
+      throw err
+    }
     try {
       if (applyMode === 'single') {
         await saveExpense(exp, t)
@@ -448,7 +452,10 @@ export default function App() {
       setModal(null); setEditRow(null)
       loadAll({ skipExcel: true }) // UI updates instantly from Sheets DB
       autoSyncToDrive()            // Background update to Excel file
-    } catch (e) { toast.error(e.message) }
+    } catch (e) {
+      toast.error(e.message)
+      throw e
+    }
   }
 
   // ── FIELD UPDATE (inline edit per column) ────────────────────
@@ -496,9 +503,12 @@ export default function App() {
 
   const executeDelete = async (scope) => {
     const { type, item } = deleteConfirm
-    setDeleteConfirm(null)
     const t = getToken()
-    if (!t) { toast.error('Sign in required'); return }
+    if (!t) {
+      const err = new Error('Sign in required')
+      toast.error(err.message)
+      throw err
+    }
     try {
       if (type === 'expense') {
         if (scope === 'month') {
@@ -532,16 +542,24 @@ export default function App() {
         await deleteCategory(item.id, t)
         toast.success('Deleted')
       }
+      setDeleteConfirm(null)
       loadAll({ skipExcel: true })
       autoSyncToDrive()
-    } catch (e) { toast.error(e.message) }
+    } catch (e) {
+      toast.error(e.message)
+      throw e
+    }
   }
 
   // ── INCOME CRUD ──────────────────────────────────────────────
   const handleSaveIncome = async (inc, applyMode = 'single') => {
     inc.source = toSentenceCase(inc.source)
     const t = getToken()
-    if (!t) { toast.error('Please sign in to save changes'); return }
+    if (!t) {
+      const err = new Error('Please sign in to save changes')
+      toast.error(err.message)
+      throw err
+    }
     try {
       if (applyMode === 'single') {
         await saveIncome(inc, t)
@@ -574,7 +592,10 @@ export default function App() {
       setModal(null); setEditRow(null)
       loadAll({ skipExcel: true })
       autoSyncToDrive()
-    } catch (e) { toast.error(e.message) }
+    } catch (e) {
+      toast.error(e.message)
+      throw e
+    }
   }
 
   const handleDeleteIncome = async (inc) => {
@@ -584,9 +605,20 @@ export default function App() {
   // ── CATEGORY CRUD ────────────────────────────────────────────
   const handleSaveCategory = async (cat) => {
     const t = getToken()
-    if (!t) { toast.error('Sign in required'); return }
-    try { await saveCategory(cat, t); toast.success('Saved!'); loadAll({ skipExcel: true }); autoSyncToDrive() }
-    catch (e) { toast.error(e.message) }
+    if (!t) {
+      const err = new Error('Sign in required')
+      toast.error(err.message)
+      throw err
+    }
+    try {
+      await saveCategory(cat, t)
+      toast.success('Saved!')
+      loadAll({ skipExcel: true })
+      autoSyncToDrive()
+    } catch (e) {
+      toast.error(e.message)
+      throw e
+    }
   }
 
   const handleDeleteCategory = (cat) => {
@@ -858,6 +890,7 @@ export default function App() {
       <CategoryModal
         open={modal === 'category'}
         initial={editRow}
+        categories={categories}
         onSave={handleSaveCategory}
         onClose={() => { setModal(null); setEditRow(null) }}
       />

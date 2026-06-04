@@ -22,7 +22,7 @@ export const useIncomeTableStyles = makeStyles()((theme) => ({
     borderRadius: '12px',
     backgroundImage: 'none',
     boxShadow: '0 4px 20px 0 rgba(0, 0, 0, 0.25)',
-    overflow: 'hidden',
+    overflowX: 'auto',
     width: '100%'
   },
   tableHead: {

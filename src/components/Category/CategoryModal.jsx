@@ -13,7 +13,65 @@ import {
 import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined'
 import { useCategoryModalStyles } from './styles/Category.styles'
 
-export default function CategoryModal({ open, initial, onSave, onClose }) {
+const BRIGHT_COLORS = [
+  '#5b7fff', // Modern Blue
+  '#52B788', // Emerald Green
+  '#FF6B6B', // Coral Red
+  '#FFB03A', // Warm Amber/Orange
+  '#b366ff', // Bright Purple
+  '#00d4ff', // Electric Cyan
+  '#ff66cc', // Hot Pink
+  '#ffd633', // Sunny Yellow
+  '#80ff00', // Lime Green
+  '#ff9933', // Tangerine
+  '#6699ff', // Light Blue
+  '#ff5050'  // Bright Red
+]
+
+function hslToHex(h, s, l) {
+  s /= 100
+  l /= 100
+  let c = (1 - Math.abs(2 * l - 1)) * s
+  let x = c * (1 - Math.abs((h / 60) % 2 - 1))
+  let m = l - c / 2
+  let r = 0, g = 0, b = 0
+  if (0 <= h && h < 60) {
+    r = c; g = x; b = 0
+  } else if (60 <= h && h < 120) {
+    r = x; g = c; b = 0
+  } else if (120 <= h && h < 180) {
+    r = 0; g = c; b = x
+  } else if (180 <= h && h < 240) {
+    r = 0; g = x; b = c
+  } else if (240 <= h && h < 300) {
+    r = x; g = 0; b = c
+  } else if (300 <= h && h < 360) {
+    r = c; g = 0; b = x
+  }
+  let r_hex = Math.round((r + m) * 255).toString(16).padStart(2, '0')
+  let g_hex = Math.round((g + m) * 255).toString(16).padStart(2, '0')
+  let b_hex = Math.round((b + m) * 255).toString(16).padStart(2, '0')
+  return `#${r_hex}${g_hex}${b_hex}`
+}
+
+function getNextUniqueColor(existingCategories = []) {
+  const existingColors = new Set(existingCategories.map(c => c.color?.toLowerCase()))
+  for (const color of BRIGHT_COLORS) {
+    if (!existingColors.has(color.toLowerCase())) {
+      return color
+    }
+  }
+  for (let i = 0; i < 50; i++) {
+    const hue = Math.floor(Math.random() * 360)
+    const color = hslToHex(hue, 85, 60)
+    if (!existingColors.has(color.toLowerCase())) {
+      return color
+    }
+  }
+  return BRIGHT_COLORS[Math.floor(Math.random() * BRIGHT_COLORS.length)]
+}
+
+export default function CategoryModal({ open, initial, categories = [], onSave, onClose }) {
   const { classes } = useCategoryModalStyles()
   const [form, setForm] = useState({
     id: '',
@@ -22,35 +80,45 @@ export default function CategoryModal({ open, initial, onSave, onClose }) {
     color: '#5b7fff'
   })
 
+  const [saving, setSaving] = useState(false)
+
   useEffect(() => {
     if (open) {
+      const defaultColor = getNextUniqueColor(categories)
       setForm({
         id: initial?.id || '',
         name: initial?.name || '',
         type: initial?.type || 'expense',
-        color: initial?.color || '#5b7fff'
+        color: initial?.color || defaultColor
       })
+      setSaving(false)
     }
-  }, [open, initial])
+  }, [open, initial, categories])
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSave = () => {
-    if (form.name.trim()) {
-      onSave({
-        ...form,
-        name: form.name.trim()
-      })
-      onClose()
+  const handleSave = async () => {
+    if (form.name.trim() && !saving) {
+      setSaving(true)
+      try {
+        await onSave({
+          ...form,
+          name: form.name.trim()
+        })
+        onClose()
+      } catch (err) {
+        console.error(err)
+        setSaving(false)
+      }
     }
   }
 
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={saving ? undefined : onClose}
       className={classes.dialog}
     >
       <Box className={classes.content}>
@@ -96,37 +164,6 @@ export default function CategoryModal({ open, initial, onSave, onClose }) {
               <MenuItem value="income" sx={{ fontSize: 13 }}>Income</MenuItem>
             </Select>
           </FormControl>
-
-          {/* Color Picker & Preview */}
-          <Box style={{ width: '100%' }}>
-            <Typography variant="caption" className={classes.colorPickerLabel}>
-              Category Color
-            </Typography>
-            <Box className={classes.colorPickerRow}>
-              <Box
-                component="input"
-                type="color"
-                value={form.color}
-                onChange={(e) => handleChange('color', e.target.value)}
-                className={classes.colorInput}
-              />
-              <Box
-                className={classes.colorPreview}
-                style={{
-                  backgroundColor: `${form.color}15`,
-                  border: `1px solid ${form.color}40`
-                }}
-              >
-                <Typography
-                  variant="caption"
-                  className={classes.colorPreviewText}
-                  style={{ color: form.color }}
-                >
-                  PREVIEW TEXT
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
         </Box>
 
         {/* Actions */}
@@ -134,14 +171,15 @@ export default function CategoryModal({ open, initial, onSave, onClose }) {
           <Button
             variant="contained"
             onClick={handleSave}
-            disabled={!form.name.trim()}
+            disabled={saving || !form.name.trim()}
             className={classes.saveButton}
           >
-            Save Category
+            {saving ? 'Saving...' : 'Save Category'}
           </Button>
           <Button
             variant="outlined"
             onClick={onClose}
+            disabled={saving}
             className={classes.cancelButton}
           >
             Cancel

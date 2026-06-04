@@ -43,8 +43,17 @@ export default function AddIncomeModal({ initial, year, month, onSave, onClose }
     }
   }
 
-  const handleSave = () => {
-    onSave(form, applyMode)
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    if (!valid || saving) return
+    setSaving(true)
+    try {
+      await onSave(form, applyMode)
+    } catch (err) {
+      console.error(err)
+      setSaving(false)
+    }
   }
 
   const isOther = !SOURCES.slice(0, -1).includes(form.source)
@@ -53,7 +62,7 @@ export default function AddIncomeModal({ initial, year, month, onSave, onClose }
   return (
     <Dialog
       open={true}
-      onClose={onClose}
+      onClose={saving ? undefined : onClose}
       className={classes.dialog}
     >
       <Box className={classes.content}>
@@ -178,6 +187,7 @@ export default function AddIncomeModal({ initial, year, month, onSave, onClose }
                   variant={applyMode === opt.value ? 'contained' : 'outlined'}
                   size="small"
                   onClick={() => setApplyMode(opt.value)}
+                  disabled={saving}
                   className={applyMode === opt.value ? classes.applyButtonActive : classes.applyButtonInactive}
                 >
                   {opt.label}
@@ -192,14 +202,15 @@ export default function AddIncomeModal({ initial, year, month, onSave, onClose }
           <Button
             variant="contained"
             onClick={handleSave}
-            disabled={!valid}
+            disabled={saving || !valid}
             className={classes.saveButton}
           >
-            {form.id ? 'Update Income' : 'Add Income'}
+            {saving ? (form.id ? 'Updating...' : 'Adding...') : (form.id ? 'Update Income' : 'Add Income')}
           </Button>
           <Button
             variant="outlined"
             onClick={onClose}
+            disabled={saving}
             className={classes.cancelButton}
           >
             Cancel

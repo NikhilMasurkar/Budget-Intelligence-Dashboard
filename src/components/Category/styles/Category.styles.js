@@ -158,7 +158,8 @@ export const useCategoryModalStyles = makeStyles()((theme) => ({
 
 export const useCategoryManagerStyles = makeStyles()((theme) => ({
   container: {
-    width: '100%'
+    width: '100%',
+    overflowX: 'auto'
   },
   actionHeader: {
     display: 'flex',

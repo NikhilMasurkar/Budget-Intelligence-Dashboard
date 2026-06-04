@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Dialog,
   Button,
@@ -138,6 +138,13 @@ const useStyles = makeStyles()((theme) => ({
 
 export default function DeleteConfirmModal({ open, item, type, onDelete, onClose }) {
   const { classes } = useStyles()
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setSaving(false)
+    }
+  }, [open])
 
   if (!item) return null
 
@@ -147,10 +154,21 @@ export default function DeleteConfirmModal({ open, item, type, onDelete, onClose
       ? item.source
       : item.name
 
+  const handleDelete = async (scope) => {
+    if (saving) return
+    setSaving(true)
+    try {
+      await onDelete(scope)
+    } catch (err) {
+      console.error(err)
+      setSaving(false)
+    }
+  }
+
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={saving ? undefined : onClose}
       className={classes.dialog}
     >
       <Box className={classes.container}>
@@ -177,33 +195,37 @@ export default function DeleteConfirmModal({ open, item, type, onDelete, onClose
             <Button
               variant="contained"
               color="error"
-              onClick={() => onDelete()}
+              onClick={() => handleDelete()}
+              disabled={saving}
               className={classes.deleteBtn}
             >
-              Delete Category
+              {saving ? 'Deleting Category...' : 'Delete Category'}
             </Button>
           ) : (
             <Box className={classes.btnGroup}>
               <Button
                 variant="contained"
                 color="error"
-                onClick={() => onDelete('month')}
+                onClick={() => handleDelete('month')}
+                disabled={saving}
                 className={classes.monthBtn}
               >
-                🗓 This Month
+                {saving ? 'Deleting...' : '🗓 This Month'}
               </Button>
               <Button
                 variant="contained"
-                onClick={() => onDelete('year')}
+                onClick={() => handleDelete('year')}
+                disabled={saving}
                 className={classes.yearBtn}
               >
-                📅 Whole Year
+                {saving ? 'Deleting...' : '📅 Whole Year'}
               </Button>
             </Box>
           )}
           <Button
             variant="outlined"
             onClick={onClose}
+            disabled={saving}
             className={classes.cancelBtn}
           >
             Cancel

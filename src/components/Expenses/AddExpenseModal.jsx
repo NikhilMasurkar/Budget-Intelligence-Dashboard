@@ -28,13 +28,26 @@ export default function AddExpenseModal({ initial, categories, year, month, onSa
     note: initial?.note || '',
   })
 
+  const [saving, setSaving] = useState(false)
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const valid = form.itemName.trim() && form.amount && form.categoryId
+
+  const handleSave = async () => {
+    if (!valid || saving) return
+    setSaving(true)
+    try {
+      await onSave(form)
+    } catch (err) {
+      console.error(err)
+      setSaving(false)
+    }
+  }
 
   return (
     <Dialog
       open={true}
-      onClose={onClose}
+      onClose={saving ? undefined : onClose}
       className={classes.dialog}
     >
       <Box className={classes.content}>
@@ -152,15 +165,16 @@ export default function AddExpenseModal({ initial, categories, year, month, onSa
         <Box className={classes.actionsContainer}>
           <Button
             variant="contained"
-            onClick={() => onSave(form)}
-            disabled={!valid}
+            onClick={handleSave}
+            disabled={saving || !valid}
             className={classes.saveButton}
           >
-            {form.id ? 'Update Expense' : 'Add Expense'}
+            {saving ? (form.id ? 'Updating...' : 'Adding...') : (form.id ? 'Update Expense' : 'Add Expense')}
           </Button>
           <Button
             variant="outlined"
             onClick={onClose}
+            disabled={saving}
             className={classes.cancelButton}
           >
             Cancel
