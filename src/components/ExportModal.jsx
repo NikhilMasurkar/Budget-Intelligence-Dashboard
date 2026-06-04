@@ -1,8 +1,176 @@
 import React, { useState, useEffect } from 'react'
 import { getToken } from '../api/sheets'
 import toast from 'react-hot-toast'
+import {
+  Dialog,
+  Box,
+  Typography,
+  Button,
+  CircularProgress
+} from '@mui/material'
+import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined'
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined'
+import { makeStyles } from 'tss-react/mui'
+
+const useStyles = makeStyles()((theme) => ({
+  dialog: {
+    '& .MuiDialog-paper': {
+      maxWidth: '380px',
+      width: 'calc(100% - 32px)',
+      margin: theme.spacing(2),
+      borderRadius: theme.spacing(3),
+      border: '1px solid rgba(255, 255, 255, 0.13)',
+      backgroundColor: '#101218',
+      backgroundImage: 'none',
+      boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.5)',
+      overflow: 'hidden',
+    },
+  },
+  container: {
+    padding: theme.spacing(2.5),
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    textAlign: 'center',
+    [theme.breakpoints.up('sm')]: {
+      padding: theme.spacing(3.5),
+    },
+  },
+  iconContainer: {
+    width: '56px',
+    height: '56px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing(2.5),
+  },
+  iconContainerDrive: {
+    backgroundColor: 'rgba(91, 127, 255, 0.1)',
+    border: '1px solid rgba(91, 127, 255, 0.25)',
+    boxShadow: '0 0 12px rgba(91, 127, 255, 0.1)',
+  },
+  iconContainerLocal: {
+    backgroundColor: 'rgba(61, 232, 160, 0.1)',
+    border: '1px solid rgba(61, 232, 160, 0.25)',
+    boxShadow: '0 0 12px rgba(61, 232, 160, 0.1)',
+  },
+  icon: {
+    fontSize: '28px',
+  },
+  title: {
+    fontWeight: 800,
+    fontSize: '16px',
+    marginBottom: theme.spacing(1.5),
+    color: theme.palette.text.primary,
+    letterSpacing: '-0.01em',
+  },
+  loadingBox: {
+    paddingTop: theme.spacing(4),
+    paddingBottom: theme.spacing(4),
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: theme.spacing(2),
+  },
+  loadingText: {
+    color: theme.palette.text.secondary,
+    fontSize: '12.5px',
+  },
+  description: {
+    color: theme.palette.text.secondary,
+    fontSize: '12.5px',
+    lineHeight: 1.6,
+    marginBottom: theme.spacing(3),
+    paddingLeft: theme.spacing(1),
+    paddingRight: theme.spacing(1),
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: theme.spacing(1.5),
+    width: '100%',
+    marginBottom: theme.spacing(3.5),
+  },
+  yearCard: {
+    padding: theme.spacing(1.5),
+    borderRadius: theme.spacing(1),
+    border: '2px solid',
+    borderColor: theme.palette.divider,
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease-in-out',
+    textAlign: 'center',
+    userSelect: 'none',
+    '&:hover': {
+      borderColor: theme.palette.text.secondary,
+      backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    },
+  },
+  yearCardSelected: {
+    borderColor: theme.palette.primary.main,
+    backgroundColor: 'rgba(91, 127, 255, 0.08)',
+    '&:hover': {
+      borderColor: theme.palette.primary.main,
+      backgroundColor: 'rgba(91, 127, 255, 0.12)',
+    },
+  },
+  yearTitle: {
+    fontWeight: 800,
+    fontSize: '13px',
+    color: theme.palette.text.primary,
+  },
+  yearTitleSelected: {
+    color: theme.palette.primary.main,
+  },
+  yearSub: {
+    fontSize: '9.5px',
+    color: theme.palette.text.secondary,
+    opacity: 0.8,
+  },
+  actionGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing(1.25),
+    width: '100%',
+  },
+  exportBtn: {
+    paddingTop: theme.spacing(1.2),
+    paddingBottom: theme.spacing(1.2),
+    fontWeight: 700,
+    borderRadius: theme.spacing(1),
+    fontSize: '13px',
+  },
+  exportBtnDrive: {
+    boxShadow: '0 4px 12px rgba(91, 127, 255, 0.2)',
+    '&:hover': {
+      boxShadow: '0 6px 16px rgba(91, 127, 255, 0.3)',
+    },
+  },
+  exportBtnLocal: {
+    boxShadow: '0 4px 12px rgba(61, 232, 160, 0.2)',
+    '&:hover': {
+      boxShadow: '0 6px 16px rgba(61, 232, 160, 0.3)',
+    },
+  },
+  cancelBtn: {
+    paddingTop: theme.spacing(0.9),
+    paddingBottom: theme.spacing(0.9),
+    borderRadius: theme.spacing(1),
+    borderColor: theme.palette.divider,
+    color: theme.palette.text.secondary,
+    fontSize: '13px',
+    fontWeight: 600,
+    '&:hover': {
+      borderColor: theme.palette.text.primary,
+      color: theme.palette.text.primary,
+      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    },
+  },
+}))
 
 export default function ExportModal({ categories, mode, onClose }) {
+  const { classes, cx } = useStyles()
   const currentYear = new Date().getFullYear()
   const [selectedYears, setSelectedYears] = useState([String(currentYear)])
   const [availableYears, setAvailableYears] = useState([])
@@ -51,7 +219,7 @@ export default function ExportModal({ categories, mode, onClose }) {
     try {
       setBusy(true)
       const toastId = mode === 'drive' ? 'drive-export' : 'local-export'
-      toast.loading(mode === 'drive' ? 'Uploading to Drive...' : 'Generating Excel...', { id: toastId })
+      toast.loading(mode === 'drive' ? 'Uploading to Drive...' : 'Generating PDF...', { id: toastId })
 
       const t = getToken()
       if (mode === 'drive' && !t) {
@@ -60,25 +228,18 @@ export default function ExportModal({ categories, mode, onClose }) {
         return
       }
 
-      const { getUserProfile, uploadExcelToDrive } = await import('../api/sheets')
-      const { exportToExcel } = await import('../utils/exportExcel')
-
-      const buffer = await exportToExcel(categories, allData.expenses, allData.income, selectedYears)
-
       if (mode === 'drive') {
+        const { getUserProfile, uploadExcelToDrive } = await import('../api/sheets')
+        const { exportToExcel } = await import('../utils/exportExcel')
+        const buffer = await exportToExcel(categories, allData.expenses, allData.income, selectedYears)
         const profile = await getUserProfile(t)
         const userName = profile.given_name || profile.name || 'User'
         await uploadExcelToDrive(buffer, userName, t)
         toast.success('✅ Saved to Google Drive!', { id: toastId })
       } else {
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'balance_sheet_.xlsx'
-        a.click()
-        URL.revokeObjectURL(url)
-        toast.success('✅ Downloaded!', { id: toastId })
+        const { exportToPdf } = await import('../utils/exportPdf')
+        await exportToPdf(categories, allData.expenses, allData.income, selectedYears)
+        toast.success('✅ PDF Downloaded!', { id: toastId })
       }
 
       onClose()
@@ -91,65 +252,98 @@ export default function ExportModal({ categories, mode, onClose }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !busy && onClose()}>
-      <div className="modal" style={{ maxWidth: 400, textAlign: 'center' }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>{mode === 'drive' ? '☁️' : '📥'}</div>
-        <div className="modal-title" style={{ textAlign: 'center' }}>Export Budget</div>
+    <Dialog
+      open={true}
+      onClose={() => {
+        if (!busy) onClose()
+      }}
+      className={classes.dialog}
+    >
+      <Box className={classes.container}>
         
+        {/* Top Icon Badge */}
+        <Box
+          className={cx(
+            classes.iconContainer,
+            mode === 'drive' ? classes.iconContainerDrive : classes.iconContainerLocal
+          )}
+        >
+          {mode === 'drive' ? (
+            <CloudUploadOutlinedIcon color="primary" className={classes.icon} />
+          ) : (
+            <FileDownloadOutlinedIcon color="secondary" className={classes.icon} />
+          )}
+        </Box>
+
+        {/* Title */}
+        <Typography variant="h6" className={classes.title}>
+          {mode === 'drive' ? 'Export to Drive' : 'Download Budget'}
+        </Typography>
+
         {loading ? (
-          <div style={{ padding: '20px 0' }}>
-            <div className="loading-spinner" style={{ margin: '0 auto 10px' }} />
-            <p style={{ color: 'var(--text3)', fontSize: 13 }}>Scanning your spreadsheet for years...</p>
-          </div>
+          <Box className={classes.loadingBox}>
+            <CircularProgress size={36} color="primary" />
+            <Typography variant="body2" className={classes.loadingText}>
+              Scanning your spreadsheet for years...
+            </Typography>
+          </Box>
         ) : (
           <>
-            <p style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 20 }}>
-              Select which year's budget sheets to include in your Excel file.
-            </p>
+            {/* Description */}
+            <Typography variant="body2" className={classes.description}>
+              Select which year's budget sheets to include in your {mode === 'drive' ? 'Excel' : 'PDF'} file.
+            </Typography>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 24 }}>
-              {availableYears.map(y => (
-                <div 
-                  key={y} 
-                  onClick={() => toggleYear(y)}
-                  style={{
-                    padding: '12px',
-                    borderRadius: 10,
-                    border: '2px solid',
-                    borderColor: selectedYears.includes(y) ? 'var(--accent)' : 'var(--border)',
-                    background: selectedYears.includes(y) ? 'var(--accent-light)' : 'transparent',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <span style={{ fontSize: 16, display: 'block' }}>{y}</span>
-                  <span style={{ fontSize: 10, opacity: 0.7 }}>{selectedYears.includes(y) ? 'Selected' : 'Include'}</span>
-                </div>
-              ))}
-            </div>
+            {/* Year selection grid */}
+            <Box className={classes.grid}>
+              {availableYears.map(y => {
+                const selected = selectedYears.includes(y)
+                return (
+                  <Box
+                    key={y}
+                    onClick={() => toggleYear(y)}
+                    className={cx(classes.yearCard, selected && classes.yearCardSelected)}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      className={cx(classes.yearTitle, selected && classes.yearTitleSelected)}
+                    >
+                      {y}
+                    </Typography>
+                    <Typography variant="caption" className={classes.yearSub}>
+                      {selected ? 'Selected' : 'Include'}
+                    </Typography>
+                  </Box>
+                )
+              })}
+            </Box>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button 
-                className="btn btn-primary" 
-                style={{ padding: '12px', width: '100%' }} 
+            {/* Actions */}
+            <Box className={classes.actionGroup}>
+              <Button
+                variant="contained"
                 onClick={handleExport}
                 disabled={busy}
+                startIcon={mode === 'drive' ? <CloudUploadOutlinedIcon /> : <FileDownloadOutlinedIcon />}
+                className={cx(
+                  classes.exportBtn,
+                  mode === 'drive' ? classes.exportBtnDrive : classes.exportBtnLocal
+                )}
               >
-                {busy ? 'Processing...' : (mode === 'drive' ? 'Upload to Drive' : 'Download Excel')}
-              </button>
-              <button 
-                className="btn btn-ghost" 
-                style={{ fontSize: 13 }} 
+                {busy ? 'Processing...' : (mode === 'drive' ? 'Upload to Drive' : 'Download PDF')}
+              </Button>
+              <Button
+                variant="outlined"
                 onClick={onClose}
                 disabled={busy}
+                className={classes.cancelBtn}
               >
                 Cancel
-              </button>
-            </div>
+              </Button>
+            </Box>
           </>
         )}
-      </div>
-    </div>
+      </Box>
+    </Dialog>
   )
 }

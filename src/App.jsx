@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Toaster, toast } from 'react-hot-toast'
+import { Box, Typography, Button, FormControl, Select } from '@mui/material'
+import { useGlobalStyles } from './styles/globalStyles'
+import { useStyles } from './App.styles'
 import {
   fetchCategories, fetchExpenses, fetchIncome,
   saveExpense, deleteExpense, saveIncome, deleteIncome,
@@ -9,16 +12,20 @@ import {
   DEFAULT_CATEGORIES, TABS, silentReauth, getSavedUserName, downloadExcelFromDrive
 } from './api/sheets'
 import Dashboard from './components/Dashboard'
-import ExpenseTable from './components/ExpenseTable'
-import CategoryManager from './components/CategoryManager'
-import IncomeTable from './components/IncomeTable'
-import AddExpenseModal from './components/AddExpenseModal'
-import AddIncomeModal from './components/AddIncomeModal'
+import ExpenseTable from './components/Expenses/ExpenseTable'
+import CategoryManager from './components/Category/CategoryManager'
+import IncomeTable from './components/Income/IncomeTable'
+import AddExpenseModal from './components/Expenses/AddExpenseModal'
+import AddIncomeModal from './components/Income/AddIncomeModal'
 import ExportModal from './components/ExportModal'
+import ConfigScreen from './components/ConfigScreen'
+import SignInScreen from './components/SignInScreen'
+import TopBar from './components/TopBar'
+import SetupBanner from './components/SetupBanner'
+import DeleteConfirmModal from './components/DeleteConfirmModal'
+import CategoryModal from './components/Category/CategoryModal'
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const YEAR_NOW = new Date().getFullYear()
-const MONTH_NOW = new Date().getMonth() + 1
+import { MONTHS, YEAR_NOW, MONTH_NOW_1 as MONTH_NOW } from './utils/constants'
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 
 // Formats text to Sentence case and removes extra whitespace (e.g. "  movie Tickets " -> "Movie tickets")
@@ -30,6 +37,9 @@ const toSentenceCase = (str) => {
 }
 
 export default function App() {
+  const { classes, cx } = useStyles()
+  const { classes: globalClasses } = useGlobalStyles()
+
   const [view, setView] = useState('dashboard')
   const [year, setYear] = useState(YEAR_NOW)
   const [month, setMonth] = useState(MONTH_NOW)
@@ -47,7 +57,6 @@ export default function App() {
   const [needsSetup, setNeedsSetup] = useState(false)
   const [userName, setUserName] = useState(getSavedUserName() || '')
   const [userPicture, setUserPicture] = useState(localStorage.getItem('budgetiq_userPicture') || '')
-  const [showProfileMenu, setShowProfileMenu] = useState(false)
 
   // ── CONFIG check ────────────────────────────────────────────
   const missingConfig = !import.meta.env.VITE_GOOGLE_SHEETS_API_KEY ||
@@ -354,7 +363,6 @@ export default function App() {
     setAuthd(false)
     setUserName('')
     setUserPicture('')
-    setShowProfileMenu(false)
     setCategories([])
     setExpenses([])
     setIncome([])
@@ -506,7 +514,7 @@ export default function App() {
           await writeAllExpenseRows(filtered, t)
           toast.success('Deleted from all months!', { id: 'del-all' })
         }
-      } else {
+      } else if (type === 'income') {
         if (scope === 'month') {
           await deleteIncome(item.id, t)
           toast.success('Deleted from this month')
@@ -520,6 +528,9 @@ export default function App() {
           await writeAllIncomeRows(filtered, t)
           toast.success('Deleted from all months!', { id: 'del-all' })
         }
+      } else if (type === 'category') {
+        await deleteCategory(item.id, t)
+        toast.success('Deleted')
       }
       loadAll({ skipExcel: true })
       autoSyncToDrive()
@@ -578,12 +589,8 @@ export default function App() {
     catch (e) { toast.error(e.message) }
   }
 
-  const handleDeleteCategory = async (id) => {
-    if (!confirm('Delete this category? Expenses using it will keep the old ID.')) return
-    const t = getToken()
-    if (!t) { toast.error('Sign in required'); return }
-    try { await deleteCategory(id, t); toast.success('Deleted'); loadAll({ skipExcel: true }); autoSyncToDrive() }
-    catch (e) { toast.error(e.message) }
+  const handleDeleteCategory = (cat) => {
+    setDeleteConfirm({ type: 'category', item: cat })
   }
 
   const handleReorderCategory = async (orderedCats) => {
@@ -620,228 +627,126 @@ export default function App() {
   if (missingConfig) return <ConfigScreen />
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Toaster position="top-right" toastOptions={{ style: { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border2)' } }} />
+    <Box className={globalClasses.globalContainer}>
+      <Toaster position="top-right" toastOptions={{ style: { background: '#101218', color: '#e4e8f5', border: '1px solid rgba(255,255,255,0.13)' } }} />
 
       {/* ── TOPBAR ── */}
-      <div className="topbar-wrap">
-        <div className="topbar">
-          <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 'auto', flexShrink: 0 }}>
-            <span style={{ fontSize: 22 }}>💰</span>
-            <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-0.5px' }}>BudgetIQ</span>
-          </div>
-
-          {/* Nav */}
-          <div className="nav-btns">
-            {['dashboard', 'expenses', 'income', 'categories'].map(v => (
-              <button key={v} onClick={() => setView(v)} title={v.charAt(0).toUpperCase() + v.slice(1) + ' view'}
-                style={{
-                  border: 'none', cursor: 'pointer', padding: '4px 10px', borderRadius: 6, fontWeight: 600, fontSize: 13, textTransform: 'capitalize', whiteSpace: 'nowrap',
-                  color: view === v ? 'var(--accent)' : 'var(--text2)',
-                  background: view === v ? 'rgba(91,127,255,0.1)' : 'transparent'
-                }}>{v}</button>
-            ))}
-          </div>
-
-          {/* Actions */}
-          <div className="action-btns" style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-            {authd && (
-              <button
-                className="btn btn-ghost"
-                style={{ fontSize: 16, padding: '4px 10px' }}
-                onClick={() => { loadAll(); toast.success('Refreshing data from Google Sheets…', { duration: 2000 }) }}
-                title="Refresh data from Google Sheets"
-                disabled={loading}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ display: 'block', animation: loading ? 'spin 1s linear infinite' : 'none' }}>
-                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                  <path d="M21 3v5h-5" />
-                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                  <path d="M8 16H3v5" />
-                </svg>
-              </button>
-            )}
-            <button className="btn btn-ghost" style={{ fontSize: 16, padding: '4px 10px' }} onClick={() => { setExportMode('drive'); setModal('export') }} title="Upload to Google Drive">
-              <svg width="18" height="18" viewBox="0 0 87.3 78" style={{ verticalAlign: 'middle' }}>
-                <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA" />
-                <path d="M43.65 25L29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.2 48.7c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00AC47" />
-                <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.85L73.55 76.8z" fill="#EA4335" />
-                <path d="M43.65 25L57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z" fill="#00832D" />
-                <path d="M59.85 53H27.5l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.5c1.6 0 3.15-.45 4.5-1.2z" fill="#2684FC" />
-                <path d="M73.4 26.5l-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25l16.2 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#FFBA00" />
-              </svg>
-            </button>
-            <button className="btn btn-ghost" style={{ fontSize: 16, padding: '4px 10px' }} onClick={() => { setExportMode('local'); setModal('export') }} title="Download to your device">⬇</button>
-
-            <div style={{ position: 'relative', marginLeft: 6 }}>
-              {authd ? (
-                <>
-                  <button
-                    onClick={() => setShowProfileMenu(!showProfileMenu)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: '4px 8px', borderRadius: 20,
-                      background: 'var(--surface3)', border: '1px solid var(--border)', cursor: 'pointer',
-                      transition: 'all 0.2s', position: 'relative'
-                    }}
-                  >
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
-                      fontSize: 12, fontWeight: 800, textAlign: 'center', overflow: 'hidden'
-                    }}>
-                      {userPicture ? (
-                        <img src={userPicture} alt={userName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        userName ? userName.charAt(0).toUpperCase() : 'U'
-                      )}
-                    </div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginRight: 4 }}>{userName}</span>
-                    <span style={{ fontSize: 10, color: 'var(--text3)' }}>▼</span>
-                  </button>
-
-                  {showProfileMenu && (
-                    <>
-                      <div
-                        onClick={() => setShowProfileMenu(false)}
-                        style={{ position: 'fixed', inset: 0, zIndex: 1100 }}
-                      />
-                      <div style={{
-                        position: 'absolute', top: 'calc(100% + 12px)', right: 0, width: 220,
-                        background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 12,
-                        boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', zIndex: 1101, overflow: 'hidden',
-                        animation: 'fadeIn 0.2s ease', padding: 8
-                      }}>
-                        <div style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border)', marginBottom: 4 }}>
-                          <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', background: 'var(--accent)' }}>
-                            {userPicture ? (
-                              <img src={userPicture} alt={userName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800 }}>
-                                {userName.charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                          </div>
-                          <div style={{ overflow: 'hidden' }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName}</div>
-                            <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase' }}>Google Account</div>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={handleSignOut}
-                          style={{
-                            width: '100%', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10,
-                            background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer',
-                            fontSize: 13, fontWeight: 600, textAlign: 'left', transition: 'all 0.2s', borderRadius: 8
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,95,95,0.1)'; e.currentTarget.style.transform = 'translateX(4px)' }}
-                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'none' }}
-                        >
-                          <span style={{ fontSize: 16 }}>🚪</span>
-                          <span>Sign Out</span>
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </>
-              ) : (
-                <button className="btn btn-primary" style={{ padding: '4px 12px', fontSize: 12, whiteSpace: 'nowrap', borderRadius: 20 }} onClick={handleSignIn} title="Sign in with Google to access your data">
-                  🔑 Sign In
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <TopBar
+        view={view}
+        setView={setView}
+        authd={authd}
+        loading={loading}
+        userName={userName}
+        userPicture={userPicture}
+        onRefresh={() => { loadAll(); toast.success('Refreshing data from Google Sheets…', { duration: 2000 }) }}
+        onExportDrive={() => { setExportMode('drive'); setModal('export') }}
+        onExportLocal={() => { setExportMode('local'); setModal('export') }}
+        onSignIn={handleSignIn}
+        onSignOut={handleSignOut}
+      />
 
       {/* ── CONTENT ── */}
-      <div className="content-area">
+      <Box className={globalClasses.contentArea}>
         {!authd ? (
-          <div style={{ textAlign: 'center', padding: '100px 20px', animation: 'fadeIn 0.3s' }}>
-            <div style={{ fontSize: 64, marginBottom: 20 }}>🔒</div>
-            <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Sign In Required</h2>
-            <p style={{ color: 'var(--text2)', marginBottom: 24, maxWidth: 400, margin: '0 auto 24px auto', lineHeight: 1.6 }}>
-              For your privacy, this dashboard is securely locked. Please sign in with your Google account to view and manage your budget data.
-            </p>
-            <button className="btn btn-primary" onClick={handleSignIn} style={{ fontSize: 16, padding: '12px 24px' }}>
-              🔑 Sign In to View Dashboard
-            </button>
-          </div>
+          <SignInScreen onSignIn={handleSignIn} />
         ) : (
           <>
-            {loading && <div style={{ textAlign: 'center', padding: 40, color: 'var(--text2)' }}>Loading from Google Sheets…</div>}
+            {loading && <Typography align="center" sx={{ p: 5, color: '#8891b8' }}>Loading from Google Sheets…</Typography>}
 
             {needsSetup && !loading && (
-              <div style={{ background: 'rgba(255, 95, 95, 0.1)', border: '1px solid var(--danger)', padding: 32, borderRadius: 12, textAlign: 'center', marginBottom: 20 }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>🛠️</div>
-                <h3 style={{ fontSize: 20, marginBottom: 8, fontWeight: 700 }}>Your Google Sheet needs to be set up!</h3>
-                <p style={{ color: 'var(--text2)', marginBottom: 20 }}>We couldn't find the required tabs (Categories, Expenses, Income).</p>
-                {authd ? (
-                  <button className="btn btn-primary" onClick={async () => {
-                    const t = getToken()
-                    try {
-                      toast.loading('Setting up your sheet...', { id: 'setup' })
-                      const { setupSheet } = await import('./api/sheets')
-                      await setupSheet(t)
-                      toast.success('Sheet setup complete!', { id: 'setup' })
-                      setNeedsSetup(false)
-                      loadAll()
-                    } catch (err) {
-                      toast.error(err.message, { id: 'setup' })
-                    }
-                  }}>Auto-Setup Sheets Now</button>
-                ) : (
-                  <button className="btn btn-primary" onClick={handleSignIn}>Sign In to Auto-Setup</button>
-                )}
-              </div>
+              <SetupBanner
+                authd={authd}
+                onSetup={async () => {
+                  const t = getToken()
+                  try {
+                    toast.loading('Setting up your sheet...', { id: 'setup' })
+                    const { setupSheet } = await import('./api/sheets')
+                    await setupSheet(t)
+                    toast.success('Sheet setup complete!', { id: 'setup' })
+                    setNeedsSetup(false)
+                    loadAll()
+                  } catch (err) {
+                    toast.error(err.message, { id: 'setup' })
+                  }
+                }}
+                onSignIn={handleSignIn}
+              />
             )}
 
             {!loading && !needsSetup && view === 'dashboard' && (
               <>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <h2 style={{ fontWeight: 800, fontSize: 18, marginRight: 4 }}>Dashboard</h2>
+                <Box className={classes.headerRow}>
+                  <Typography variant="h5" className={classes.titleText}>
+                    Dashboard
+                  </Typography>
                   {/* Year Tabs */}
-                  <div style={{ display: 'flex', gap: 6, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 24, padding: '3px' }}>
+                  <Box className={classes.yearTabsContainer}>
                     {availableYears.map(y => (
-                      <button key={y} onClick={() => setYear(y)}
-                        style={{
-                          padding: '4px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700,
-                          cursor: 'pointer', border: 'none', transition: 'all 0.18s',
-                          background: year === y ? 'var(--accent)' : 'transparent',
-                          color: year === y ? 'white' : 'var(--text2)',
-                          boxShadow: year === y ? '0 2px 8px rgba(91,127,255,0.35)' : 'none',
-                        }}>
+                      <Button
+                        key={y}
+                        onClick={() => setYear(y)}
+                        size="small"
+                        className={cx(classes.yearTabButton, year === y && classes.yearTabActiveButton)}
+                      >
                         {y}
-                      </button>
+                      </Button>
                     ))}
-                  </div>
-
-                </div>
+                  </Box>
+                </Box>
                 <Dashboard expenses={expenses} income={income} categories={categories} year={year} month={month} filterMonth={dashFilterMonth} onMonthChange={m => { setMonth(m); setDashFilterMonth(m) }} />
               </>
             )}
 
             {!loading && !needsSetup && view === 'expenses' && (
               <>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <h2 style={{ fontWeight: 800, fontSize: 18 }}>Expenses</h2>
-                  <select value={year} onChange={e => setYear(+e.target.value)} style={{ width: 80 }} title="Select year">
-                    {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                  <select value={month} onChange={e => setMonth(+e.target.value)} style={{ width: 80 }} title="Select month">
-                    {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-                  </select>
-                  <div style={{ flex: 1 }} />
-                  {authd && <>
-                    {selectedExpenseIds.length > 0 && (
-                      <button className="btn btn-primary" onClick={handleCopySelected} title="Copy selected expenses to next month" style={{ background: 'var(--accent)' }}>
-                        📋 Copy Selected ({selectedExpenseIds.length}) → Next Month
-                      </button>
-                    )}
-                    <button className="btn btn-primary" onClick={() => { setEditRow(null); setModal('add-expense') }}>+ Add Expense</button>
-                  </>}
-                </div>
+                <Box className={classes.headerRow}>
+                  <Typography variant="h5" className={classes.titleText}>
+                    Expenses
+                  </Typography>
+                  <FormControl size="small" className={globalClasses.nativeSelectFormControl}>
+                    <Select
+                      value={year}
+                      onChange={e => setYear(+e.target.value)}
+                      native
+                      className={globalClasses.nativeSelect}
+                    >
+                      {availableYears.map(y => <option key={y} value={y} style={{ background: '#181b28', color: '#e4e8f5' }}>{y}</option>)}
+                    </Select>
+                  </FormControl>
+                  <FormControl size="small" className={globalClasses.nativeSelectFormControl}>
+                    <Select
+                      value={month}
+                      onChange={e => setMonth(+e.target.value)}
+                      native
+                      className={globalClasses.nativeSelect}
+                    >
+                      {MONTHS.map((m, i) => <option key={i} value={i + 1} style={{ background: '#181b28', color: '#e4e8f5' }}>{m}</option>)}
+                    </Select>
+                  </FormControl>
+                  <Box className={classes.flexFiller} />
+                  {authd && (
+                    <Box className={classes.actionButtonsContainer}>
+                      {selectedExpenseIds.length > 0 && (
+                        <Button
+                          variant="contained"
+                          onClick={handleCopySelected}
+                          size="small"
+                          className={globalClasses.containedBlueButton}
+                        >
+                          📋 Copy Selected ({selectedExpenseIds.length}) → Next Month
+                        </Button>
+                      )}
+                      <Button
+                        variant="contained"
+                        onClick={() => { setEditRow(null); setModal('add-expense') }}
+                        size="small"
+                        className={globalClasses.containedBlueButton}
+                      >
+                        + Add Expense
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
                 <ExpenseTable
                   expenses={expenses.filter(e => e.month === String(month))}
                   categories={categories}
@@ -856,17 +761,42 @@ export default function App() {
 
             {!loading && !needsSetup && view === 'income' && (
               <>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <h2 style={{ fontWeight: 800, fontSize: 18 }}>Income</h2>
-                  <select value={year} onChange={e => setYear(+e.target.value)} style={{ width: 80 }} title="Select year">
-                    {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                  <select value={month} onChange={e => setMonth(+e.target.value)} style={{ width: 80 }} title="Select month">
-                    {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-                  </select>
-                  <div style={{ flex: 1 }} />
-                  {authd && <button className="btn btn-primary" onClick={() => { setEditRow(null); setModal('add-income') }}>+ Add Income</button>}
-                </div>
+                <Box className={classes.headerRow}>
+                  <Typography variant="h5" className={classes.titleText}>
+                    Income
+                  </Typography>
+                  <FormControl size="small" className={globalClasses.nativeSelectFormControl}>
+                    <Select
+                      value={year}
+                      onChange={e => setYear(+e.target.value)}
+                      native
+                      className={globalClasses.nativeSelect}
+                    >
+                      {availableYears.map(y => <option key={y} value={y} style={{ background: '#181b28', color: '#e4e8f5' }}>{y}</option>)}
+                    </Select>
+                  </FormControl>
+                  <FormControl size="small" className={globalClasses.nativeSelectFormControl}>
+                    <Select
+                      value={month}
+                      onChange={e => setMonth(+e.target.value)}
+                      native
+                      className={globalClasses.nativeSelect}
+                    >
+                      {MONTHS.map((m, i) => <option key={i} value={i + 1} style={{ background: '#181b28', color: '#e4e8f5' }}>{m}</option>)}
+                    </Select>
+                  </FormControl>
+                  <Box className={classes.flexFiller} />
+                  {authd && (
+                    <Button
+                      variant="contained"
+                      onClick={() => { setEditRow(null); setModal('add-income') }}
+                      size="small"
+                      className={globalClasses.containedBlueButton}
+                    >
+                      + Add Income
+                    </Button>
+                  )}
+                </Box>
                 <IncomeTable
                   income={income.filter(i => i.month === String(month))}
                   onEdit={row => { setEditRow(row); setModal('add-income') }}
@@ -878,10 +808,21 @@ export default function App() {
 
             {!loading && !needsSetup && view === 'categories' && (
               <>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center' }}>
-                  <h2 style={{ fontWeight: 800, fontSize: 18, flex: 1 }}>Categories</h2>
-                  {authd && <button className="btn btn-primary" onClick={() => { setEditRow(null); setModal('category') }}>+ Add Category</button>}
-                </div>
+                <Box className={classes.headerRow}>
+                  <Typography variant="h5" className={cx(classes.titleText, classes.flexFiller)}>
+                    Categories
+                  </Typography>
+                  {authd && (
+                    <Button
+                      variant="contained"
+                      onClick={() => { setEditRow(null); setModal('category') }}
+                      size="small"
+                      className={globalClasses.containedBlueButton}
+                    >
+                      + Add Category
+                    </Button>
+                  )}
+                </Box>
                 <CategoryManager
                   categories={categories}
                   onEdit={row => { setEditRow(row); setModal('category') }}
@@ -894,7 +835,7 @@ export default function App() {
             )}
           </>
         )}
-      </div>
+      </Box>
 
       {/* ── MODALS ── */}
       {modal === 'add-expense' && (
@@ -914,14 +855,12 @@ export default function App() {
           onClose={() => { setModal(null); setEditRow(null) }}
         />
       )}
-      {modal === 'category' && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(null)}>
-          <div className="modal" style={{ maxWidth: 420 }}>
-            <div className="modal-title" style={{ textAlign: 'center' }}>{editRow ? '✏️ Edit Category' : '+ New Category'}</div>
-            <CategoryForm initial={editRow} onSave={c => { handleSaveCategory(c); setModal(null); setEditRow(null) }} onCancel={() => { setModal(null); setEditRow(null) }} />
-          </div>
-        </div>
-      )}
+      <CategoryModal
+        open={modal === 'category'}
+        initial={editRow}
+        onSave={handleSaveCategory}
+        onClose={() => { setModal(null); setEditRow(null) }}
+      />
       {modal === 'export' && (
         <ExportModal
           categories={categories}
@@ -931,72 +870,13 @@ export default function App() {
       )}
 
       {/* Delete confirmation modal */}
-      {deleteConfirm && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setDeleteConfirm(null)}>
-          <div className="modal" style={{ maxWidth: 380, textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🗑️</div>
-            <div className="modal-title">Delete {deleteConfirm.type === 'expense' ? deleteConfirm.item.itemName : deleteConfirm.item.source}?</div>
-            <p style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
-              Choose whether to delete just this month or remove it from all months in {deleteConfirm.item.year}.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-danger" style={{ flex: 1, padding: '10px 12px', fontSize: 13 }} onClick={() => executeDelete('month')}>
-                  🗓 This month
-                </button>
-                <button className="btn btn-danger" style={{ flex: 1, padding: '10px 12px', fontSize: 13, background: '#8B0000' }} onClick={() => executeDelete('year')}>
-                  📅 Whole year
-                </button>
-              </div>
-              <button className="btn btn-ghost" style={{ padding: '8px 12px', fontSize: 13 }} onClick={() => setDeleteConfirm(null)}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function CategoryForm({ initial, onSave, onCancel }) {
-  const [form, setForm] = useState({ id: initial?.id || '', name: initial?.name || '', type: initial?.type || 'expense', color: initial?.color || '#6c8fff' })
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const lblStyle = { display: 'block', fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.7 }
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div><label style={lblStyle}>Category Name</label>
-        <input type="text" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Groceries" /></div>
-      <div><label style={lblStyle}>Type</label>
-        <select value={form.type} onChange={e => set('type', e.target.value)}>
-          <option value="expense">Expense</option>
-          <option value="fixed">Fixed Expense</option>
-          <option value="savings">Savings / Investment</option>
-          <option value="income">Income</option>
-        </select></div>
-      <div><label style={lblStyle}>Color</label>
-        <input type="color" value={form.color} onChange={e => set('color', e.target.value)} style={{ width: 60, height: 36, background: 'none', border: 'none', cursor: 'pointer' }} /></div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
-        <button className="btn btn-primary" style={{ width: '100%', padding: '10px 14px', fontSize: 14 }} onClick={() => form.name && onSave(form)}>💾 Save Category</button>
-        <button className="btn btn-ghost" style={{ padding: '8px 12px', fontSize: 13 }} onClick={onCancel}>Cancel</button>
-      </div>
-    </div>
-  )
-}
-
-function ConfigScreen() {
-  return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 16, padding: 36, maxWidth: 560, width: '100%' }}>
-        <div style={{ fontSize: 40, marginBottom: 16 }}>⚙️</div>
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 10 }}>Setup Required</h2>
-        <p style={{ color: 'var(--text2)', marginBottom: 24, lineHeight: 1.7 }}>
-          Create a <code style={{ background: 'var(--surface2)', padding: '2px 6px', borderRadius: 4 }}>.env</code> file in your project root with the following keys:
-        </p>
-        <pre style={{ background: 'var(--surface2)', borderRadius: 10, padding: 18, fontSize: 13, color: 'var(--accent2)', lineHeight: 1.8, overflowX: 'auto' }}>{`VITE_GOOGLE_SHEETS_API_KEY=your_api_key
-VITE_GOOGLE_OAUTH_CLIENT_ID=your_oauth_client_id`}</pre>
-        <div style={{ marginTop: 20, padding: 14, background: 'rgba(91,127,255,0.08)', borderRadius: 8, fontSize: 13, color: 'var(--text2)', lineHeight: 1.8 }}>
-          📖 See <strong style={{ color: 'var(--text)' }}>SETUP.md</strong> in the project folder for step-by-step instructions.
-        </div>
-      </div>
-    </div>
+      <DeleteConfirmModal
+        open={!!deleteConfirm}
+        item={deleteConfirm?.item}
+        type={deleteConfirm?.type}
+        onDelete={executeDelete}
+        onClose={() => setDeleteConfirm(null)}
+      />
+    </Box>
   )
 }
