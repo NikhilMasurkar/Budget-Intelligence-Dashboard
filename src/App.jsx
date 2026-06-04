@@ -102,31 +102,133 @@ export default function App() {
         }
       }
 
-      const rawExps = await fetchExpenses(year, t)
-      const rawInc = await fetchIncome(year, t)
-
       const yearStr = String(year)
+      let rawExps = []
+      let rawInc = []
 
-      // ONE-TIME MIGRATION: If Sheets DB is empty but Drive Excel has data, seed the Sheets DB
-      if (rawExps.length === 0 && xlsxExps.length > 0) {
-        const { writeAllExpenseRows, writeAllIncomeRows } = await import('./api/sheets')
+      if (xlsxOk) {
+        rawExps = xlsxExps.filter(e => String(e.year) === yearStr)
+        rawInc = xlsxInc.filter(i => String(i.year) === yearStr)
 
-        // Format rows for the DB schema
-        const expRows = xlsxExps.map(e => [e.id, e.year, e.month, e.categoryId, e.itemName, e.amount, e.isFixed, e.note || ''])
-        const incRows = xlsxInc.map(i => [i.id, i.year, i.month, i.source, i.amount])
+        // Sync Drive Excel updates back to Sheets DB in the background
+        ;(async () => {
+          try {
+            const { readAllExpenseRows, writeAllExpenseRows, readAllIncomeRows, writeAllIncomeRows } = await import('./api/sheets')
+            const [dbExpRows, dbIncRows] = await Promise.all([
+              readAllExpenseRows(t),
+              readAllIncomeRows(t)
+            ])
 
-        await writeAllExpenseRows(expRows, t)
-        await writeAllIncomeRows(incRows, t)
+            // Reconcile expenses by business key: year-month-categoryId-itemName
+            const reconciledExpenses = []
+            const dbExpMap = new Map()
+            dbExpRows.forEach(row => {
+              const key = `${row[1]}-${row[2]}-${row[3]}-${toSentenceCase(row[4])}`
+              dbExpMap.set(key, row)
+            })
 
-        rawExps.push(...xlsxExps.filter(e => e.year === yearStr))
-        rawInc.push(...xlsxInc.filter(i => i.year === yearStr))
+            let expensesChanged = false
+            xlsxExps.forEach(xls => {
+              const key = `${xls.year}-${xls.month}-${xls.categoryId}-${toSentenceCase(xls.itemName)}`
+              const existing = dbExpMap.get(key)
+              if (existing) {
+                const amountDiff = String(existing[5]) !== String(xls.amount)
+                const fixedDiff = String(existing[6]) !== String(xls.isFixed || 'FALSE')
+                if (amountDiff || fixedDiff) {
+                  expensesChanged = true
+                }
+                const updatedRow = [
+                  existing[0],
+                  xls.year,
+                  xls.month,
+                  xls.categoryId,
+                  toSentenceCase(xls.itemName),
+                  xls.amount,
+                  xls.isFixed || existing[6] || 'FALSE',
+                  existing[7] || ''
+                ]
+                reconciledExpenses.push(updatedRow)
+                dbExpMap.delete(key)
+              } else {
+                expensesChanged = true
+                const newRow = [
+                  xls.id || uid(),
+                  xls.year,
+                  xls.month,
+                  xls.categoryId,
+                  toSentenceCase(xls.itemName),
+                  xls.amount,
+                  xls.isFixed || 'FALSE',
+                  ''
+                ]
+                reconciledExpenses.push(newRow)
+              }
+            })
+
+            if (dbExpMap.size > 0) {
+              expensesChanged = true
+            }
+
+            if (expensesChanged) {
+              await writeAllExpenseRows(reconciledExpenses, t)
+            }
+
+            // Reconcile income by business key: year-month-source
+            const reconciledIncome = []
+            const dbIncMap = new Map()
+            dbIncRows.forEach(row => {
+              const key = `${row[1]}-${row[2]}-${toSentenceCase(row[3])}`
+              dbIncMap.set(key, row)
+            })
+
+            let incomeChanged = false
+            xlsxInc.forEach(xls => {
+              const key = `${xls.year}-${xls.month}-${toSentenceCase(xls.source)}`
+              const existing = dbIncMap.get(key)
+              if (existing) {
+                if (String(existing[4]) !== String(xls.amount)) {
+                  incomeChanged = true
+                }
+                const updatedRow = [
+                  existing[0],
+                  xls.year,
+                  xls.month,
+                  toSentenceCase(xls.source),
+                  xls.amount
+                ]
+                reconciledIncome.push(updatedRow)
+                dbIncMap.delete(key)
+              } else {
+                incomeChanged = true
+                const newRow = [
+                  xls.id || uid(),
+                  xls.year,
+                  xls.month,
+                  toSentenceCase(xls.source),
+                  xls.amount
+                ]
+                reconciledIncome.push(newRow)
+              }
+            })
+
+            if (dbIncMap.size > 0) {
+              incomeChanged = true
+            }
+
+            if (incomeChanged) {
+              await writeAllIncomeRows(reconciledIncome, t)
+            }
+          } catch (syncErr) {
+            console.error('[BudgetIQ] Sync to Sheets DB failed:', syncErr)
+          }
+        })()
+      } else {
+        rawExps = await fetchExpenses(year, t)
+        rawInc = await fetchIncome(year, t)
       }
 
-      // If we already have data in DB, just use that. If not, fallback to whatever we have.
-      const filteredXlsxExps = xlsxExps.filter(e => e.year === yearStr)
-      const filteredXlsxInc = xlsxInc.filter(i => i.year === yearStr)
-      const finalExps = rawExps.length > 0 ? rawExps : filteredXlsxExps
-      const finalInc = rawInc.length > 0 ? rawInc : filteredXlsxInc
+      const finalExps = rawExps
+      const finalInc = rawInc
 
       // Ensure consistent formatting across all historical/raw data globally
       const exps = finalExps.map(e => ({ ...e, itemName: toSentenceCase(e.itemName) }))
