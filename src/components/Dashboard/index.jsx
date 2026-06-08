@@ -125,14 +125,16 @@ export default function Dashboard({ expenses, income, categories, year, month, f
   return (
     <Box className={classes.container}>
       {/* 1. Summary Cards (Current Month) */}
-      <CurrentMonthSummary
-        displayMonthName={displayMonthName}
-        year={year}
-        curMonthInc={curMonthInc}
-        curMonthExp={curMonthExp}
-        curMonthSav={curMonthSav}
-        fmt={fmt}
-      />
+      {parseInt(year) >= curYear && (
+        <CurrentMonthSummary
+          displayMonthName={displayMonthName}
+          year={year}
+          curMonthInc={curMonthInc}
+          curMonthExp={curMonthExp}
+          curMonthSav={curMonthSav}
+          fmt={fmt}
+        />
+      )}
 
       {/* 2. Month Filters Control */}
       <MonthFilterControl

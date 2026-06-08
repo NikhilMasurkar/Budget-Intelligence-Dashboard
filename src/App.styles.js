@@ -58,5 +58,17 @@ export const useStyles = makeStyles()((theme) => ({
     gap: '10px',
     flexWrap: 'wrap',
     alignItems: 'center'
+  },
+  lockedBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 179, 71, 0.06)',
+    border: '1px solid rgba(255, 179, 71, 0.18)',
+    borderRadius: '10px',
+    padding: '10px 14px',
+    marginBottom: '16px',
+    color: '#ffb347',
+    width: '100%',
+    boxSizing: 'border-box'
   }
 }))

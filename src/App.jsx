@@ -8,7 +8,7 @@ import {
   saveExpense, deleteExpense, saveIncome, deleteIncome,
   saveCategory, deleteCategory, copyExpensesToNextMonth,
   signInWithGoogle, signOut, isSignedIn, getToken,
-  getUserProfile, findUserSpreadsheet, createUserSpreadsheet, setSheetId, setupSheet,
+  getUserProfile, findUserSpreadsheet, createUserSpreadsheet, setSheetId, setupSheet, getSheetId,
   DEFAULT_CATEGORIES, TABS, silentReauth, getSavedUserName, downloadExcelFromDrive
 } from './api/sheets'
 import Dashboard from './components/Dashboard'
@@ -53,10 +53,12 @@ export default function App() {
   const [modal, setModal] = useState(null)   // 'add-expense' | 'add-income' | 'category' | 'export'
   const [editRow, setEditRow] = useState(null)
   const [exportMode, setExportMode] = useState('local') // 'drive' | 'local'
-  const [availableYears, setAvailableYears] = useState([YEAR_NOW, YEAR_NOW + 1])
+  const [availableYears, setAvailableYears] = useState([YEAR_NOW])
   const [needsSetup, setNeedsSetup] = useState(false)
   const [userName, setUserName] = useState(getSavedUserName() || '')
   const [userPicture, setUserPicture] = useState(localStorage.getItem('budgetiq_userPicture') || '')
+
+  const isLocked = parseInt(year) < new Date().getFullYear()
 
   // ── CONFIG check ────────────────────────────────────────────
   const missingConfig = !import.meta.env.VITE_GOOGLE_SHEETS_API_KEY ||
@@ -68,7 +70,8 @@ export default function App() {
   const loadAll = useCallback(async (opts = {}) => {
     if (missingConfig) return
     const t = getToken()
-    if (!t) { setCategories([]); setExpenses([]); setIncome([]); return }
+    const sid = getSheetId()
+    if (!t || !sid) { setCategories([]); setExpenses([]); setIncome([]); return }
     setLoading(true)
     setNeedsSetup(false)
     try {
@@ -116,124 +119,121 @@ export default function App() {
       let rawInc = []
 
       if (xlsxOk) {
-        rawExps = xlsxExps.filter(e => String(e.year) === yearStr)
-        rawInc = xlsxInc.filter(i => String(i.year) === yearStr)
+        const { readAllExpenseRows, writeAllExpenseRows, readAllIncomeRows, writeAllIncomeRows } = await import('./api/sheets')
+        const [dbExpRows, dbIncRows] = await Promise.all([
+          readAllExpenseRows(t),
+          readAllIncomeRows(t)
+        ])
 
-        // Sync Drive Excel updates back to Sheets DB in the background
-        ;(async () => {
-          try {
-            const { readAllExpenseRows, writeAllExpenseRows, readAllIncomeRows, writeAllIncomeRows } = await import('./api/sheets')
-            const [dbExpRows, dbIncRows] = await Promise.all([
-              readAllExpenseRows(t),
-              readAllIncomeRows(t)
-            ])
+        // Reconcile expenses by business key: year-month-categoryId-itemName
+        const reconciledExpenses = []
+        const dbExpMap = new Map()
+        dbExpRows.forEach(row => {
+          const key = `${row[1]}-${row[2]}-${row[3]}-${toSentenceCase(row[4])}`
+          dbExpMap.set(key, row)
+        })
 
-            // Reconcile expenses by business key: year-month-categoryId-itemName
-            const reconciledExpenses = []
-            const dbExpMap = new Map()
-            dbExpRows.forEach(row => {
-              const key = `${row[1]}-${row[2]}-${row[3]}-${toSentenceCase(row[4])}`
-              dbExpMap.set(key, row)
-            })
-
-            let expensesChanged = false
-            xlsxExps.forEach(xls => {
-              const key = `${xls.year}-${xls.month}-${xls.categoryId}-${toSentenceCase(xls.itemName)}`
-              const existing = dbExpMap.get(key)
-              if (existing) {
-                const amountDiff = String(existing[5]) !== String(xls.amount)
-                const fixedDiff = String(existing[6]) !== String(xls.isFixed || 'FALSE')
-                if (amountDiff || fixedDiff) {
-                  expensesChanged = true
-                }
-                const updatedRow = [
-                  existing[0],
-                  xls.year,
-                  xls.month,
-                  xls.categoryId,
-                  toSentenceCase(xls.itemName),
-                  xls.amount,
-                  xls.isFixed || existing[6] || 'FALSE',
-                  existing[7] || ''
-                ]
-                reconciledExpenses.push(updatedRow)
-                dbExpMap.delete(key)
-              } else {
-                expensesChanged = true
-                const newRow = [
-                  xls.id || uid(),
-                  xls.year,
-                  xls.month,
-                  xls.categoryId,
-                  toSentenceCase(xls.itemName),
-                  xls.amount,
-                  xls.isFixed || 'FALSE',
-                  ''
-                ]
-                reconciledExpenses.push(newRow)
-              }
-            })
-
-            if (dbExpMap.size > 0) {
+        let expensesChanged = false
+        xlsxExps.forEach(xls => {
+          const key = `${xls.year}-${xls.month}-${xls.categoryId}-${toSentenceCase(xls.itemName)}`
+          const existing = dbExpMap.get(key)
+          if (existing) {
+            xls.id = existing[0]
+            const amountDiff = String(existing[5]) !== String(xls.amount)
+            const fixedDiff = String(existing[6]) !== String(xls.isFixed || 'FALSE')
+            if (amountDiff || fixedDiff) {
               expensesChanged = true
             }
+            const updatedRow = [
+              existing[0],
+              xls.year,
+              xls.month,
+              xls.categoryId,
+              toSentenceCase(xls.itemName),
+              xls.amount,
+              xls.isFixed || existing[6] || 'FALSE',
+              existing[7] || ''
+            ]
+            reconciledExpenses.push(updatedRow)
+            dbExpMap.delete(key)
+          } else {
+            if (!xls.id) xls.id = uid()
+            expensesChanged = true
+            const newRow = [
+              xls.id,
+              xls.year,
+              xls.month,
+              xls.categoryId,
+              toSentenceCase(xls.itemName),
+              xls.amount,
+              xls.isFixed || 'FALSE',
+              ''
+            ]
+            reconciledExpenses.push(newRow)
+          }
+        })
 
-            if (expensesChanged) {
-              await writeAllExpenseRows(reconciledExpenses, t)
-            }
+        if (dbExpMap.size > 0) {
+          expensesChanged = true
+        }
 
-            // Reconcile income by business key: year-month-source
-            const reconciledIncome = []
-            const dbIncMap = new Map()
-            dbIncRows.forEach(row => {
-              const key = `${row[1]}-${row[2]}-${toSentenceCase(row[3])}`
-              dbIncMap.set(key, row)
-            })
+        if (expensesChanged) {
+          await writeAllExpenseRows(reconciledExpenses, t)
+        }
 
-            let incomeChanged = false
-            xlsxInc.forEach(xls => {
-              const key = `${xls.year}-${xls.month}-${toSentenceCase(xls.source)}`
-              const existing = dbIncMap.get(key)
-              if (existing) {
-                if (String(existing[4]) !== String(xls.amount)) {
-                  incomeChanged = true
-                }
-                const updatedRow = [
-                  existing[0],
-                  xls.year,
-                  xls.month,
-                  toSentenceCase(xls.source),
-                  xls.amount
-                ]
-                reconciledIncome.push(updatedRow)
-                dbIncMap.delete(key)
-              } else {
-                incomeChanged = true
-                const newRow = [
-                  xls.id || uid(),
-                  xls.year,
-                  xls.month,
-                  toSentenceCase(xls.source),
-                  xls.amount
-                ]
-                reconciledIncome.push(newRow)
-              }
-            })
+        // Reconcile income by business key: year-month-source
+        const reconciledIncome = []
+        const dbIncMap = new Map()
+        dbIncRows.forEach(row => {
+          const key = `${row[1]}-${row[2]}-${toSentenceCase(row[3])}`
+          dbIncMap.set(key, row)
+        })
 
-            if (dbIncMap.size > 0) {
+        let incomeChanged = false
+        xlsxInc.forEach(xls => {
+          const key = `${xls.year}-${xls.month}-${toSentenceCase(xls.source)}`
+          const existing = dbIncMap.get(key)
+          if (existing) {
+            xls.id = existing[0] // Align temporary Excel ID with existing DB ID!
+            if (String(existing[4]) !== String(xls.amount)) {
               incomeChanged = true
             }
-
-            if (incomeChanged) {
-              await writeAllIncomeRows(reconciledIncome, t)
-            }
-          } catch (syncErr) {
-            console.error('[BudgetIQ] Sync to Sheets DB failed:', syncErr)
+            const updatedRow = [
+              existing[0],
+              xls.year,
+              xls.month,
+              toSentenceCase(xls.source),
+              xls.amount
+            ]
+            reconciledIncome.push(updatedRow)
+            dbIncMap.delete(key)
+          } else {
+            if (!xls.id) xls.id = uid()
+            incomeChanged = true
+            const newRow = [
+              xls.id,
+              xls.year,
+              xls.month,
+              toSentenceCase(xls.source),
+              xls.amount
+            ]
+            reconciledIncome.push(newRow)
           }
-        })()
+        })
+
+        if (dbIncMap.size > 0) {
+          incomeChanged = true
+        }
+
+        if (incomeChanged) {
+          await writeAllIncomeRows(reconciledIncome, t)
+        }
+
+        rawExps = xlsxExps
+        rawInc = xlsxInc
       } else {
-        rawExps = await fetchExpenses(year, t)
-        rawInc = await fetchIncome(year, t)
+        rawExps = await fetchExpenses(null, t)
+        rawInc = await fetchIncome(null, t)
       }
 
       const finalExps = rawExps
@@ -247,15 +247,17 @@ export default function App() {
       setExpenses(exps)
       setIncome(inc)
 
-      // ── Dynamic year discovery ───────────────────────────────
-      const years = new Set([YEAR_NOW, YEAR_NOW + 1])
-      if (parsedYears.length > 0) {
-        parsedYears.forEach(y => years.add(y))
-      } else {
-        exps.forEach(e => { if (e.year) years.add(+e.year) })
-        inc.forEach(i => { if (i.year) years.add(+i.year) })
-      }
-      setAvailableYears(Array.from(years).sort((a, b) => a - b))
+      // ── Dynamic year discovery (restricted to current system year & past years with data) ───
+      const systemYear = new Date().getFullYear()
+      const years = new Set([systemYear])
+      exps.forEach(e => { if (e.year) years.add(parseInt(e.year)) })
+      inc.forEach(i => { if (i.year) years.add(parseInt(i.year)) })
+      
+      const filteredYears = Array.from(years)
+        .filter(y => y <= systemYear || exps.some(e => parseInt(e.year) === y) || inc.some(i => parseInt(i.year) === y))
+        .sort((a, b) => a - b)
+
+      setAvailableYears(filteredYears)
 
     } catch (e) {
       if (e.message.includes('Unable to parse range')) {
@@ -269,7 +271,7 @@ export default function App() {
     } finally {
       setLoading(false)
     }
-  }, [year, missingConfig])
+  }, [missingConfig, userName, authd])
 
   useEffect(() => { loadAll() }, [loadAll])
 
@@ -337,9 +339,6 @@ export default function App() {
       const userPic = profile.picture || ''
       localStorage.setItem('budgetiq_userName', userName)
       localStorage.setItem('budgetiq_userPicture', userPic)
-      setUserName(userName)
-      setUserPicture(userPic)
-
       let sid = await findUserSpreadsheet(token, userName)
       if (!sid) {
         toast.loading(`Creating personal database for ${userName}...`, { id: 'auth' })
@@ -351,9 +350,10 @@ export default function App() {
         setSheetId(sid)
       }
 
+      setUserName(userName)
+      setUserPicture(userPic)
       setAuthd(true)
       toast.success(`Welcome, ${userName}!`, { id: 'auth' })
-      loadAll()
     } catch (e) {
       toast.error('Sign-in failed: ' + e.message, { id: 'auth' })
     }
@@ -414,6 +414,11 @@ export default function App() {
   // ── EXPENSE CRUD ─────────────────────────────────────────────
   const handleSaveExpense = async (exp, applyMode = 'single') => {
     exp.itemName = toSentenceCase(exp.itemName)
+    const targetYear = parseInt(exp.year || year)
+    if (targetYear < new Date().getFullYear()) {
+      toast.error('Cannot modify historical data: Year is locked.')
+      return
+    }
     const t = getToken()
     if (!t) {
       const err = new Error('Please sign in to save changes')
@@ -437,10 +442,10 @@ export default function App() {
 
         for (let m = startMonth; m <= endMonth; m++) {
           const existIdx = allRows.findIndex(r =>
-            r[4] === exp.itemName && r[3] === exp.categoryId &&
+            toSentenceCase(r[4]) === toSentenceCase(exp.itemName) && r[3] === exp.categoryId &&
             String(r[1]) === String(exp.year) && String(r[2]) === String(m)
           )
-          const row = [existIdx >= 0 ? allRows[existIdx][0] : uid(), exp.year, m, exp.categoryId, exp.itemName, exp.amount, exp.isFixed ? 'TRUE' : 'FALSE', exp.note || '']
+          const row = [existIdx >= 0 ? allRows[existIdx][0] : uid(), String(exp.year), String(m), exp.categoryId, exp.itemName, exp.amount, exp.isFixed ? 'TRUE' : 'FALSE', exp.note || '']
           if (existIdx >= 0) allRows[existIdx] = row
           else allRows.push(row)
         }
@@ -461,6 +466,11 @@ export default function App() {
   // ── FIELD UPDATE (inline edit per column) ────────────────────
   const handleFieldUpdate = async (expense, field, value, scope) => {
     if (field === 'itemName') value = toSentenceCase(value)
+    const targetYear = parseInt(expense.year || year)
+    if (targetYear < new Date().getFullYear()) {
+      toast.error('Cannot modify historical data: Year is locked.')
+      return
+    }
     const t = getToken()
     if (!t) { toast.error('Sign in required'); return }
     try {
@@ -479,7 +489,7 @@ export default function App() {
         const idx = fieldIdx[field]
         let count = 0
         for (let i = 0; i < allRows.length; i++) {
-          if (allRows[i][4] === expense.itemName &&
+          if (toSentenceCase(allRows[i][4]) === toSentenceCase(expense.itemName) &&
             allRows[i][3] === expense.categoryId &&
             String(allRows[i][1]) === String(expense.year)) {
             allRows[i][idx] = field === 'isFixed' ? (value ? 'TRUE' : 'FALSE') : value
@@ -489,7 +499,6 @@ export default function App() {
         await writeAllExpenseRows(allRows, t)
         toast.success(`Updated in ${count} months!`, { id: 'field-update' })
       }
-      setEditField(null)
       loadAll({ skipExcel: true })
       autoSyncToDrive()
     } catch (e) { toast.error(e.message) }
@@ -503,6 +512,11 @@ export default function App() {
 
   const executeDelete = async (scope) => {
     const { type, item } = deleteConfirm
+    const targetYear = parseInt(item?.year || year)
+    if (type !== 'category' && targetYear && targetYear < new Date().getFullYear()) {
+      toast.error('Cannot modify historical data: Year is locked.')
+      return
+    }
     const t = getToken()
     if (!t) {
       const err = new Error('Sign in required')
@@ -519,7 +533,7 @@ export default function App() {
           const { readAllExpenseRows, writeAllExpenseRows } = await import('./api/sheets')
           const allRows = await readAllExpenseRows(t)
           const filtered = allRows.filter(r =>
-            !(r[4] === item.itemName && r[3] === item.categoryId && String(r[1]) === String(item.year))
+            !(toSentenceCase(r[4]) === toSentenceCase(item.itemName) && r[3] === item.categoryId && String(r[1]) === String(item.year))
           )
           await writeAllExpenseRows(filtered, t)
           toast.success('Deleted from all months!', { id: 'del-all' })
@@ -533,7 +547,7 @@ export default function App() {
           const { readAllIncomeRows, writeAllIncomeRows } = await import('./api/sheets')
           const allRows = await readAllIncomeRows(t)
           const filtered = allRows.filter(r =>
-            !(r[3] === item.source && String(r[1]) === String(item.year))
+            !(toSentenceCase(r[3]) === toSentenceCase(item.source) && String(r[1]) === String(item.year))
           )
           await writeAllIncomeRows(filtered, t)
           toast.success('Deleted from all months!', { id: 'del-all' })
@@ -554,6 +568,11 @@ export default function App() {
   // ── INCOME CRUD ──────────────────────────────────────────────
   const handleSaveIncome = async (inc, applyMode = 'single') => {
     inc.source = toSentenceCase(inc.source)
+    const targetYear = parseInt(inc.year || year)
+    if (targetYear < new Date().getFullYear()) {
+      toast.error('Cannot modify historical data: Year is locked.')
+      return
+    }
     const t = getToken()
     if (!t) {
       const err = new Error('Please sign in to save changes')
@@ -577,10 +596,10 @@ export default function App() {
 
         for (let m = startMonth; m <= endMonth; m++) {
           const existIdx = allRows.findIndex(r =>
-            r[3] === inc.source &&
+            toSentenceCase(r[3]) === toSentenceCase(inc.source) &&
             String(r[1]) === String(inc.year) && String(r[2]) === String(m)
           )
-          const row = [existIdx >= 0 ? allRows[existIdx][0] : uid(), inc.year, m, inc.source, inc.amount]
+          const row = [existIdx >= 0 ? allRows[existIdx][0] : uid(), String(inc.year), String(m), inc.source, inc.amount]
           if (existIdx >= 0) allRows[existIdx] = row
           else allRows.push(row)
         }
@@ -641,6 +660,11 @@ export default function App() {
   const handleCopySelected = async () => {
     if (selectedExpenseIds.length === 0) {
       toast.error('No expenses selected')
+      return
+    }
+    const targetYear = parseInt(year)
+    if (targetYear < new Date().getFullYear()) {
+      toast.error('Cannot modify historical data: Year is locked.')
       return
     }
     const t = getToken()
@@ -707,6 +731,14 @@ export default function App() {
 
             {!loading && !needsSetup && view === 'dashboard' && (
               <>
+                {isLocked && (
+                  <Box className={classes.lockedBanner}>
+                    <span style={{ marginRight: '8px', fontSize: '16px' }}>🔒</span>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      <strong>Historical Archive:</strong> Year {year} is locked. Data is preserved as read-only.
+                    </Typography>
+                  </Box>
+                )}
                 <Box className={classes.headerRow}>
                   <Typography variant="h5" className={classes.titleText}>
                     Dashboard
@@ -725,12 +757,28 @@ export default function App() {
                     ))}
                   </Box>
                 </Box>
-                <Dashboard expenses={expenses} income={income} categories={categories} year={year} month={month} filterMonth={dashFilterMonth} onMonthChange={m => { setMonth(m); setDashFilterMonth(m) }} />
+                <Dashboard
+                  expenses={expenses.filter(e => String(e.year) === String(year))}
+                  income={income.filter(i => String(i.year) === String(year))}
+                  categories={categories}
+                  year={year}
+                  month={month}
+                  filterMonth={dashFilterMonth}
+                  onMonthChange={m => { setMonth(m); setDashFilterMonth(m) }}
+                />
               </>
             )}
 
             {!loading && !needsSetup && view === 'expenses' && (
               <>
+                {isLocked && (
+                  <Box className={classes.lockedBanner}>
+                    <span style={{ marginRight: '8px', fontSize: '16px' }}>🔒</span>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      <strong>Historical Archive:</strong> Year {year} is locked. Data is preserved as read-only.
+                    </Typography>
+                  </Box>
+                )}
                 <Box className={classes.headerRow}>
                   <Typography variant="h5" className={classes.titleText}>
                     Expenses
@@ -756,7 +804,7 @@ export default function App() {
                     </Select>
                   </FormControl>
                   <Box className={classes.flexFiller} />
-                  {authd && (
+                  {authd && !isLocked && (
                     <Box className={classes.actionButtonsContainer}>
                       {selectedExpenseIds.length > 0 && (
                         <Button
@@ -780,11 +828,11 @@ export default function App() {
                   )}
                 </Box>
                 <ExpenseTable
-                  expenses={expenses.filter(e => e.month === String(month))}
+                  expenses={expenses.filter(e => String(e.year) === String(year) && String(e.month) === String(month))}
                   categories={categories}
                   onEdit={row => { setEditRow(row); setModal('add-expense') }}
                   onDelete={handleDeleteExpense}
-                  canEdit={authd}
+                  canEdit={authd && !isLocked}
                   selectedIds={selectedExpenseIds}
                   onSelectionChange={setSelectedExpenseIds}
                 />
@@ -793,6 +841,14 @@ export default function App() {
 
             {!loading && !needsSetup && view === 'income' && (
               <>
+                {isLocked && (
+                  <Box className={classes.lockedBanner}>
+                    <span style={{ marginRight: '8px', fontSize: '16px' }}>🔒</span>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      <strong>Historical Archive:</strong> Year {year} is locked. Data is preserved as read-only.
+                    </Typography>
+                  </Box>
+                )}
                 <Box className={classes.headerRow}>
                   <Typography variant="h5" className={classes.titleText}>
                     Income
@@ -818,7 +874,7 @@ export default function App() {
                     </Select>
                   </FormControl>
                   <Box className={classes.flexFiller} />
-                  {authd && (
+                  {authd && !isLocked && (
                     <Button
                       variant="contained"
                       onClick={() => { setEditRow(null); setModal('add-income') }}
@@ -830,10 +886,10 @@ export default function App() {
                   )}
                 </Box>
                 <IncomeTable
-                  income={income.filter(i => i.month === String(month))}
+                  income={income.filter(i => String(i.year) === String(year) && String(i.month) === String(month))}
                   onEdit={row => { setEditRow(row); setModal('add-income') }}
                   onDelete={handleDeleteIncome}
-                  canEdit={authd}
+                  canEdit={authd && !isLocked}
                 />
               </>
             )}
@@ -875,6 +931,7 @@ export default function App() {
           initial={editRow}
           categories={categories}
           year={year} month={month}
+          availableYears={availableYears}
           onSave={handleSaveExpense}
           onClose={() => { setModal(null); setEditRow(null) }}
         />
@@ -883,6 +940,7 @@ export default function App() {
         <AddIncomeModal
           initial={editRow}
           year={year} month={month}
+          availableYears={availableYears}
           onSave={handleSaveIncome}
           onClose={() => { setModal(null); setEditRow(null) }}
         />

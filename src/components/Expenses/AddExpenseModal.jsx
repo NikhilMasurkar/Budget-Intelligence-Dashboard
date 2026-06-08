@@ -15,7 +15,7 @@ import { useAddExpenseModalStyles } from './styles/Expenses.styles'
 
 import { MONTHS } from '../../utils/constants'
 
-export default function AddExpenseModal({ initial, categories, year, month, onSave, onClose }) {
+export default function AddExpenseModal({ initial, categories, year, month, availableYears = [new Date().getFullYear()], onSave, onClose }) {
   const { classes } = useAddExpenseModalStyles()
   const [form, setForm] = useState({
     id: initial?.id || '',
@@ -78,7 +78,7 @@ export default function AddExpenseModal({ initial, categories, year, month, onSa
                 label="Year"
                 notched
               >
-                {[2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
               </Select>
             </FormControl>
 

@@ -15,7 +15,7 @@ import { useAddIncomeModalStyles } from './styles/Income.styles'
 
 import { MONTHS, SOURCES } from '../../utils/constants'
 
-export default function AddIncomeModal({ initial, year, month, onSave, onClose }) {
+export default function AddIncomeModal({ initial, year, month, availableYears = [new Date().getFullYear()], onSave, onClose }) {
   const { classes } = useAddIncomeModalStyles()
   const [form, setForm] = useState({
     id: initial?.id || '',
@@ -93,7 +93,7 @@ export default function AddIncomeModal({ initial, year, month, onSave, onClose }
                 label="Year"
                 notched
               >
-                {[2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
               </Select>
             </FormControl>
 
