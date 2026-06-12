@@ -1,47 +1,11 @@
 import ExcelJS from 'exceljs'
 
-// ─── DESIGN TOKENS ───────────────────────────────────────────────────────────
-const C = {
-  // Blues – primary brand
-  NAVY:        '1F3864', // deep navy – section banners
-  STEEL:       '2E75B6', // mid-blue  – income header bar
-  SKY:         'D6E4F7', // light sky – alternating income rows / year col accent
 
-  // Reds / pinks – expense palette
-  CRIMSON:     'C00000', // deep red  – expense banners
-  BLUSH:       'FCE4D6', // pale blush – category header rows
-  ROSE:        'F4CCCC', // rose      – total rows
-
-  // Neutrals
-  WHITE:       'FFFFFF',
-  OFFWHITE:    'F9F9F9', // data rows background
-  LIGHT_GRAY:  'E8E8E8', // subtle row separator
-  MID_GRAY:    'BFBFBF', // thin borders
-  DARK_GRAY:   '595959', // secondary labels
-
-  // Text
-  TEXT_BLACK:  '0D0D0D',
-  TEXT_WHITE:  'FFFFFF',
-
-  // Summary sheet
-  SUMMARY_HDR: '243F60',
-  SAVINGS_POS: 'D9F0D5', // light green for positive savings
-  SAVINGS_NEG: 'FCE4D6', // blush for negative savings
-}
-
-const FONT = 'Verdana'
-const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+import { EXCEL_COLORS as C, EXCEL_FONT as FONT, MONTHS_UPPER as MONTHS, toSentenceCase } from './constants'
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function fill(cell, hex) {
   cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + hex } }
-}
-
-function toSentenceCase(str) {
-  if (!str) return ''
-  const t = String(str).trim().replace(/\s+/g, ' ')
-  if (!t) return ''
-  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()
 }
 
 function font(cell, { color = C.TEXT_BLACK, size = 11, bold = false, italic = false } = {}) {
@@ -189,10 +153,9 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
   workbook.created = new Date()
 
   let years = Array.from(new Set([
-    '2026', '2027',
     ...expenses.map(e => String(e.year)),
     ...income.map(i => String(i.year)),
-  ])).sort()
+  ])).filter(y => y && y !== 'NaN' && y !== 'undefined').sort()
 
   if (filterYears && filterYears.length > 0) {
     years = years.filter(y => filterYears.includes(String(y)))

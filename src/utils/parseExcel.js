@@ -14,9 +14,12 @@
 // ============================================================
 
 import ExcelJS from 'exceljs'
-
-const MONTH_COL_START = 2   // Column B = JAN
-const MONTH_COL_END   = 13  // Column M = DEC
+import {
+  PARSE_MONTH_COL_START as MONTH_COL_START,
+  PARSE_MONTH_COL_END as MONTH_COL_END,
+  PARSE_STOP_LABELS as STOP_LABELS,
+  PARSE_FUZZY_CATEGORIES as FUZZY
+} from './constants'
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 
@@ -40,7 +43,7 @@ function getCellText(cell) {
 }
 
 // ─── SKIP ROW DETECTOR ───────────────────────────────────────
-const STOP_LABELS = new Set(['TOTALS', 'SUMMARY', 'TOTAL EXPENSES', 'CASH SHORT / EXTRA'])
+// STOP_LABELS is imported from constants.js
 
 function shouldStop(upper)  { return STOP_LABELS.has(upper) }
 function shouldSkip(upper)  {
@@ -54,22 +57,7 @@ function shouldSkip(upper)  {
 
 // ─── FUZZY CATEGORY MATCHER ──────────────────────────────────
 // Falls back when category name in Excel doesn't exactly match app category
-const FUZZY = [
-  { keys: ['TRAVELLING','TRAVEL'],                              id: 'cat_travel'      },
-  { keys: ['VACATION'],                                         id: 'cat_vacations'   },
-  { keys: ['ENTERTAINMENT','ENTERTAINMENTS'],                   id: 'cat_entertain'   },
-  { keys: ['FINANCIAL OBLIGATION','INVESTMENT','SAVING','SIP'], id: 'cat_invest'      },
-  { keys: ['PERSONAL','LIFESTYLE'],                             id: 'cat_personal'    },
-  { keys: ['RENTAL HOME','RENTAL'],                             id: 'cat_rental'      },
-  { keys: ['OWNED HOME','HOME EMI','OWNED'],                    id: 'cat_home'        },
-  { keys: ['ELECTRONIC','UTENSIL','GADGET'],                    id: 'cat_electronics' },
-  { keys: ['HEALTH','MEDICAL','HOSPITAL'],                      id: 'cat_health'      },
-  { keys: ['LOAN','EMI'],                                       id: 'cat_loans'       },
-  { keys: ['RETURN MONEY','RETURN'],                            id: 'cat_return'      },
-  { keys: ['RECHARGE','SUBSCRIPTION'],                          id: 'cat_recharge'    },
-  { keys: ['SERVICES','PLANNING','BUILDING'],                   id: 'cat_services'    },
-  { keys: ['MISCELLANEOUS','MISC'],                             id: 'cat_misc'        },
-]
+// FUZZY is imported from constants.js
 
 function resolveCategory(upper, categories, catByName) {
   // 1. Exact match

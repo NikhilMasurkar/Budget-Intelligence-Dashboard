@@ -317,7 +317,7 @@ export default function TopBar({
   userName,
   userPicture,
   onRefresh,
-  onExportDrive,
+  onOpenDrive,
   onExportLocal,
   onSignIn,
   onSignOut
@@ -417,24 +417,28 @@ export default function TopBar({
             </Tooltip>
           )}
 
-          <Tooltip title="Upload to Google Drive">
-            <IconButton onClick={onExportDrive} className={classes.actionButton}>
-              <svg width="18" height="18" viewBox="0 0 87.3 78" className={classes.svgIcon}>
-                <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA" />
-                <path d="M43.65 25L29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.2 48.7c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00AC47" />
-                <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.85L73.55 76.8z" fill="#EA4335" />
-                <path d="M43.65 25L57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z" fill="#00832D" />
-                <path d="M59.85 53H27.5l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.5c1.6 0 3.15-.45 4.5-1.2z" fill="#2684FC" />
-                <path d="M73.4 26.5l-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25l16.2 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#FFBA00" />
-              </svg>
-            </IconButton>
-          </Tooltip>
+          {authd && (
+            <Tooltip title="Open in Google Drive">
+              <IconButton onClick={onOpenDrive} className={classes.actionButton}>
+                <svg width="18" height="18" viewBox="0 0 87.3 78" className={classes.svgIcon}>
+                  <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA" />
+                  <path d="M43.65 25L29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.2 48.7c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00AC47" />
+                  <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.85L73.55 76.8z" fill="#EA4335" />
+                  <path d="M43.65 25L57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z" fill="#00832D" />
+                  <path d="M59.85 53H27.5l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.5c1.6 0 3.15-.45 4.5-1.2z" fill="#2684FC" />
+                  <path d="M73.4 26.5l-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25l16.2 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#FFBA00" />
+                </svg>
+              </IconButton>
+            </Tooltip>
+          )}
 
-          <Tooltip title="Download to device">
-            <IconButton onClick={onExportLocal} className={classes.actionButton}>
-              <DownloadIcon className={classes.downloadIcon} />
-            </IconButton>
-          </Tooltip>
+          {authd && (
+            <Tooltip title="Download to device">
+              <IconButton onClick={onExportLocal} className={classes.actionButton}>
+                <DownloadIcon className={classes.downloadIcon} />
+              </IconButton>
+            </Tooltip>
+          )}
 
           {authd ? (
             <Box>
