@@ -1,18 +1,16 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
-const USE_RUPEE_SYMBOL = false
-const FONT_NAME = USE_RUPEE_SYMBOL ? 'NotoSans' : 'helvetica'
-const CURRENCY = USE_RUPEE_SYMBOL ? '\u20B9' : 'Rs '
-
-const toSentenceCase = (str) => {
-  if (!str) return ''
-  const t = String(str).trim().replace(/\s+/g, ' ')
-  if (!t) return ''
-  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()
-}
+import {
+  MONTHS_UPPER as MONTHS,
+  PDF_USE_RUPEE_SYMBOL as USE_RUPEE_SYMBOL,
+  PDF_FONT_NAME as FONT_NAME,
+  PDF_CURRENCY as CURRENCY,
+  PDF_COLORS as C,
+  PDF_TABLE_MARGIN as TABLE_MARGIN,
+  toSentenceCase
+} from './constants'
 
 const fmtVal = (n) => {
   const v = Math.round(+n || 0)
@@ -23,25 +21,7 @@ const fmtVal = (n) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // COLOR PALETTE  (tweak everything in one place)
 // ─────────────────────────────────────────────────────────────────────────────
-const C = {
-  navy:         [31, 56, 100],   // brand / grand-total
-  incomeHead:   [46, 117, 182],  // income header + income grand total
-  incomeStripe: [240, 246, 252], // soft zebra for income rows
-  expenseHead:  [192, 0, 0],     // expense header
-  expenseSub:   [253, 235, 224], // category sub-header band
-  expenseTotal: [248, 224, 224], // category subtotal band
-  summaryInc:   [219, 233, 250], // summary "income" row
-  summaryExp:   [250, 224, 224], // summary "expense" row
-
-  // The "Year Total" column — one gold accent reused on every table so it always
-  // reads as the totals column. Header gets a deeper gold cap.
-  totalFill:    [255, 240, 199], // light gold (column body)
-  totalText:    [122, 87, 0],    // dark amber text
-  totalHead:    [224, 184, 88],  // deeper gold (header cell)
-  totalHeadText:[51, 38, 0],
-
-  white:        [255, 255, 255],
-}
+// Color palette is loaded from constants.js
 
 // Builds right-aligned column styles for the 12 month columns + year-total column.
 // Doing alignment here (instead of only in didParseCell) makes it reliable, and
@@ -67,7 +47,7 @@ const styleTotalHeader = (data) => {
   }
 }
 
-const TABLE_MARGIN = { left: 14, right: 14 }
+// Table margin is loaded from constants.js
 
 export async function exportToPdf(categories, expenses, income, filterYears = null) {
   const doc = new jsPDF({
@@ -81,10 +61,9 @@ export async function exportToPdf(categories, expenses, income, filterYears = nu
   doc.setFont(FONT_NAME, 'normal')
 
   let years = Array.from(new Set([
-    '2026', '2027',
     ...expenses.map(e => String(e.year)),
     ...income.map(i => String(i.year)),
-  ])).sort()
+  ])).filter(y => y && y !== 'NaN' && y !== 'undefined').sort()
 
   if (filterYears && filterYears.length > 0) {
     years = years.filter(y => filterYears.includes(String(y)))

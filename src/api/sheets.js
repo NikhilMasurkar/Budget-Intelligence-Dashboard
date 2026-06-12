@@ -3,12 +3,19 @@
 //  All secrets go in .env — never hardcode keys
 // ============================================================
 
-const API_KEY  = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY
-const BASE     = 'https://sheets.googleapis.com/v4/spreadsheets'
+import { API_CONFIG } from './api'
 
 let _sheetId = null
 export const getSheetId = () => _sheetId
-export const setSheetId = (id) => { _sheetId = id; localStorage.setItem('budgetiq_sheetId', id || '') }
+export const setSheetId = (id) => {
+  _sheetId = id
+  localStorage.setItem('budgetiq_sheetId', id || '')
+  _cache.clear()
+}
+
+// ─── IN-MEMORY CACHE (full-tab reads only) ───────────────────
+const _cache = new Map()
+function _invalidate(tab) { _cache.delete(tab) }
 
 export const TABS = {
   CATEGORIES: 'Categories',
@@ -19,62 +26,67 @@ export const TABS = {
 // ─── LOW-LEVEL READ (Needs OAuth token if restricted) ───
 async function readRange(tab, range = '', token) {
   if (!_sheetId) throw new Error('No spreadsheet ID set')
+  if (!range && _cache.has(tab)) return _cache.get(tab)
   const fullRange = range ? `${tab}!${range}` : tab
-  const url = `${BASE}/${_sheetId}/values/${encodeURIComponent(fullRange)}?key=${API_KEY}`
+  const url = API_CONFIG.SHEET.getValuesUrl(_sheetId, fullRange, API_CONFIG.API_KEY)
   const headers = token ? { Authorization: `Bearer ${token}` } : {}
   const res = await fetch(url, { headers, cache: 'no-store' })
   if (!res.ok) { const e = await res.json(); throw new Error(e?.error?.message || 'Read failed') }
-  return (await res.json()).values || []
+  const rows = (await res.json()).values || []
+  if (!range) _cache.set(tab, rows)
+  return rows
 }
 
 // ─── LOW-LEVEL WRITE (needs OAuth token) ────────────────────
 async function writeRange(tab, startCell, values, token) {
   if (!_sheetId) throw new Error('No spreadsheet ID set')
   const range = `${tab}!${startCell}`
-  const url   = `${BASE}/${_sheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED&key=${API_KEY}`
+  const url   = API_CONFIG.SHEET.getValuesUrl(_sheetId, range, API_CONFIG.API_KEY) + '&valueInputOption=USER_ENTERED'
   const res   = await fetch(url, {
     method:  'PUT',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body:    JSON.stringify({ range, majorDimension: 'ROWS', values })
   })
   if (!res.ok) { const e = await res.json(); throw new Error(e?.error?.message || 'Write failed') }
+  _invalidate(tab)
   return res.json()
 }
 
 export async function appendRows(tab, values, token) {
   if (!_sheetId) throw new Error('No spreadsheet ID set')
-  const url = `${BASE}/${_sheetId}/values/${encodeURIComponent(tab)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${API_KEY}`
+  const url = API_CONFIG.SHEET.getAppendUrl(_sheetId, tab, API_CONFIG.API_KEY)
   const res = await fetch(url, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body:    JSON.stringify({ majorDimension: 'ROWS', values })
   })
   if (!res.ok) { const e = await res.json(); throw new Error(e?.error?.message || 'Append failed') }
+  _invalidate(tab)
   return res.json()
 }
 
 async function clearAndWrite(tab, values, token) {
   if (!_sheetId) throw new Error('No spreadsheet ID set')
-  const clearUrl = `${BASE}/${_sheetId}/values/${encodeURIComponent(tab + '!A2:Z99999')}:clear?key=${API_KEY}`
+  _invalidate(tab)
+  const clearUrl = API_CONFIG.SHEET.getClearUrl(_sheetId, tab, API_CONFIG.API_KEY)
   await fetch(clearUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: '{}' })
   if (values.length > 0) await writeRange(tab, 'A2', values, token)
 }
 
 // ─── GOOGLE OAUTH (popup, no backend needed) ────────────────
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID
-const SCOPES    = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile'
+const CLIENT_ID = API_CONFIG.OAUTH.CLIENT_ID
+const SCOPES    = API_CONFIG.OAUTH.SCOPES
 let _token = null, _exp = 0
 
 // ─── PERSISTENCE ────────────────────────────────────────────
 function _persist() {
-  localStorage.setItem('budgetiq_token', _token || '')
-  localStorage.setItem('budgetiq_exp', String(_exp))
   localStorage.setItem('budgetiq_sheetId', _sheetId || '')
 }
 function _restore() {
-  _token   = localStorage.getItem('budgetiq_token') || null
-  _exp     = parseInt(localStorage.getItem('budgetiq_exp') || '0', 10)
   _sheetId = localStorage.getItem('budgetiq_sheetId') || null
+  // Clean up stale keys written by an older version of this app
+  localStorage.removeItem('budgetiq_token')
+  localStorage.removeItem('budgetiq_exp')
 }
 _restore() // run on module load
 
@@ -86,7 +98,7 @@ function _loadGsi() {
   return new Promise((resolve, reject) => {
     if (window.google?.accounts?.oauth2) { resolve(); return }
     const s = document.createElement('script')
-    s.src = 'https://accounts.google.com/gsi/client'
+    s.src = API_CONFIG.OAUTH.GSI_SCRIPT
     s.onload = resolve
     s.onerror = () => reject(new Error('Failed to load Google Identity'))
     document.head.appendChild(s)
@@ -134,17 +146,31 @@ export function silentReauth() {
 export function signOut() {
   if (_token && window.google?.accounts?.oauth2) window.google.accounts.oauth2.revoke(_token)
   _token = null; _exp = 0; _sheetId = null
-  localStorage.removeItem('budgetiq_token')
-  localStorage.removeItem('budgetiq_exp')
+  _cache.clear()
   localStorage.removeItem('budgetiq_sheetId')
   localStorage.removeItem('budgetiq_userName')
+  localStorage.removeItem('budgetiq_userPicture')
 }
 
 // ─── DRIVE FILE MANAGEMENT ──────────────────────────────────
 export async function getUserProfile(token) {
-  const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: `Bearer ${token}` } })
+  const res = await fetch(API_CONFIG.OAUTH.USER_INFO, { headers: { Authorization: `Bearer ${token}` } })
   if (!res.ok) throw new Error('Failed to get user profile')
   return res.json()
+}
+
+// ─── GET SPREADSHEET DIRECT URL ──────────────────────────────
+// Returns the direct Google Sheets edit URL for the user's balance_sheet_.xlsx.
+export async function getSpreadsheetUrl(token, userName) {
+  const query = userName
+    ? `name='${userName} balance_sheet_.xlsx' and trashed=false`
+    : `name contains 'balance_sheet_' and trashed=false and mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'`
+  const url = API_CONFIG.DRIVE.getFilesUrl(query, 'files(id)', 1)
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+  if (!res.ok) { const e = await res.json(); throw new Error(e?.error?.message || 'Drive search failed') }
+  const data = await res.json()
+  if (!data.files || data.files.length === 0) return null
+  return `https://docs.google.com/spreadsheets/d/${data.files[0].id}/edit`
 }
 
 // ─── DOWNLOAD EXCEL FROM DRIVE ───────────────────────────────
@@ -156,7 +182,7 @@ export async function downloadExcelFromDrive(token, userName) {
     ? `name='${userName} balance_sheet_.xlsx' and trashed=false`
     : `name contains 'balance_sheet_' and trashed=false and mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'`
 
-  const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=5`
+  const searchUrl = API_CONFIG.DRIVE.getFilesUrl(query, 'files(id,name,modifiedTime)', 5) + '&orderBy=modifiedTime+desc'
   const searchRes = await fetch(searchUrl, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
   if (!searchRes.ok) {
     const e = await searchRes.json()
@@ -170,7 +196,7 @@ export async function downloadExcelFromDrive(token, userName) {
 
   const fileId = data.files[0].id
 
-  const dlUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`
+  const dlUrl = API_CONFIG.DRIVE.getDownloadUrl(fileId)
   const dlRes  = await fetch(dlUrl, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
   if (!dlRes.ok) {
     const e = await dlRes.json()
@@ -181,7 +207,7 @@ export async function downloadExcelFromDrive(token, userName) {
 
 export async function findUserSpreadsheet(token, userName) {
   const query = `name='${userName} budgetIQ_Data' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`
-  const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}`
+  const url = API_CONFIG.DRIVE.getFilesUrl(query)
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
   if (!res.ok) {
     const e = await res.json()
@@ -192,7 +218,7 @@ export async function findUserSpreadsheet(token, userName) {
 }
 
 export async function createUserSpreadsheet(token, userName) {
-  const res = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+  const res = await fetch(API_CONFIG.SHEET.BASE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ properties: { title: `${userName} budgetIQ_Data` } })
@@ -210,7 +236,7 @@ export async function uploadExcelToDrive(buffer, userName, token) {
   
   // 1. Search for existing file
   const query = `name='${fileName}' and mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' and trashed=false`
-  const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}`
+  const searchUrl = API_CONFIG.DRIVE.getFilesUrl(query)
   const searchRes = await fetch(searchUrl, { headers: { Authorization: `Bearer ${token}` } })
   if (!searchRes.ok) {
     const e = await searchRes.json()
@@ -223,7 +249,7 @@ export async function uploadExcelToDrive(buffer, userName, token) {
 
   if (existingId) {
     // 2a. Overwrite existing file
-    const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=media`
+    const uploadUrl = API_CONFIG.DRIVE.getUploadUrl(existingId)
     const uploadRes = await fetch(uploadUrl, {
       method: 'PATCH',
       headers: { 
@@ -244,7 +270,7 @@ export async function uploadExcelToDrive(buffer, userName, token) {
     form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }))
     form.append('file', blob)
 
-    const createRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    const createRes = await fetch(API_CONFIG.DRIVE.getUploadUrl(), {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: form
@@ -271,7 +297,7 @@ function rowsToObjects(rows) {
   })
 }
 
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 
 // ─── CATEGORIES ─────────────────────────────────────────────
 export async function fetchCategories(token) {
@@ -396,7 +422,7 @@ export const DEFAULT_CATEGORIES = [
 export async function setupSheet(token) {
   if (!_sheetId) throw new Error('No spreadsheet ID set')
   // 1. Get existing sheets
-  const getUrl = `${BASE}/${_sheetId}?key=${API_KEY}`
+  const getUrl = API_CONFIG.SHEET.getMetaUrl(_sheetId, API_CONFIG.API_KEY)
   const getRes = await fetch(getUrl, { headers: { Authorization: `Bearer ${token}` } })
   if (!getRes.ok) throw new Error('Failed to read spreadsheet info')
   const meta = await getRes.json()
@@ -412,7 +438,7 @@ export async function setupSheet(token) {
 
   // 2. Add missing sheets
   if (requests.length > 0) {
-    const updateUrl = `${BASE}/${_sheetId}:batchUpdate?key=${API_KEY}`
+    const updateUrl = API_CONFIG.SHEET.getBatchUpdateUrl(_sheetId, API_CONFIG.API_KEY)
     const updateRes = await fetch(updateUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
