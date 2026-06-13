@@ -153,9 +153,21 @@ export default function ExpenseTable({
                       </TableCell>
                     )}
                     <TableCell className={classes.itemNameCell}>
-                      <Typography variant="subtitle2" className={classes.itemName}>
-                        {e.itemName}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Typography variant="subtitle2" className={classes.itemName}>
+                          {e.itemName}
+                        </Typography>
+                        {e.isFixed === 'TRUE' && (
+                          <Box component="span" sx={{
+                            fontSize: 10, background: 'rgba(91,127,255,0.15)',
+                            color: '#a0b4ff', border: '1px solid rgba(91,127,255,0.3)',
+                            borderRadius: '4px', padding: '1px 5px', fontWeight: 600,
+                            letterSpacing: '0.3px', lineHeight: 1.6, flexShrink: 0
+                          }}>
+                            📌
+                          </Box>
+                        )}
+                      </Box>
                       {e.note && (
                         <Typography variant="caption" className={classes.itemNote}>
                           💬 {e.note}

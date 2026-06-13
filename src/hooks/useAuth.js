@@ -9,6 +9,9 @@ import {
 export function useAuth() {
   const [authd, setAuthd] = useState(false)
   const [userName, setUserName] = useState(getSavedUserName() || '')
+  const [userFullName, setUserFullName] = useState(
+    () => localStorage.getItem('budgetiq_userFullName') || getSavedUserName() || ''
+  )
   const [userPicture, setUserPicture] = useState(
     () => localStorage.getItem('budgetiq_userPicture') || ''
   )
@@ -30,9 +33,11 @@ export function useAuth() {
       const token = await signInWithGoogle()
       toast.loading('Finding your personal database...', { id: 'auth' })
       const profile = await getUserProfile(token)
-      const name = profile.given_name || profile.name || 'User'
-      const pic = profile.picture || ''
+      const name     = profile.given_name || profile.name || 'User'
+      const fullName = profile.name || name 
+      const pic      = profile.picture || ''
       localStorage.setItem('budgetiq_userName', name)
+      localStorage.setItem('budgetiq_userFullName', fullName)
       localStorage.setItem('budgetiq_userPicture', pic)
       let sid = await findUserSpreadsheet(token, name)
       if (!sid) {
@@ -45,6 +50,7 @@ export function useAuth() {
         setSheetId(sid)
       }
       setUserName(name)
+      setUserFullName(fullName)
       setUserPicture(pic)
       setAuthd(true)
       toast.success(`Welcome, ${name}!`, { id: 'auth' })
@@ -57,9 +63,10 @@ export function useAuth() {
     signOut()
     setAuthd(false)
     setUserName('')
+    setUserFullName('')
     setUserPicture('')
     toast('Signed out')
   }
 
-  return { authd, userName, userPicture, handleSignIn, handleSignOut }
+  return { authd, userName, userFullName, userPicture, handleSignIn, handleSignOut }
 }

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { Box, Typography } from '@mui/material'
-import { Bar, Doughnut, Line } from 'react-chartjs-2'
+import { Bar, Doughnut } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Tooltip, Legend, Filler } from 'chart.js'
 import { useStyles } from '../styles/ChartsSection.styles'
 
@@ -153,117 +153,6 @@ export default function ChartsSection({
         </Box>
       </Box>
 
-      {/* Stacked Category Monthly Breakdown */}
-      <Box className={classes.stackedCard}>
-        <Typography variant="subtitle1" className={classes.chartTitle}>
-          Monthly Expense Breakdown by Category
-        </Typography>
-        <Typography variant="body2" className={classes.chartSubtitle}>
-          Stacked view of each category's contribution per month
-        </Typography>
-        <Box className={classes.chartContainer300}>
-          <Bar
-            data={{ labels: filteredLabels, datasets: stackedDatasets }}
-            options={{
-              ...CHART_OPTS,
-              scales: {
-                ...CHART_OPTS.scales,
-                x: { ...CHART_OPTS.scales.x, stacked: true },
-                y: { ...CHART_OPTS.scales.y, stacked: true }
-              },
-              plugins: {
-                legend: {
-                  display: true,
-                  position: 'top',
-                  align: 'start',
-                  labels: { color: '#8891b8', boxWidth: 12, font: { size: 11 }, padding: 14 }
-                },
-                tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmtK(c.raw)}` } }
-              }
-            }}
-          />
-        </Box>
-      </Box>
-
-      {/* Charts Row 2 — Savings & Ratio */}
-      <Box className={classes.chartGrid}>
-        {/* Net Savings Bar Chart */}
-        <Box className={classes.chartCard}>
-          <Typography variant="subtitle1" className={classes.chartTitle}>
-            Monthly Net Savings (Cash Short/Extra)
-          </Typography>
-          <Typography variant="body2" className={classes.chartSubtitle}>
-            Positive = surplus, Negative = deficit
-          </Typography>
-          <Box className={classes.chartContainer220}>
-            <Bar
-              data={{
-                labels: filteredLabels,
-                datasets: [{
-                  label: 'Net Savings',
-                  data: selMonths.map(i => monthlyData.sav[i]),
-                  backgroundColor: selMonths.map(i => monthlyData.sav[i] >= 0 ? 'rgba(61,232,160,0.75)' : 'rgba(255,95,95,0.75)'),
-                  borderRadius: 4
-                }]
-              }}
-              options={CHART_OPTS}
-            />
-          </Box>
-        </Box>
-
-        {/* Expense Ratio Line Chart */}
-        <Box className={classes.chartCard}>
-          <Typography variant="subtitle1" className={classes.chartTitle}>
-            Expense Ratio to Income
-          </Typography>
-          <Typography variant="body2" className={classes.chartSubtitle}>
-            % of income spent each month
-          </Typography>
-          <Box className={classes.chartContainer220}>
-            <Line
-              data={{
-                labels: filteredLabels,
-                datasets: [{
-                  label: 'Expense %',
-                  data: selMonths.map(i => monthlyData.inc[i] > 0
-                    ? +((monthlyData.exp[i] / monthlyData.inc[i]) * 100).toFixed(1)
-                    : 0),
-                  borderColor: '#ffb347',
-                  backgroundColor: 'rgba(255,179,71,0.12)',
-                  borderWidth: 2.5,
-                  pointRadius: 4,
-                  pointBackgroundColor: '#ffb347',
-                  pointBorderColor: '#13151f',
-                  pointBorderWidth: 2,
-                  tension: 0.35,
-                  fill: true
-                }]
-              }}
-              options={{
-                ...CHART_OPTS,
-                plugins: {
-                  legend: { display: false },
-                  tooltip: { callbacks: { label: c => `Expense ratio: ${c.raw}%` } }
-                },
-                scales: {
-                  x: { ...CHART_OPTS.scales.x },
-                  y: {
-                    ...CHART_OPTS.scales.y,
-                    min: 0,
-                    ticks: {
-                      ...CHART_OPTS.scales.y.ticks,
-                      callback: v => `${v}%`
-                    }
-                  }
-                }
-              }}
-            />
-          </Box>
-          <Typography variant="caption" className={classes.captionRight}>
-            Dashed line at 100% = spending equals income
-          </Typography>
-        </Box>
-      </Box>
     </Box>
   )
 }

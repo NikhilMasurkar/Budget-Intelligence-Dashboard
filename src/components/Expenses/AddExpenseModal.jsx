@@ -8,7 +8,9 @@ import {
   Select,
   Box,
   Typography,
-  InputAdornment
+  InputAdornment,
+  Switch,
+  FormControlLabel
 } from '@mui/material'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import { useAddExpenseModalStyles } from './styles/Expenses.styles'
@@ -159,6 +161,33 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             InputLabelProps={{ shrink: true }}
             className={classes.fieldStyles}
           />
+
+          {/* Fixed / Recurring toggle */}
+          <Box sx={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 12px', borderRadius: '8px',
+            background: form.isFixed ? 'rgba(91,127,255,0.08)' : 'rgba(255,255,255,0.03)',
+            border: `1px solid ${form.isFixed ? 'rgba(91,127,255,0.3)' : 'rgba(255,255,255,0.07)'}`,
+            transition: 'all 0.2s'
+          }}>
+            <Box>
+              <Typography sx={{ fontSize: 13, fontWeight: 600, color: form.isFixed ? '#a0b4ff' : '#8891b8' }}>
+                📌 Fixed / Recurring
+              </Typography>
+              <Typography sx={{ fontSize: 11, color: '#8891b8', mt: '2px' }}>
+                Auto-copied to next month at start
+              </Typography>
+            </Box>
+            <Switch
+              checked={form.isFixed}
+              onChange={e => set('isFixed', e.target.checked)}
+              size="small"
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': { color: '#5b7fff' },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#5b7fff' }
+              }}
+            />
+          </Box>
         </Box>
 
         {/* Actions */}

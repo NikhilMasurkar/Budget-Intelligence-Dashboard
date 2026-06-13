@@ -77,7 +77,8 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
     id: '',
     name: '',
     type: 'expense',
-    color: '#5b7fff'
+    color: '#5b7fff',
+    budget: 0
   })
 
   const [saving, setSaving] = useState(false)
@@ -89,7 +90,8 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
         id: initial?.id || '',
         name: initial?.name || '',
         type: initial?.type || 'expense',
-        color: initial?.color || defaultColor
+        color: initial?.color || defaultColor,
+        budget: initial?.budget || 0
       })
       setSaving(false)
     }
@@ -164,6 +166,22 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
               <MenuItem value="income" sx={{ fontSize: 13 }}>Income</MenuItem>
             </Select>
           </FormControl>
+
+          <TextField
+            label="Monthly Budget (₹)"
+            value={form.budget || ''}
+            onChange={(e) => handleChange('budget', +e.target.value || 0)}
+            placeholder="0 = no limit"
+            fullWidth
+            variant="outlined"
+            size="small"
+            type="number"
+            inputProps={{ min: 0 }}
+            InputLabelProps={{ shrink: true }}
+            className={classes.fieldStyles}
+            helperText="Set a monthly spend limit to track against in the dashboard"
+            FormHelperTextProps={{ sx: { color: '#8891b8', fontSize: 11 } }}
+          />
         </Box>
 
         {/* Actions */}
