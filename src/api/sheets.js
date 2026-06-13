@@ -472,7 +472,7 @@ export async function setupSheet(token) {
   }
 
   // 3. Write headers
-  await writeRange(TABS.CATEGORIES, 'A1', [['id', 'name', 'type', 'color']], token)
+  await writeRange(TABS.CATEGORIES, 'A1', [['id', 'name', 'type', 'color', 'budget']], token)
   await writeRange(TABS.EXPENSES, 'A1', [['id', 'year', 'month', 'categoryId', 'itemName', 'amount', 'isFixed', 'note']], token)
   await writeRange(TABS.INCOME, 'A1', [['id', 'year', 'month', 'source', 'amount']], token)
 

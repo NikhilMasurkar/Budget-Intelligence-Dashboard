@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { Box, Typography } from '@mui/material'
 
-export default function BudgetProgressSection({ categories, expenses, selMonths, catMap, selExpense, onCategoryClick, fmt, MONTHS }) {
+export default function BudgetProgressSection({ categories, expenses, selMonths, catMap, selExpense, onCategoryClick, onEditCategory, fmt, MONTHS }) {
   const catData = useMemo(() => {
     const grouped = {}
     expenses.filter(e => selMonths.includes(+e.month - 1)).forEach(e => {
@@ -122,14 +122,23 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
                 {fmt(cat.total)}
               </Typography>
 
-              {/* Budget/mo — desktop only */}
-              <Typography sx={{
-                display: { xs: 'none', md: 'block' },
-                fontSize: 12, textAlign: 'right', fontVariantNumeric: 'tabular-nums', pr: '12px',
-                color: budgetLimit > 0 ? '#6a7190' : '#252a40',
-              }}>
-                {budgetLimit > 0 ? fmt(budgetLimit) : '—'}
-              </Typography>
+              {/* Budget column — desktop only */}
+              <Box sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'flex-end', pr: '12px' }}>
+                {budgetLimit > 0 ? (
+                  <Typography sx={{ fontSize: 12, fontVariantNumeric: 'tabular-nums', color: '#6a7190' }}>
+                    {fmt(budgetLimit)}
+                  </Typography>
+                ) : onEditCategory ? (
+                  <Typography
+                    onClick={e => { e.stopPropagation(); onEditCategory(categories.find(c => c.id === cat.id) || cat) }}
+                    sx={{ fontSize: 11, color: '#3a4575', cursor: 'pointer', '&:hover': { color: '#5b7fff' } }}
+                  >
+                    + Set budget
+                  </Typography>
+                ) : (
+                  <Typography sx={{ fontSize: 11, color: '#252a40' }}>—</Typography>
+                )}
+              </Box>
 
               {/* Status — desktop full text, mobile badge */}
               <Box sx={{ textAlign: 'right' }}>

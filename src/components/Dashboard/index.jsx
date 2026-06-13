@@ -22,7 +22,7 @@ function periodLabel(selMonths, year) {
   return `${s.map(m => MONTHS[m]).join(', ')} ${year}`
 }
 
-export default function Dashboard({ expenses, income, categories, year, month, selMonths, setSelMonths }) {
+export default function Dashboard({ expenses, income, categories, year, month, selMonths, setSelMonths, onEditCategory }) {
   const { classes } = useStyles()
   const [detailModal, setDetailModal] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -182,6 +182,7 @@ export default function Dashboard({ expenses, income, categories, year, month, s
         catMap={catMap}
         selExpense={selExpense}
         onCategoryClick={setDetailModal}
+        onEditCategory={onEditCategory}
         fmt={fmt}
         MONTHS={MONTHS}
       />

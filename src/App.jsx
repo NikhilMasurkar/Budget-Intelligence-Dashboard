@@ -239,6 +239,7 @@ export default function App() {
                   month={month}
                   selMonths={selMonths}
                   setSelMonths={setSelMonths}
+                  onEditCategory={row => { setEditRow(row); setModal('category') }}
                 />
               </ErrorBoundary>
             )}
