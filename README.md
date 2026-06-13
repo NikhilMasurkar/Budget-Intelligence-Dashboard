@@ -1,85 +1,199 @@
 # BudgetIQ — Personal Budget Intelligence Dashboard
 
-BudgetIQ is a premium, client-side React web application designed for personal budget tracking, financial analysis, and reporting. It offers direct integration with Google Sheets (acting as a secure, personal database) and Google Drive (for real-time Excel report synchronization and live spreadsheet editing).
-
-## Key Features
-
-- **Google OAuth 2.0 Integration**: Secure profile authentication and silent session restoration without backend storage.
-- **Google Sheets Database**: Dynamically locates or initializes a personal database spreadsheet (`budgetIQ_Data`) inside the user's Google Drive.
-- **Direct Spreadsheet Access**: A single action opens the active database spreadsheet directly in Google Sheets for manual adjustments.
-- **Auto-Sync to Google Drive**: Automatically reconciles, formats, and uploads a Microsoft Excel version (`balance_sheet_.xlsx`) to Google Drive after updates.
-- **Interactive Dashboard**: Displays clean financial charts (income, expenses, savings rate) using Chart.js, with support for monthly filtering and year selections.
-- **Advanced CRUD Management**:
-  - **Expenses Table**: Custom categories, amount logging, fixed/variable tracking, and multi-month bulk copying (e.g. copying selected items to next month).
-  - **Income Table**: Track salary, freelance, or other earnings.
-  - **Category Manager**: Draggable items for custom layout ordering, color picking, and fuzzy matching for automated imports.
-- **Reporting & Exporting**: 
-  - Save your budget locally as a formatted Microsoft Excel spreadsheet (`.xlsx`) via ExcelJS.
-  - Generate a professional-grade, multi-page PDF report (`.pdf`) using jsPDF and AutoTable.
-- **Modern UI/UX**: Premium dark-mode design styled using Material-UI (MUI), CSS, and `tss-react` for smooth animations and micro-interactions.
+BudgetIQ is a premium, client-side React web application for personal budget tracking, financial analysis, and AI-powered insights. It uses Google Sheets as a personal cloud database, Firebase Firestore for categories, and Google Drive for automatic Excel backup — all with zero backend server required.
 
 ---
 
-## Technical Architecture
+## Features
 
-### 1. File Structure
+### Dashboard
+- **Period filter** — select any combination of months, quarters (Q1–Q4), halves (H1/H2), or full year
+- **3 KPI insight cards** with animated ring gauges:
+  - **Cash Savings** — liquid cash remaining after all expenses (%)
+  - **Budget Health** — how many categories are within budget (X/Y on track)
+  - **Monthly Burn** — average monthly spend as % of monthly income
+- **2 Wealth cards**:
+  - **Investments & Savings** — total invested in savings categories with per-item breakdown
+  - **Savings Rate** — full calculation breakdown: invested % + cash left % = total wealth-building rate
+- **Budget Overview table** — all categories with total spent, period budget, share bar, and status (over/under). Tap any row for a monthly drill-down
+- **Charts** — Income vs Expenses monthly bar/line chart + Category spend donut, side by side on desktop
 
-```text
+### Transactions
+- **Expenses tab** — expenses grouped by category for selected month, with add/edit/delete, bulk copy to next month, and category management
+- **Income tab** — income entries by month (salary, freelance, dividend, ITR return, other)
+- Both tabs live under one **Transactions** nav item with a pill switcher
+
+### AI Insights
+- Powered by **Google Gemini** — summarises your spending patterns, flags anomalies, and gives personalised suggestions for the selected period
+
+### Data & Sync
+- **Google Sheets** as primary database — `{user} budgetIQ_Data` spreadsheet with Categories, Expenses, and Income tabs
+- **Firebase Firestore** for category metadata (name, color, budget, type)
+- **Auto-sync to Google Drive** — exports a full `.xlsx` balance sheet after every write
+- **PWA** — installable on desktop and mobile, works offline with Workbox service worker
+
+### Export
+- **Excel export** (`.xlsx`) via ExcelJS — formatted balance sheet
+- **PDF report** via jsPDF + AutoTable — multi-page professional report
+- **Open in Google Sheets** — one-click link to your live spreadsheet
+
+---
+
+## Tech Stack
+
+| Layer | Library |
+|---|---|
+| UI framework | React 18 + Vite 5 |
+| Component library | Material UI (MUI v5) + tss-react |
+| Charts | Chart.js + react-chartjs-2 |
+| Database | Google Sheets REST API + Firebase Firestore |
+| Auth | Google OAuth 2.0 (popup, no backend) |
+| AI | Google Gemini API (free tier) |
+| Excel | ExcelJS + FileSaver.js |
+| PDF | jsPDF + jspdf-autotable |
+| PWA | vite-plugin-pwa + Workbox |
+| Notifications | react-hot-toast |
+
+---
+
+## Key Metric Definitions
+
+| Metric | Formula |
+|---|---|
+| **Cash Savings** | Income − All expenses (incl. investments) |
+| **Investments & Savings** | Sum of expenses in categories marked as `type: 'savings'` |
+| **Savings Rate** | (Investments + Cash Savings) ÷ Income — total wealth-building rate |
+| **Budget Health** | Categories where spend ≤ budget × selected months |
+| **Monthly Burn** | Total spend ÷ number of selected months |
+
+---
+
+## File Structure
+
+```
 budget-app/
 ├── public/
+│   ├── favicon-32x32.png
+│   ├── pwa-192x192.png
+│   └── pwa-512x512.png
 ├── src/
 │   ├── api/
-│   │   ├── api.js         # Global API registry & endpoint builders
-│   │   └── sheets.js      # Sheets & Drive logic/queries (CRUD operations)
-│   ├── components/        # UI components (Dashboard, Modals, Forms, Tables)
-│   ├── hooks/             # Custom React hooks (useAuth, useBudgetData, useExpenses, useIncome, useCategories)
-│   ├── styles/            # Mui Theme custom global styling rules
+│   │   ├── sheets.js          # Google Sheets + Drive CRUD, OAuth token management
+│   │   ├── firestoreCategories.js  # Firebase Firestore category operations
+│   │   └── gemini.js          # Gemini AI API calls
+│   ├── components/
+│   │   ├── Dashboard/
+│   │   │   ├── index.jsx      # Dashboard root — data aggregation, period maths
+│   │   │   ├── subcomponents/
+│   │   │   │   ├── KPICardsSection.jsx       # 3 ring-gauge insight cards
+│   │   │   │   ├── WealthCardsSection.jsx    # Investments + Savings Rate cards
+│   │   │   │   ├── BudgetProgressSection.jsx # Unified budget overview table
+│   │   │   │   ├── ChartsSection.jsx         # Income vs Expenses + donut charts
+│   │   │   │   ├── MonthFilterControl.jsx    # Month/quarter/half/year filter pills
+│   │   │   │   ├── AIInsightsSection.jsx     # Gemini AI insights modal
+│   │   │   │   └── CategoryDetailsDialog.jsx # Monthly drill-down for a category
+│   │   │   └── styles/
+│   │   ├── Expenses/
+│   │   │   ├── ExpensesByCategory.jsx  # Expenses grouped by category
+│   │   │   ├── ExpenseTable.jsx
+│   │   │   └── AddExpenseModal.jsx
+│   │   ├── Income/
+│   │   │   ├── IncomeTable.jsx
+│   │   │   └── AddIncomeModal.jsx
+│   │   └── Category/
+│   │       ├── CategoryManager.jsx
+│   │       └── CategoryModal.jsx
+│   ├── hooks/
+│   │   ├── useAuth.js          # Google OAuth2 sign-in / sign-out
+│   │   ├── useBudgetData.js    # Loads all expenses, income, categories
+│   │   ├── useExpenses.js      # Expense CRUD + bulk operations
+│   │   ├── useIncome.js        # Income CRUD
+│   │   └── useCategories.js   # Category CRUD + reorder
+│   ├── styles/                 # MUI theme + global CSS-in-JS
 │   └── utils/
-│       ├── constants.js   # Centralized design tokens, helper functions, and matching rules
-│       ├── exportExcel.js # Local Excel generation logic
-│       ├── exportPdf.js   # Local PDF layout and formatting logic
-│       └── parseExcel.js  # Excel parser with fuzzy matching algorithms
+│       ├── constants.js        # MONTHS, formatters (fmt, fmtK), defaultMonths
+│       ├── exportExcel.js      # ExcelJS export
+│       ├── exportPdf.js        # jsPDF report layout
+│       └── parseExcel.js       # Excel parser with fuzzy matching
+├── firebase.js                 # Firebase app init
+├── vite.config.js              # Vite + PWA plugin config
+└── index.html
 ```
-
-### 2. Design System & Clean Refactors
-- **Centralized API Config ([api.js](src/api/api.js))**: Decouples API endpoints, OAuth configurations, client library scripts, and query builders from the business logic layer.
-- **Centralized Constants ([constants.js](src/utils/constants.js))**: Stores design palettes, fonts, margins, uppercase months, and shared string helpers like `toSentenceCase`.
-- **Functional Components & Hooks**: Component states and UI interactions are isolated inside domain hooks (e.g. `useExpenses`, `useAuth`) for reusable, clean logic.
-- **Functional Error Boundaries**: Modern functional component wrapper around `react-error-boundary` to gracefully handle unexpected runtime errors.
 
 ---
 
 ## Installation & Setup
 
 ### Prerequisites
-- Node.js (v18+)
-- Google Cloud Project credentials (with Google Sheets & Google Drive APIs enabled).
+- Node.js v18+
+- Google Cloud project with **Google Sheets API** and **Google Drive API** enabled
+- Firebase project with **Firestore** enabled
+- Google Gemini API key (optional — for AI insights)
 
-### 1. Environment Setup
-Create a `.env` file in the root directory and specify the Google OAuth Client ID and Google API Key:
+### 1. Environment Variables
+
+Create a `.env` file in the project root:
 
 ```env
-VITE_GOOGLE_SHEETS_API_KEY=YOUR_GOOGLE_SHEETS_API_KEY
-VITE_GOOGLE_OAUTH_CLIENT_ID=YOUR_GOOGLE_OAUTH_CLIENT_ID
+VITE_GOOGLE_SHEETS_API_KEY=your_google_api_key
+VITE_GOOGLE_OAUTH_CLIENT_ID=your_oauth_client_id
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_firebase_project_id
+VITE_GEMINI_API_KEY=your_gemini_api_key
 ```
 
-### 2. Installing Dependencies
-Use `npm` to install packages:
+### 2. Install Dependencies
 
 ```bash
 npm install
 ```
 
 ### 3. Run Development Server
-Launch Vite development server:
 
 ```bash
-npm start
+npm run dev
 ```
 
-### 4. Build Production Bundle
-Compile code:
+### 4. Build for Production
 
 ```bash
 npm run build
 ```
+
+---
+
+## Data Model
+
+### Expenses (Google Sheets)
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string | UUID |
+| `year` | number | e.g. 2026 |
+| `month` | number | 1–12 |
+| `categoryId` | string | Firestore category ID |
+| `itemName` | string | Description |
+| `amount` | number | INR |
+| `isFixed` | `'TRUE'`/`'FALSE'` | Recurring flag |
+
+### Income (Google Sheets)
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string | UUID |
+| `year` | number | |
+| `month` | number | 1–12 |
+| `source` | string | Salary / Freelance / Dividend / ITR Return / Other |
+| `amount` | number | INR |
+
+### Categories (Firestore — `sheets/{sheetId}/categories/{categoryId}`)
+| Field | Type | Notes |
+|---|---|---|
+| `name` | string | Display name |
+| `color` | string | Hex color for charts |
+| `budget` | number | Monthly budget limit (INR) |
+| `type` | `'expense'`/`'savings'` | Savings type counts toward wealth metrics |
+| `order` | number | Display order |
+
+---
+
+> Historical years (before current year) are locked as read-only. No data is ever deleted from Google Sheets by the app — only appended or overwritten via the API.

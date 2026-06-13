@@ -26,7 +26,6 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import MenuIcon from '@mui/icons-material/Menu'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
-import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 
 import { makeStyles } from 'tss-react/mui'
 
