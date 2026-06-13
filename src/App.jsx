@@ -4,11 +4,12 @@ import { Box, Typography, Button, FormControl, Select } from '@mui/material'
 import { useGlobalStyles } from './styles/globalStyles'
 import { useStyles } from './App.styles'
 import {
-  deleteExpense, deleteIncome, deleteCategory,
+  deleteExpense, deleteIncome,
   readAllExpenseRows, writeAllExpenseRows,
   readAllIncomeRows, writeAllIncomeRows,
-  getToken, setupSheet, getSpreadsheetUrl
+  getToken, getSheetId, setupSheet, getDriveExcelUrl
 } from './api/sheets'
+import { deleteCategoryFS } from './api/firestoreCategories'
 
 
 import { useAuth } from './hooks/useAuth'
@@ -18,8 +19,8 @@ import { useIncome } from './hooks/useIncome'
 import { useCategories } from './hooks/useCategories'
 
 import Dashboard from './components/Dashboard'
-import ExpenseTable from './components/Expenses/ExpenseTable'
-import CategoryManager from './components/Category/CategoryManager'
+import ExpensesByCategory from './components/Expenses/ExpensesByCategory'
+import AIInsightsSection from './components/Dashboard/subcomponents/AIInsightsSection'
 import IncomeTable from './components/Income/IncomeTable'
 import AddExpenseModal from './components/Expenses/AddExpenseModal'
 import AddIncomeModal from './components/Income/AddIncomeModal'
@@ -32,7 +33,7 @@ import DeleteConfirmModal from './components/DeleteConfirmModal'
 import CategoryModal from './components/Category/CategoryModal'
 import ErrorBoundary from './components/ErrorBoundary'
 
-import { MONTHS, YEAR_NOW, MONTH_NOW_1 as MONTH_NOW, toSentenceCase } from './utils/constants'
+import { MONTHS, YEAR_NOW, MONTH_NOW_1 as MONTH_NOW, toSentenceCase, defaultMonths } from './utils/constants'
 
 export default function App() {
   const { classes, cx } = useStyles()
@@ -42,20 +43,27 @@ export default function App() {
   const [view, setView] = useState('dashboard')
   const [year, setYear] = useState(YEAR_NOW)
   const [month, setMonth] = useState(MONTH_NOW)
-  const [dashFilterMonth, setDashFilterMonth] = useState(null)
+  const [selMonths, setSelMonths] = useState(() => defaultMonths(YEAR_NOW))
+
+  // Reset selMonths when year changes
+  useEffect(() => { setSelMonths(defaultMonths(year)) }, [year])
+
+  const [txnTab, setTxnTab] = useState('expenses')
   const [selectedExpenseIds, setSelectedExpenseIds] = useState([])
   const [modal, setModal] = useState(null)
   const [editRow, setEditRow] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [aiOpen, setAiOpen] = useState(false)
 
   const isLocked = parseInt(year) < new Date().getFullYear()
 
+  useEffect(() => { if (view !== 'expenses') setTxnTab('expenses') }, [view])
   useEffect(() => { setSelectedExpenseIds([]) }, [year, month, view])
 
   const closeModal = useCallback(() => { setModal(null); setEditRow(null) }, [])
 
   // ── Auth ──────────────────────────────────────────────────────
-  const { authd, userName, userPicture, handleSignIn, handleSignOut } = useAuth()
+  const { authd, userName, userFullName, userPicture, handleSignIn, handleSignOut } = useAuth()
 
   // ── Data ──────────────────────────────────────────────────────
   const {
@@ -64,7 +72,7 @@ export default function App() {
   } = useBudgetData({ authd, userName, onUnauthorized: handleSignOut })
 
   // ── CRUD hooks ────────────────────────────────────────────────
-  const { handleSaveExpense, handleFieldUpdate, handleDeleteExpense, handleCopySelected } = useExpenses({
+  const { handleSaveExpense, handleDeleteExpense, handleCopySelected } = useExpenses({
     loadAll, autoSyncToDrive, year, month, setDeleteConfirm, closeModal,
     clearSelection: () => setSelectedExpenseIds([])
   })
@@ -117,7 +125,8 @@ export default function App() {
           toast.success('Deleted from all months!', { id: 'del-all' })
         }
       } else if (type === 'category') {
-        await deleteCategory(item.id, t)
+        const sid = getSheetId()
+        await deleteCategoryFS(sid, item.id)
         toast.success('Deleted')
       }
       setDeleteConfirm(null)
@@ -135,7 +144,7 @@ export default function App() {
     if (!t) { toast.error('Sign in to open spreadsheet'); return }
     try {
       toast.loading('Finding your spreadsheet…', { id: 'open-drive' })
-      const url = await getSpreadsheetUrl(t, userName)
+      const url = await getDriveExcelUrl(t, userName)
       toast.dismiss('open-drive')
       if (!url) { toast.error('No spreadsheet found yet — add some data first'); return }
       window.open(url, '_blank', 'noopener,noreferrer')
@@ -163,6 +172,8 @@ export default function App() {
         onExportLocal={() => setModal('export')}
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}
+        onAIInsights={() => setAiOpen(true)}
+        hasAIKey={!!import.meta.env.VITE_GEMINI_API_KEY}
       />
 
       <Box className={globalClasses.contentArea}>
@@ -226,8 +237,8 @@ export default function App() {
                   categories={categories}
                   year={year}
                   month={month}
-                  filterMonth={dashFilterMonth}
-                  onMonthChange={m => { setMonth(m); setDashFilterMonth(m) }}
+                  selMonths={selMonths}
+                  setSelMonths={setSelMonths}
                 />
               </ErrorBoundary>
             )}
@@ -242,133 +253,99 @@ export default function App() {
                     </Typography>
                   </Box>
                 )}
-                <Box className={classes.headerRow}>
-                  <Typography variant="h5" className={classes.titleText}>Expenses</Typography>
-                  <FormControl size="small" className={globalClasses.nativeSelectFormControl}>
-                    <Select value={year} onChange={e => setYear(+e.target.value)} native className={globalClasses.nativeSelect}>
-                      {availableYears.map(y => (
-                        <option key={y} value={y} style={{ background: '#181b28', color: '#e4e8f5' }}>{y}</option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl size="small" className={globalClasses.nativeSelectFormControl}>
-                    <Select value={month} onChange={e => setMonth(+e.target.value)} native className={globalClasses.nativeSelect}>
-                      {MONTHS.map((m, i) => (
-                        <option key={i} value={i + 1} style={{ background: '#181b28', color: '#e4e8f5' }}>{m}</option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <Box className={classes.flexFiller} />
-                  {authd && !isLocked && (
-                    <Box className={classes.actionButtonsContainer}>
-                      {selectedExpenseIds.length > 0 && (
+
+                {/* Sub-tab switcher */}
+                <Box sx={{ display: 'flex', gap: '3px', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', p: '3px', mb: '16px', width: 'fit-content' }}>
+                  {[{ id: 'expenses', label: 'Expenses' }, { id: 'income', label: 'Income' }].map(tab => (
+                    <Button
+                      key={tab.id}
+                      onClick={() => setTxnTab(tab.id)}
+                      size="small"
+                      sx={{
+                        borderRadius: '8px',
+                        px: '14px',
+                        py: '5px',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        textTransform: 'none',
+                        color: txnTab === tab.id ? '#fff' : '#6a7190',
+                        background: txnTab === tab.id ? '#5b7fff' : 'transparent',
+                        minWidth: 0,
+                        '&:hover': {
+                          background: txnTab === tab.id ? '#5b7fff' : 'rgba(255,255,255,0.05)',
+                        },
+                      }}
+                    >
+                      {tab.label}
+                    </Button>
+                  ))}
+                </Box>
+
+                {txnTab === 'expenses' ? (
+                  <ExpensesByCategory
+                    expenses={expenses.filter(e => String(e.year) === String(year))}
+                    categories={categories}
+                    year={year}
+                    month={month}
+                    availableYears={availableYears}
+                    onYearChange={setYear}
+                    onMonthChange={setMonth}
+                    onAddExpense={catId => {
+                      setEditRow(catId ? { categoryId: catId } : null)
+                      setModal('add-expense')
+                    }}
+                    onEditExpense={row => { setEditRow(row); setModal('add-expense') }}
+                    onDeleteExpense={handleDeleteExpense}
+                    onAddCategory={() => { setEditRow(null); setModal('category') }}
+                    onEditCategory={row => { setEditRow(row); setModal('category') }}
+                    onDeleteCategory={handleDeleteCategory}
+                    onReorderCategory={handleReorderCategory}
+                    onCopyToNextMonth={handleCopySelected}
+                    canEdit={authd && !isLocked}
+                  />
+                ) : (
+                  <>
+                    <Box className={classes.headerRow}>
+                      <Typography variant="h5" className={classes.titleText}>Income</Typography>
+                      <FormControl size="small" className={globalClasses.nativeSelectFormControl}>
+                        <Select value={year} onChange={e => setYear(+e.target.value)} native className={globalClasses.nativeSelect}>
+                          {availableYears.map(y => (
+                            <option key={y} value={y} style={{ background: '#181b28', color: '#e4e8f5' }}>{y}</option>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControl size="small" className={globalClasses.nativeSelectFormControl}>
+                        <Select value={month} onChange={e => setMonth(+e.target.value)} native className={globalClasses.nativeSelect}>
+                          {MONTHS.map((m, i) => (
+                            <option key={i} value={i + 1} style={{ background: '#181b28', color: '#e4e8f5' }}>{m}</option>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Box className={classes.flexFiller} />
+                      {authd && !isLocked && (
                         <Button
                           variant="contained"
-                          onClick={() => handleCopySelected(selectedExpenseIds)}
+                          onClick={() => { setEditRow(null); setModal('add-income') }}
                           size="small"
                           className={globalClasses.containedBlueButton}
                         >
-                          📋 Copy Selected ({selectedExpenseIds.length}) → Next Month
+                          + Add Income
                         </Button>
                       )}
-                      <Button
-                        variant="contained"
-                        onClick={() => { setEditRow(null); setModal('add-expense') }}
-                        size="small"
-                        className={globalClasses.containedBlueButton}
-                      >
-                        + Add Expense
-                      </Button>
                     </Box>
-                  )}
-                </Box>
-                <ExpenseTable
-                  expenses={expenses.filter(e => String(e.year) === String(year) && String(e.month) === String(month))}
-                  categories={categories}
-                  onEdit={row => { setEditRow(row); setModal('add-expense') }}
-                  onDelete={handleDeleteExpense}
-                  canEdit={authd && !isLocked}
-                  selectedIds={selectedExpenseIds}
-                  onSelectionChange={setSelectedExpenseIds}
-                />
-              </ErrorBoundary>
-            )}
-
-            {!loading && !needsSetup && view === 'income' && (
-              <ErrorBoundary>
-                {isLocked && (
-                  <Box className={classes.lockedBanner}>
-                    <span style={{ marginRight: '8px', fontSize: '16px' }}>🔒</span>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      <strong>Historical Archive:</strong> Year {year} is locked. Data is preserved as read-only.
-                    </Typography>
-                  </Box>
+                    <IncomeTable
+                      income={income.filter(i => String(i.year) === String(year) && String(i.month) === String(month))}
+                      onEdit={row => { setEditRow(row); setModal('add-income') }}
+                      onDelete={handleDeleteIncome}
+                      canEdit={authd && !isLocked}
+                    />
+                  </>
                 )}
-                <Box className={classes.headerRow}>
-                  <Typography variant="h5" className={classes.titleText}>Income</Typography>
-                  <FormControl size="small" className={globalClasses.nativeSelectFormControl}>
-                    <Select value={year} onChange={e => setYear(+e.target.value)} native className={globalClasses.nativeSelect}>
-                      {availableYears.map(y => (
-                        <option key={y} value={y} style={{ background: '#181b28', color: '#e4e8f5' }}>{y}</option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl size="small" className={globalClasses.nativeSelectFormControl}>
-                    <Select value={month} onChange={e => setMonth(+e.target.value)} native className={globalClasses.nativeSelect}>
-                      {MONTHS.map((m, i) => (
-                        <option key={i} value={i + 1} style={{ background: '#181b28', color: '#e4e8f5' }}>{m}</option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <Box className={classes.flexFiller} />
-                  {authd && !isLocked && (
-                    <Button
-                      variant="contained"
-                      onClick={() => { setEditRow(null); setModal('add-income') }}
-                      size="small"
-                      className={globalClasses.containedBlueButton}
-                    >
-                      + Add Income
-                    </Button>
-                  )}
-                </Box>
-                <IncomeTable
-                  income={income.filter(i => String(i.year) === String(year) && String(i.month) === String(month))}
-                  onEdit={row => { setEditRow(row); setModal('add-income') }}
-                  onDelete={handleDeleteIncome}
-                  canEdit={authd && !isLocked}
-                />
               </ErrorBoundary>
             )}
 
-            {!loading && !needsSetup && view === 'categories' && (
-              <ErrorBoundary>
-                <Box className={classes.headerRow}>
-                  <Typography variant="h5" className={cx(classes.titleText, classes.flexFiller)}>
-                    Categories
-                  </Typography>
-                  {authd && (
-                    <Button
-                      variant="contained"
-                      onClick={() => { setEditRow(null); setModal('category') }}
-                      size="small"
-                      className={globalClasses.containedBlueButton}
-                    >
-                      + Add Category
-                    </Button>
-                  )}
-                </Box>
-                <CategoryManager
-                  categories={categories}
-                  onEdit={row => { setEditRow(row); setModal('category') }}
-                  onDelete={handleDeleteCategory}
-                  onReorder={handleReorderCategory}
-                  onSave={handleSaveCategory}
-                  canEdit={authd}
-                />
-              </ErrorBoundary>
-            )}
           </>
+
         )}
       </Box>
 
@@ -411,6 +388,17 @@ export default function App() {
         type={deleteConfirm?.type}
         onDelete={executeDelete}
         onClose={() => setDeleteConfirm(null)}
+      />
+
+      <AIInsightsSection
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        expenses={expenses.filter(e => String(e.year) === String(year))}
+        income={income.filter(i => String(i.year) === String(year))}
+        categories={categories}
+        year={year}
+        selMonths={selMonths}
+        userName={userFullName || userName}
       />
     </Box>
   )

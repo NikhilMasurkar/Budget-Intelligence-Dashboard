@@ -2,13 +2,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import {
   fetchCategories, fetchExpenses, fetchIncome,
-  getToken, getSheetId, signOut, appendRows,
-  DEFAULT_CATEGORIES, TABS, downloadExcelFromDrive,
+  getToken, getSheetId, signOut,
+  DEFAULT_CATEGORIES, downloadExcelFromDrive,
   readAllExpenseRows, writeAllExpenseRows,
   readAllIncomeRows, writeAllIncomeRows,
-  uploadExcelToDrive, uid
+  uploadExcelToDrive, uid, autoFixedCopyToMonth
 } from '../api/sheets'
-
+import {
+  fetchCategoriesFS, saveAllCategoriesFS
+} from '../api/firestoreCategories'
 import { YEAR_NOW, toSentenceCase } from '../utils/constants'
 
 export function useBudgetData({ authd, userName, onUnauthorized }) {
@@ -30,20 +32,28 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
     setLoading(true)
     setNeedsSetup(false)
     try {
-      let cats = await fetchCategories(t)
+      // ── Categories: Firestore is the source of truth ──────────────────────
+      let cats = await fetchCategoriesFS(sid)
+
       if (cats.length === 0) {
-        await appendRows(TABS.CATEGORIES, DEFAULT_CATEGORIES.map(c => [c.id, c.name, c.type, c.color]), t)
-        cats = DEFAULT_CATEGORIES
-      } else {
-        const existingIds = new Set(cats.map(c => c.id))
-        const missing = DEFAULT_CATEGORIES.filter(d => !existingIds.has(d.id))
-        if (missing.length > 0) {
-          await appendRows(TABS.CATEGORIES, missing.map(c => [c.id, c.name, c.type, c.color]), t)
-          cats = [...cats, ...missing]
+        // One-time migration: pull from the Google Sheet Categories tab
+        const sheetCats = await fetchCategories(t)
+        if (sheetCats.length > 0) {
+          const withOrder = sheetCats.map((c, i) => ({ ...c, order: i }))
+          await saveAllCategoriesFS(sid, withOrder)
+          cats = withOrder
+          toast.success('Categories migrated to Firebase ✓', { duration: 3000 })
+        } else {
+          // Brand-new user: seed default categories into Firestore
+          const withOrder = DEFAULT_CATEGORIES.map((c, i) => ({ ...c, order: i }))
+          await saveAllCategoriesFS(sid, withOrder)
+          cats = withOrder
         }
       }
+
       setCategories(cats)
 
+      // ── Expenses + Income: Google Sheets (unchanged) ──────────────────────
       let xlsxExps = [], xlsxInc = [], xlsxOk = false
       if (!opts.skipExcel) {
         try {
@@ -197,14 +207,39 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
     scanYears()
   }, [authd])
 
-  const autoSyncToDrive = useCallback(async () => {
+  // Auto-copy fixed expenses once per calendar month
+  useEffect(() => {
+    if (!authd) return
     const t = getToken()
     if (!t) return
+    const now = new Date()
+    const curY = now.getFullYear()
+    const curM = now.getMonth() + 1
+    const key = `budgetiq_autocopy_${curY}_${curM}`
+    if (localStorage.getItem(key)) return
+    localStorage.setItem(key, '1')
+    autoFixedCopyToMonth(curY, curM, t)
+      .then(count => {
+        if (count > 0) {
+          toast.success(`📌 Auto-copied ${count} recurring expense${count > 1 ? 's' : ''} from last month`, { duration: 4000 })
+          loadAll({ skipExcel: true })
+        }
+      })
+      .catch(e => {
+        localStorage.removeItem(key)
+        console.error('[AutoFixed]', e)
+      })
+  }, [authd])
+
+  const autoSyncToDrive = useCallback(async () => {
+    const t = getToken()
+    const sid = getSheetId()
+    if (!t || !sid) return
     try {
       const [allExpRows, allIncRows, freshCats] = await Promise.all([
         readAllExpenseRows(t),
         readAllIncomeRows(t),
-        fetchCategories(t)
+        fetchCategoriesFS(sid)          // use Firestore, not the Sheet tab
       ])
       const toObjs = (rows, fields) => rows.map(r => {
         const obj = {}; fields.forEach((f, i) => obj[f] = r[i]); return obj

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   AppBar,
   Toolbar,
@@ -19,13 +19,15 @@ import {
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import DownloadIcon from '@mui/icons-material/Download'
+import GetAppIcon from '@mui/icons-material/GetApp'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import LogoutIcon from '@mui/icons-material/Logout'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import MenuIcon from '@mui/icons-material/Menu'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
-import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined'
+
 import { makeStyles } from 'tss-react/mui'
 
 const useStyles = makeStyles()((theme) => ({
@@ -87,6 +89,10 @@ const useStyles = makeStyles()((theme) => ({
     fontSize: '16px',
     letterSpacing: '-0.5px',
     color: theme.palette.text.primary,
+    display: 'none',
+    [theme.breakpoints.up('sm')]: {
+      display: 'block',
+    },
   },
   navGroup: {
     display: 'none',
@@ -320,29 +326,37 @@ export default function TopBar({
   onOpenDrive,
   onExportLocal,
   onSignIn,
-  onSignOut
+  onSignOut,
+  onAIInsights,
+  hasAIKey
 }) {
   const { classes, cx } = useStyles()
   const [anchorEl, setAnchorEl] = useState(null)
   const openMenu = Boolean(anchorEl)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [installPrompt, setInstallPrompt] = useState(null)
+  const [isIOS, setIsIOS] = useState(false)
+  const [showIOSHint, setShowIOSHint] = useState(false)
+
+  useEffect(() => {
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream
+    setIsIOS(ios)
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e) }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
   }
 
+  const NAV_LABELS = { dashboard: 'Dashboard', expenses: 'Transactions' }
+
   const getNavIcon = (v) => {
     switch (v) {
-      case 'dashboard':
-        return <DashboardOutlinedIcon className={classes.navIcon} />
-      case 'expenses':
-        return <ReceiptLongOutlinedIcon className={classes.navIcon} />
-      case 'income':
-        return <TrendingUpIcon className={classes.navIcon} />
-      case 'categories':
-        return <CategoryOutlinedIcon className={classes.navIcon} />
-      default:
-        return null
+      case 'dashboard': return <DashboardOutlinedIcon className={classes.navIcon} />
+      case 'expenses':  return <ReceiptLongOutlinedIcon className={classes.navIcon} />
+      default:          return null
     }
   }
 
@@ -387,7 +401,7 @@ export default function TopBar({
 
         {/* NAVIGATION */}
         <Box className={classes.navGroup}>
-          {['dashboard', 'expenses', 'income', 'categories'].map((v) => {
+          {['dashboard', 'expenses'].map((v) => {
             const isActive = view === v
             return (
               <Button
@@ -395,7 +409,7 @@ export default function TopBar({
                 onClick={() => setView(v)}
                 className={cx(classes.navButton, isActive && classes.navButtonActive)}
               >
-                {v.charAt(0).toUpperCase() + v.slice(1)}
+                {NAV_LABELS[v]}
               </Button>
             )
           })}
@@ -403,6 +417,53 @@ export default function TopBar({
 
         {/* ACTIONS */}
         <Box className={classes.actionGroup}>
+          {/* PWA install — shown when browser decides app is installable */}
+          {installPrompt && (
+            <Tooltip title="Install BudgetIQ as an app">
+              <IconButton
+                onClick={async () => {
+                  installPrompt.prompt()
+                  const { outcome } = await installPrompt.userChoice
+                  if (outcome === 'accepted') setInstallPrompt(null)
+                }}
+                className={classes.actionButton}
+                sx={{ color: '#3de8a0 !important', borderColor: 'rgba(61,232,160,0.4) !important' }}
+              >
+                <GetAppIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {/* iOS hint — Safari doesn't fire beforeinstallprompt */}
+          {isIOS && !installPrompt && (
+            <Tooltip
+              title='Install: tap the Share icon in Safari, then "Add to Home Screen"'
+              open={showIOSHint}
+              onClose={() => setShowIOSHint(false)}
+              disableFocusListener
+              disableHoverListener
+              disableTouchListener
+            >
+              <IconButton
+                onClick={() => setShowIOSHint(v => !v)}
+                className={classes.actionButton}
+              >
+                <GetAppIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {authd && hasAIKey && (
+            <Tooltip title="AI Budget Insights — get simple tips on your spending" arrow>
+              <IconButton onClick={onAIInsights} className={classes.actionButton}
+                sx={{ color: '#a0b4ff !important', borderColor: 'rgba(91,127,255,0.35) !important',
+                  '&:hover': { borderColor: 'rgba(91,127,255,0.7) !important', background: 'rgba(91,127,255,0.08) !important' }
+                }}>
+                <AutoAwesomeIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+          )}
+
           {authd && (
             <Tooltip title="Refresh from Google Sheets">
               <IconButton
@@ -540,7 +601,7 @@ export default function TopBar({
         </Box>
 
         <List className={classes.drawerList}>
-          {['dashboard', 'expenses', 'income', 'categories'].map((v) => {
+          {['dashboard', 'expenses'].map((v) => {
             const isActive = view === v
             return (
               <ListItem key={v} disablePadding className={classes.drawerListItem}>
@@ -557,7 +618,7 @@ export default function TopBar({
                     {getNavIcon(v)}
                   </ListItemIcon>
                   <ListItemText
-                    primary={v.charAt(0).toUpperCase() + v.slice(1)}
+                    primary={NAV_LABELS[v]}
                     primaryTypographyProps={{
                       fontSize: 13.5,
                       fontWeight: isActive ? 700 : 600

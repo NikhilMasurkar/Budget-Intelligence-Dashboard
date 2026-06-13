@@ -1,18 +1,29 @@
 import React, { useMemo, useState, useEffect } from 'react'
-import { Box } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import { useStyles } from './styles/Dashboard.styles'
-import CurrentMonthSummary from './subcomponents/CurrentMonthSummary'
 import MonthFilterControl from './subcomponents/MonthFilterControl'
 import KPICardsSection from './subcomponents/KPICardsSection'
 import WealthCardsSection from './subcomponents/WealthCardsSection'
+import BudgetProgressSection from './subcomponents/BudgetProgressSection'
 import ChartsSection from './subcomponents/ChartsSection'
-import TopExpensesTable from '../Expenses/TopExpensesTable'
 import CategoryDetailsDialog from './subcomponents/CategoryDetailsDialog'
-import { MONTHS, fmt, fmtK,defaultMonths,CHART_OPTS } from '../../utils/constants'
+import { MONTHS, fmt, fmtK, defaultMonths, CHART_OPTS } from '../../utils/constants'
 
-export default function Dashboard({ expenses, income, categories, year, month, filterMonth }) {
+function periodLabel(selMonths, year) {
+  const s = [...selMonths].sort((a, b) => a - b)
+  if (s.length === 12) return `Full Year ${year}`
+  if (s.length === 1)  return `${MONTHS[s[0]]} ${year}`
+  if (s.length === 3 && s[0] === 0)  return `Q1 ${year}`
+  if (s.length === 3 && s[0] === 3)  return `Q2 ${year}`
+  if (s.length === 3 && s[0] === 6)  return `Q3 ${year}`
+  if (s.length === 3 && s[0] === 9)  return `Q4 ${year}`
+  if (s.length === 6 && s[0] === 0)  return `H1 ${year}`
+  if (s.length === 6 && s[0] === 6)  return `H2 ${year}`
+  return `${s.map(m => MONTHS[m]).join(', ')} ${year}`
+}
+
+export default function Dashboard({ expenses, income, categories, year, month, selMonths, setSelMonths }) {
   const { classes } = useStyles()
-  const [selMonths, setSelMonths] = useState(() => defaultMonths(year))
   const [detailModal, setDetailModal] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
 
@@ -23,28 +34,9 @@ export default function Dashboard({ expenses, income, categories, year, month, f
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // When year changes → reset to smart default for that year
-  useEffect(() => {
-    setSelMonths(defaultMonths(year))
-  }, [year])
-
-  // When filterMonth changes from OUTSIDE (not null) → select just that month
-  useEffect(() => {
-    if (filterMonth !== null && filterMonth >= 1 && filterMonth <= 12) {
-      setSelMonths([filterMonth - 1])
-    } else if (filterMonth === null) {
-      setSelMonths(defaultMonths(year))
-    }
-  }, [filterMonth])
-
-  // Treat these category names as "investments" (savings outflows, not spending)
-  const INVEST_NAMES = useMemo(() =>
-    new Set(['INVESTMENTS & SAVINGS', 'FINANCIAL OBLIGATIONS', 'INVESTMENT', 'SAVINGS'].map(n => n.toUpperCase()))
-  , [])
-
   const investCatIds = useMemo(() =>
-    new Set(categories.filter(c => INVEST_NAMES.has(c.name.toUpperCase())).map(c => c.id))
-  , [categories, INVEST_NAMES])
+    new Set(categories.filter(c => c.type === 'savings').map(c => c.id))
+  , [categories])
 
   // Build monthly aggregates — split expenses into investing vs spending
   const monthlyData = useMemo(() => {
@@ -124,19 +116,8 @@ export default function Dashboard({ expenses, income, categories, year, month, f
 
   return (
     <Box className={classes.container}>
-      {/* 1. Summary Cards (Current Month) */}
-      {parseInt(year) >= curYear && (
-        <CurrentMonthSummary
-          displayMonthName={displayMonthName}
-          year={year}
-          curMonthInc={curMonthInc}
-          curMonthExp={curMonthExp}
-          curMonthSav={curMonthSav}
-          fmt={fmt}
-        />
-      )}
 
-      {/* 2. Month Filters Control */}
+      {/* 1. Month Filter */}
       <MonthFilterControl
         selMonths={selMonths}
         setSelMonths={setSelMonths}
@@ -145,32 +126,73 @@ export default function Dashboard({ expenses, income, categories, year, month, f
         year={year}
       />
 
-      {/* 3. Core Financial KPI Cards */}
+      {/* Period summary + current month context */}
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px 16px', mb: '16px', px: '2px' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Box sx={{ width: 6, height: 6, borderRadius: '50%', background: '#5b7fff' }} />
+          <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#6a7190' }}>
+            {periodLabel(selMonths, year)}
+          </Typography>
+          <Typography sx={{ fontSize: 12, color: '#3a4060' }}>·</Typography>
+          <Typography sx={{ fontSize: 12, color: '#3de8a0', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+            {fmt(selIncome)} earned
+          </Typography>
+          <Typography sx={{ fontSize: 12, color: '#3a4060' }}>·</Typography>
+          <Typography sx={{ fontSize: 12, color: '#ff5f5f', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+            {fmt(selExpense)} spent
+          </Typography>
+        </Box>
+        {parseInt(year) >= curYear && selMonths.length > 1 && (
+          <>
+            <Box sx={{ width: '1px', height: 12, background: 'rgba(255,255,255,0.07)', display: { xs: 'none', sm: 'block' } }} />
+            <Typography sx={{ fontSize: 11, color: '#3a4060' }}>
+              {displayMonthName} now: {' '}
+              <Box component="span" sx={{ color: '#8891b8', fontVariantNumeric: 'tabular-nums' }}>{fmt(curMonthInc)} in</Box>
+              {' · '}
+              <Box component="span" sx={{ color: '#8891b8', fontVariantNumeric: 'tabular-nums' }}>{fmt(curMonthExp)} out</Box>
+              {' · '}
+              <Box component="span" sx={{ color: curMonthSav >= 0 ? '#3de8a0' : '#ff5f5f', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{fmt(curMonthSav)}</Box>
+            </Typography>
+          </>
+        )}
+      </Box>
+
+      {/* 2. 3 Insight Cards */}
       <KPICardsSection
         selIncome={selIncome}
         selExpense={selExpense}
         selNetSav={selNetSav}
+        selInvest={selInvest}
         selMonths={selMonths}
-        catTotals={catTotals}
-        expRate={expRate}
-        savRate={savRate}
+        categories={categories}
+        expenses={expenses}
         fmt={fmt}
       />
 
-      {/* 4. Wealth / Investment Breakdown Cards */}
+      {/* 4. Wealth Cards — 2 cards side by side */}
       <WealthCardsSection
         selInvest={selInvest}
         investRate={investRate}
         investBreakdown={investBreakdown}
         selNetSav={selNetSav}
-        savRate={savRate}
-        selWealth={selWealth}
-        wealthRate={wealthRate}
+        selIncome={selIncome}
         fmt={fmt}
         selMonths={selMonths}
       />
 
-      {/* 5. Chart Visualization Sections */}
+      {/* 5. Budget Overview — full width */}
+      <BudgetProgressSection
+        categories={categories}
+        expenses={expenses}
+        selMonths={selMonths}
+        catMap={catMap}
+        selExpense={selExpense}
+        onCategoryClick={setDetailModal}
+        fmt={fmt}
+        MONTHS={MONTHS}
+      />
+
+      {/* 6. Chart Visualization Sections */}
       <ChartsSection
         filteredLabels={filteredLabels}
         monthlyData={monthlyData}
@@ -185,18 +207,7 @@ export default function Dashboard({ expenses, income, categories, year, month, f
         CHART_OPTS={CHART_OPTS}
       />
 
-      {/* 6. Top Expenses Breakdown List */}
-      <TopExpensesTable
-        expenses={expenses}
-        selMonths={selMonths}
-        catMap={catMap}
-        selExpense={selExpense}
-        onCategoryClick={setDetailModal}
-        fmt={fmt}
-        MONTHS={MONTHS}
-      />
-
-      {/* 7. Category Pivot PivotTable Dialog */}
+      {/* 7. Category Pivot Dialog */}
       <CategoryDetailsDialog
         detailModal={detailModal}
         onClose={() => setDetailModal(null)}

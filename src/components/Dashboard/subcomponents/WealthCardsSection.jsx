@@ -1,53 +1,113 @@
 import React from 'react'
 import { Box, Typography } from '@mui/material'
-import { useStyles } from '../styles/WealthCardsSection.styles'
 
 export default function WealthCardsSection({
   selInvest,
   investRate,
   investBreakdown,
   selNetSav,
-  savRate,
-  selWealth,
-  wealthRate,
+  selIncome,
   fmt,
-  selMonths
+  selMonths,
 }) {
-  const { classes, cx } = useStyles()
+  const selTrueSav  = selNetSav + selInvest
+  const totalRate   = selIncome > 0 ? (selTrueSav / selIncome * 100).toFixed(1) : '0.0'
+  const cashRate    = selIncome > 0 ? (selNetSav  / selIncome * 100).toFixed(1) : '0.0'
+  const rateColor   = parseFloat(totalRate) >= 25 ? '#5b7fff' : parseFloat(totalRate) >= 10 ? '#ffb347' : '#ff5f5f'
 
   return (
-    <Box className={classes.container}>
-      {/* Investments Card */}
-      <Box className={cx(classes.cardBase, classes.cardInvestments)}>
-        <Box className={cx(classes.accentBar, classes.accentInvestments)} />
-        <Typography variant="caption" className={classes.label}>
-          📈 Investments & Savings
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: '16px', mb: '18px' }}>
+
+      {/* ── Card 1 — Investments & Savings ── */}
+      <Box sx={{
+        position: 'relative',
+        background: 'linear-gradient(135deg, #1a1330 0%, #0f0d20 100%)',
+        border: '1px solid rgba(185,127,255,0.22)',
+        borderRadius: '14px',
+        padding: '16px 18px',
+        overflow: 'hidden',
+      }}>
+        {/* Left accent bar */}
+        <Box sx={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: '3px',
+          background: 'linear-gradient(180deg, #b97fff, #7c3fe8)',
+          borderRadius: '14px 0 0 14px',
+        }} />
+
+        {/* Label */}
+        <Typography sx={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: '#8891b8',
+          textTransform: 'uppercase',
+          letterSpacing: '0.6px',
+          mb: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}>
+          <span style={{ fontSize: 14 }}>📈</span> Investments & Savings
         </Typography>
-        <Typography variant="h4" className={cx(classes.value, classes.valueInvestments)}>
+
+        {/* Value */}
+        <Typography sx={{
+          fontSize: 28,
+          fontWeight: 800,
+          color: '#b97fff',
+          fontVariantNumeric: 'tabular-nums',
+          letterSpacing: '-0.5px',
+          lineHeight: 1.1,
+          mb: '4px',
+        }}>
           {fmt(selInvest)}
         </Typography>
-        <Typography variant="body2" className={cx(classes.subText, classes.subTextInvestments)}>
+
+        {/* Sub text */}
+        <Typography sx={{ fontSize: 12, color: '#6a4a9a', mb: selInvest > 0 ? '12px' : 0 }}>
           {investRate}% of income invested
         </Typography>
 
+        {/* Breakdown */}
         {selInvest > 0 && (
-          <Box className={classes.breakdownSection}>
-            <Box
-              className={classes.breakdownHeader}
-              style={{ marginBottom: investBreakdown.length ? '8px' : 0 }}
-            >
+          <Box sx={{
+            background: 'rgba(185,127,255,0.05)',
+            border: '1px solid rgba(185,127,255,0.1)',
+            borderRadius: '8px',
+            padding: '10px 12px',
+          }}>
+            <Typography sx={{
+              fontSize: 11,
+              color: '#7a5aaa',
+              fontWeight: 600,
+              mb: investBreakdown.length ? '8px' : 0,
+            }}>
               Avg {fmt(selInvest / selMonths.length)}/month
-            </Box>
+            </Typography>
+
             {investBreakdown.length > 0 && (
-              <Box className={classes.breakdownContainer}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 {investBreakdown.map(([name, amount]) => (
-                  <Box key={name} className={classes.breakdownRow}>
-                    <Box component="span" className={classes.breakdownBullet}>
-                      • {name}
-                    </Box>
-                    <Box component="span" className={classes.breakdownAmount}>
+                  <Box key={name} sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}>
+                    <Typography sx={{ fontSize: 12, color: '#9a80c0', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Box component="span" sx={{ color: '#b97fff', fontSize: 14, lineHeight: 1 }}>•</Box>
+                      {name}
+                    </Typography>
+                    <Typography sx={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: '#b97fff',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}>
                       {fmt(amount)}
-                    </Box>
+                    </Typography>
                   </Box>
                 ))}
               </Box>
@@ -56,69 +116,91 @@ export default function WealthCardsSection({
         )}
       </Box>
 
-      {/* Cash Savings Card */}
-      <Box
-        className={classes.cardBase}
-        style={{
-          background: selNetSav >= 0 ? 'linear-gradient(135deg, #0d2318, #0a1a10)' : 'linear-gradient(135deg, #230d0d, #1a0a0a)',
-          border: `1px solid ${selNetSav >= 0 ? 'rgba(61, 232, 160, 0.3)' : 'rgba(255, 95, 95, 0.3)'}`
-        }}
-      >
-        <Box
-          className={classes.accentBar}
-          style={{
-            background: selNetSav >= 0 ? 'linear-gradient(90deg, #3de8a0, #22c55e)' : 'linear-gradient(90deg, #ff5f5f, #e83d3d)'
-          }}
-        />
-        <Typography variant="caption" className={classes.label}>
-          🏦 Cash Savings
-        </Typography>
-        <Typography
-          variant="h4"
-          className={classes.value}
-          style={{
-            color: selNetSav >= 0 ? '#3de8a0' : '#ff5f5f'
-          }}
-        >
-          {fmt(selNetSav)}
-        </Typography>
-        <Typography
-          variant="body2"
-          className={classes.subText}
-          style={{
-            color: selNetSav >= 0 ? '#4a8a6a' : '#8a4a4a'
-          }}
-        >
-          {savRate}% of income remaining
-        </Typography>
-        {selNetSav !== 0 && (
-          <Box className={classes.footerLabel}>
-            After all expenses incl. investments
-          </Box>
-        )}
-      </Box>
+      {/* ── Card 2 — Savings Rate breakdown ── */}
+      <Box sx={{
+        position: 'relative',
+        background: 'linear-gradient(135deg, #0d1322 0%, #090d18 100%)',
+        border: `1px solid ${rateColor}38`,
+        borderRadius: '14px',
+        padding: '16px 18px',
+        overflow: 'hidden',
+      }}>
+        {/* Left accent bar */}
+        <Box sx={{
+          position: 'absolute',
+          left: 0, top: 0, bottom: 0,
+          width: '3px',
+          background: `linear-gradient(180deg, ${rateColor}, ${rateColor}88)`,
+          borderRadius: '14px 0 0 14px',
+        }} />
 
-      {/* Wealth Built Card */}
-      <Box className={cx(classes.cardBase, classes.cardWealth)}>
-        <Box className={cx(classes.accentBar, classes.accentWealth)} />
-        <Typography variant="caption" className={classes.label}>
-          🚀 Total Wealth Built
+        {/* Label */}
+        <Typography sx={{
+          fontSize: 11, fontWeight: 700, color: '#8891b8',
+          textTransform: 'uppercase', letterSpacing: '0.6px',
+          mb: '8px', display: 'flex', alignItems: 'center', gap: '6px',
+        }}>
+          <span style={{ fontSize: 14 }}>💰</span> Savings Rate
         </Typography>
-        <Typography variant="h4" className={cx(classes.value, classes.valueWealth)}>
-          {fmt(selWealth)}
+
+        {/* Total value */}
+        <Typography sx={{
+          fontSize: 28, fontWeight: 800, color: rateColor,
+          fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px',
+          lineHeight: 1.1, mb: '2px',
+        }}>
+          {fmt(selTrueSav)}
         </Typography>
-        <Typography variant="body2" className={cx(classes.subText, classes.subTextWealth)}>
-          {wealthRate}% wealth rate
+        <Typography sx={{ fontSize: 12, color: `${rateColor}99`, mb: '12px' }}>
+          {totalRate}% of income goes toward wealth
         </Typography>
-        <Box className={classes.footerSection}>
-          <Box component="span" style={{ color: '#a78bfa' }}>
-            📈 Inv: {fmt(selInvest)}
+
+        {/* Calculation breakdown */}
+        <Box sx={{
+          background: `${rateColor}08`,
+          border: `1px solid ${rateColor}18`,
+          borderRadius: '8px',
+          padding: '10px 12px',
+        }}>
+          <Typography sx={{ fontSize: 10, fontWeight: 700, color: '#3a4060', letterSpacing: '0.5px', textTransform: 'uppercase', mb: '8px' }}>
+            How it's calculated
+          </Typography>
+
+          {/* Row: Invested */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '5px' }}>
+            <Typography sx={{ fontSize: 12, color: '#b97fff', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Box component="span" sx={{ fontSize: 10 }}>📈</Box> Invested
+            </Typography>
+            <Box sx={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <Typography sx={{ fontSize: 11, color: '#6a4a9a', fontVariantNumeric: 'tabular-nums' }}>{investRate}%</Typography>
+              <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#b97fff', fontVariantNumeric: 'tabular-nums' }}>{fmt(selInvest)}</Typography>
+            </Box>
           </Box>
-          <Box component="span" style={{ color: '#3de8a0' }}>
-            🏦 Cash: {fmt(selNetSav)}
+
+          {/* Row: Cash left */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '8px' }}>
+            <Typography sx={{ fontSize: 12, color: '#3de8a0', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Box component="span" sx={{ fontSize: 10 }}>🏦</Box> Cash left
+            </Typography>
+            <Box sx={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <Typography sx={{ fontSize: 11, color: '#2a6a4e', fontVariantNumeric: 'tabular-nums' }}>{cashRate}%</Typography>
+              <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#3de8a0', fontVariantNumeric: 'tabular-nums' }}>{fmt(selNetSav)}</Typography>
+            </Box>
+          </Box>
+
+          {/* Divider + Total */}
+          <Box sx={{ borderTop: `1px solid ${rateColor}20`, pt: '7px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography sx={{ fontSize: 12, fontWeight: 700, color: rateColor }}>
+              = Total saved
+            </Typography>
+            <Box sx={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <Typography sx={{ fontSize: 11, color: `${rateColor}88`, fontVariantNumeric: 'tabular-nums' }}>{totalRate}%</Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 800, color: rateColor, fontVariantNumeric: 'tabular-nums' }}>{fmt(selTrueSav)}</Typography>
+            </Box>
           </Box>
         </Box>
       </Box>
+
     </Box>
   )
 }

@@ -140,7 +140,7 @@ export default function CategoryManager({ categories, onEdit, onDelete, onReorde
                 {cat.name}
               </Typography>
               <Typography variant="caption" className={classes.categoryType}>
-                {cat.type}
+                {cat.type}{cat.budget > 0 ? ` · ₹${cat.budget.toLocaleString('en-IN')}/mo` : ''}
               </Typography>
             </Box>
 

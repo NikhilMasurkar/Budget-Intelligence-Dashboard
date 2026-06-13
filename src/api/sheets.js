@@ -159,18 +159,19 @@ export async function getUserProfile(token) {
   return res.json()
 }
 
-// ─── GET SPREADSHEET DIRECT URL ──────────────────────────────
-// Returns the direct Google Sheets edit URL for the user's balance_sheet_.xlsx.
-export async function getSpreadsheetUrl(token, userName) {
+// ─── GET DRIVE FILE VIEW URL ─────────────────────────────────
+// Returns the Google Drive view URL for the user's balance_sheet_.xlsx.
+// On mobile, this URL opens directly in the Drive/Sheets app if installed.
+export async function getDriveExcelUrl(token, userName) {
   const query = userName
     ? `name='${userName} balance_sheet_.xlsx' and trashed=false`
     : `name contains 'balance_sheet_' and trashed=false and mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'`
-  const url = API_CONFIG.DRIVE.getFilesUrl(query, 'files(id)', 1)
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+  const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id)&pageSize=1`
+  const res = await fetch(searchUrl, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
   if (!res.ok) { const e = await res.json(); throw new Error(e?.error?.message || 'Drive search failed') }
   const data = await res.json()
   if (!data.files || data.files.length === 0) return null
-  return `https://docs.google.com/spreadsheets/d/${data.files[0].id}/edit`
+  return `https://drive.google.com/file/d/${data.files[0].id}/view`
 }
 
 // ─── DOWNLOAD EXCEL FROM DRIVE ───────────────────────────────
@@ -358,6 +359,29 @@ export async function copyExpensesToNextMonth(fromYear, fromMonth, selectedIds, 
     .map(f => [uid(), String(toYear), String(toMonth), f.categoryId, f.itemName, f.amount, 'FALSE', f.note || ''])
   if (newRows.length) await appendRows(TABS.EXPENSES, newRows, token)
   return { copied: newRows.length, toYear, toMonth }
+}
+
+// Copies all isFixed='TRUE' expenses from the month before toYear/toMonth into that month.
+// Skips expenses that already exist there (same categoryId + itemName). Returns count copied.
+export async function autoFixedCopyToMonth(toYear, toMonth, token) {
+  const allRows = await readAllExpenseRows(token)
+  let prevY = toYear, prevM = toMonth - 1
+  if (prevM === 0) { prevM = 12; prevY-- }
+
+  const fixedRows = allRows.filter(r =>
+    String(r[1]) === String(prevY) &&
+    String(r[2]) === String(prevM) &&
+    r[6] === 'TRUE'
+  )
+  if (!fixedRows.length) return 0
+
+  const destRows = allRows.filter(r => String(r[1]) === String(toYear) && String(r[2]) === String(toMonth))
+  const newRows = fixedRows
+    .filter(f => !destRows.some(d => d[3] === f[3] && d[4] === f[4]))
+    .map(f => [uid(), String(toYear), String(toMonth), f[3], f[4], f[5], 'TRUE', f[7] || ''])
+
+  if (newRows.length) await appendRows(TABS.EXPENSES, newRows, token)
+  return newRows.length
 }
 
 // ─── INCOME ─────────────────────────────────────────────────
