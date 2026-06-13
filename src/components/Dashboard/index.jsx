@@ -90,18 +90,12 @@ export default function Dashboard({ expenses, income, categories, year, month, s
   }, [expenses, selMonths, investCatIds])
 
   // Selected period totals
-  const selIncome    = selMonths.reduce((s,i) => s + monthlyData.inc[i],   0)
-  const selExpense   = selMonths.reduce((s,i) => s + monthlyData.exp[i],   0)
-  const selInvest    = selMonths.reduce((s,i) => s + monthlyData.inv[i],   0)
-  const selSpend     = selMonths.reduce((s,i) => s + monthlyData.spend[i], 0)
+  const selIncome    = selMonths.reduce((s,i) => s + monthlyData.inc[i], 0)
+  const selExpense   = selMonths.reduce((s,i) => s + monthlyData.exp[i], 0)
+  const selInvest    = selMonths.reduce((s,i) => s + monthlyData.inv[i], 0)
   const selNetSav    = selIncome - selExpense
-  const selTrueSav   = selIncome - selSpend
-  const selWealth    = selTrueSav
 
-  const savRate      = selIncome > 0 ? (selNetSav  / selIncome * 100).toFixed(1) : 0
-  const investRate   = selIncome > 0 ? (selInvest  / selIncome * 100).toFixed(1) : 0
-  const wealthRate   = selIncome > 0 ? (selWealth  / selIncome * 100).toFixed(1) : 0
-  const expRate      = selIncome > 0 ? (selExpense / selIncome * 100).toFixed(1) : 0
+  const investRate   = selIncome > 0 ? (selInvest / selIncome * 100).toFixed(1) : 0
 
   const filteredLabels = selMonths.map(i => MONTHS[i])
   const catColors = ['#5b7fff','#3de8a0','#ff5f5f','#b97fff','#ffb347','#ff6eb4','#60c0ff','#ffd700','#ff8c69','#7fffd4']
