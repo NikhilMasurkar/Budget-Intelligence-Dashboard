@@ -100,7 +100,8 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
             reconciledExpenses.push([
               existing[0], xls.year, xls.month, xls.categoryId,
               toSentenceCase(xls.itemName), xls.amount,
-              xls.isFixed || existing[6] || 'FALSE', existing[7] || ''
+              // Sheets DB wins for isFixed — app pins must not be overwritten by stale Excel
+              existing[6] || xls.isFixed || 'FALSE', existing[7] || ''
             ])
             dbExpMap.delete(key)
           } else {
@@ -112,7 +113,8 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
             ])
           }
         })
-        if (dbExpMap.size > 0) expensesChanged = true
+        // Preserve Sheets-only rows (added in app, not yet in Drive Excel backup)
+        dbExpMap.forEach(row => { expensesChanged = true; reconciledExpenses.push(row) })
         if (expensesChanged) await writeAllExpenseRows(reconciledExpenses, t)
 
         const reconciledIncome = []
@@ -139,11 +141,17 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
             reconciledIncome.push([xls.id, xls.year, xls.month, toSentenceCase(xls.source), xls.amount])
           }
         })
-        if (dbIncMap.size > 0) incomeChanged = true
+        // Preserve Sheets-only income rows (added in app, not yet in Drive Excel backup)
+        dbIncMap.forEach(row => { incomeChanged = true; reconciledIncome.push(row) })
         if (incomeChanged) await writeAllIncomeRows(reconciledIncome, t)
 
-        rawExps = xlsxExps
-        rawInc = xlsxInc
+        rawExps = reconciledExpenses.map(r => ({
+          id: r[0], year: r[1], month: r[2], categoryId: r[3],
+          itemName: r[4], amount: r[5], isFixed: r[6], note: r[7]
+        }))
+        rawInc = reconciledIncome.map(r => ({
+          id: r[0], year: r[1], month: r[2], source: r[3], amount: r[4]
+        }))
       } else {
         rawExps = await fetchExpenses(null, t)
         rawInc = await fetchIncome(null, t)

@@ -81,12 +81,22 @@ let _token = null, _exp = 0
 // ─── PERSISTENCE ────────────────────────────────────────────
 function _persist() {
   localStorage.setItem('budgetiq_sheetId', _sheetId || '')
+  if (_token && _exp > Date.now()) {
+    localStorage.setItem('budgetiq_token', _token)
+    localStorage.setItem('budgetiq_exp', String(_exp))
+  }
 }
 function _restore() {
   _sheetId = localStorage.getItem('budgetiq_sheetId') || null
-  // Clean up stale keys written by an older version of this app
-  localStorage.removeItem('budgetiq_token')
-  localStorage.removeItem('budgetiq_exp')
+  const savedToken = localStorage.getItem('budgetiq_token')
+  const savedExp   = parseInt(localStorage.getItem('budgetiq_exp') || '0', 10)
+  if (savedToken && savedExp > Date.now()) {
+    _token = savedToken
+    _exp   = savedExp
+  } else {
+    localStorage.removeItem('budgetiq_token')
+    localStorage.removeItem('budgetiq_exp')
+  }
 }
 _restore() // run on module load
 
@@ -147,6 +157,8 @@ export function signOut() {
   if (_token && window.google?.accounts?.oauth2) window.google.accounts.oauth2.revoke(_token)
   _token = null; _exp = 0; _sheetId = null
   _cache.clear()
+  localStorage.removeItem('budgetiq_token')
+  localStorage.removeItem('budgetiq_exp')
   localStorage.removeItem('budgetiq_sheetId')
   localStorage.removeItem('budgetiq_userName')
   localStorage.removeItem('budgetiq_userPicture')
