@@ -10,6 +10,8 @@ import {
   getToken, getSheetId, setupSheet, getDriveExcelUrl
 } from './api/sheets'
 import { deleteCategoryFS } from './api/firestoreCategories'
+import { getPinFS, setPinFS } from './api/firestoreSettings'
+import PinScreen from './components/PinScreen'
 
 
 import { useAuth } from './hooks/useAuth'
@@ -39,14 +41,20 @@ export default function App() {
   const { classes, cx } = useStyles()
   const { classes: globalClasses } = useGlobalStyles()
 
+  // ── Auth first — authd needed by PIN gate effect below ────────
+  const { authd, userName, userFullName, userPicture, handleSignIn, handleSignOut } = useAuth()
+
   // ── UI state ──────────────────────────────────────────────────
   const [view, setView] = useState('dashboard')
   const [year, setYear] = useState(YEAR_NOW)
   const [month, setMonth] = useState(MONTH_NOW)
   const [selMonths, setSelMonths] = useState(() => defaultMonths(YEAR_NOW))
 
-  // Reset selMonths when year changes
-  useEffect(() => { setSelMonths(defaultMonths(year)) }, [year])
+  // ── PIN state ─────────────────────────────────────────────────
+  const [pinMode, setPinMode] = useState(null)      // null | 'setup' | 'entry'
+  const [pinVerified, setPinVerified] = useState(
+    () => sessionStorage.getItem('budgetiq_pin_verified') === '1'
+  )
 
   const [txnTab, setTxnTab] = useState('expenses')
   const [selectedExpenseIds, setSelectedExpenseIds] = useState([])
@@ -57,13 +65,26 @@ export default function App() {
 
   const isLocked = parseInt(year) < new Date().getFullYear()
 
+  // Reset selMonths when year changes
+  useEffect(() => { setSelMonths(defaultMonths(year)) }, [year])
+
+  // ── PIN gate ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!authd || pinVerified) return
+    const sid = getSheetId()
+    if (!sid) return
+    getPinFS(sid).then(existing => {
+      setPinMode(existing === null ? 'setup' : 'entry')
+    }).catch(() => {
+      // Firebase error — skip PIN gate rather than block the app
+      setPinVerified(true)
+    })
+  }, [authd])
+
   useEffect(() => { if (view !== 'expenses') setTxnTab('expenses') }, [view])
   useEffect(() => { setSelectedExpenseIds([]) }, [year, month, view])
 
   const closeModal = useCallback(() => { setModal(null); setEditRow(null) }, [])
-
-  // ── Auth ──────────────────────────────────────────────────────
-  const { authd, userName, userFullName, userPicture, handleSignIn, handleSignOut } = useAuth()
 
   // ── Data ──────────────────────────────────────────────────────
   const {
@@ -155,6 +176,37 @@ export default function App() {
 
   // ── Config check ──────────────────────────────────────────────
   if (missingConfig) return <ConfigScreen />
+
+  // ── PIN gate ──────────────────────────────────────────────────
+  if (authd && !pinVerified && pinMode) {
+    const sid = getSheetId()
+    return (
+      <PinScreen
+        mode={pinMode}
+        userName={userName}
+        onSetPin={async (pin) => {
+          await setPinFS(sid, pin)
+        }}
+        onSuccess={async (enteredPin) => {
+          if (pinMode === 'setup') {
+            sessionStorage.setItem('budgetiq_pin_verified', '1')
+            setPinVerified(true)
+            setPinMode(null)
+            return true
+          }
+          // Entry mode — verify against Firestore
+          const stored = await getPinFS(sid)
+          if (enteredPin === stored) {
+            sessionStorage.setItem('budgetiq_pin_verified', '1')
+            setPinVerified(true)
+            setPinMode(null)
+            return true
+          }
+          return false
+        }}
+      />
+    )
+  }
 
   return (
     <Box className={globalClasses.globalContainer}>
