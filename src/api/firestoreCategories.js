@@ -9,8 +9,20 @@ import {
 const catCol = (sheetId) =>
   collection(db, 'sheets', sheetId, 'categories')
 
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Firebase timeout — check VITE_FIREBASE_PROJECT_ID env var')), ms)
+    )
+  ])
+}
+
 export async function fetchCategoriesFS(sheetId) {
-  const snap = await getDocs(query(catCol(sheetId), orderBy('order', 'asc')))
+  const snap = await withTimeout(
+    getDocs(query(catCol(sheetId), orderBy('order', 'asc'))),
+    10000
+  )
   return snap.docs.map(d => d.data())
 }
 

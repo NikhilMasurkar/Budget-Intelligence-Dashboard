@@ -22,7 +22,8 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
   const [availableYears, setAvailableYears] = useState([YEAR_NOW])
 
   const missingConfig = !import.meta.env.VITE_GOOGLE_SHEETS_API_KEY ||
-    !import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID
+    !import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID ||
+    !import.meta.env.VITE_FIREBASE_PROJECT_ID
 
   const loadAll = useCallback(async (opts = {}) => {
     if (missingConfig) return
