@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   Box, Typography, Button, IconButton, Tooltip,
   Collapse, Menu, MenuItem, ListItemIcon, Divider,
-  FormControl, Select
+  FormControl, Select, Checkbox, TextField, InputAdornment
 } from '@mui/material'
+import PushPinIcon from '@mui/icons-material/PushPin'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
@@ -11,8 +12,29 @@ import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
+import ChatBubbleOutlinedIcon from '@mui/icons-material/ChatBubbleOutlined'
+import SearchIcon from '@mui/icons-material/Search'
 import { makeStyles } from 'tss-react/mui'
 import { MONTHS, fmt } from '../../utils/constants'
+import ExpenseCommentsModal, { parseComments } from './ExpenseCommentsModal'
+
+function fmtUpdated(raw) {
+  if (!raw) return null
+  const s = String(raw)
+  if (!s.startsWith('U')) return null
+  const ms = +s.slice(1)
+  if (!ms || isNaN(ms)) return null
+  const diffMs   = Date.now() - ms
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHrs  = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  if (diffMins < 1)  return 'just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHrs  < 24) return `${diffHrs}h ago`
+  if (diffDays === 1) return 'yesterday'
+  if (diffDays  < 7) return `${diffDays}d ago`
+  return new Date(ms).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+}
 import { useGlobalStyles } from '../../styles/globalStyles'
 
 const useStyles = makeStyles()((theme) => ({
@@ -22,16 +44,41 @@ const useStyles = makeStyles()((theme) => ({
   },
   title: { fontWeight: 700, fontSize: '22px', color: theme.palette.text.primary },
   flexFiller: { flex: 1 },
+  // Summary / money-story bar
   totalBar: {
-    display: 'flex', gap: '12px', marginBottom: '16px',
-    padding: '10px 16px',
+    display: 'flex', gap: '20px', marginBottom: '12px',
+    padding: '12px 16px', alignItems: 'center', flexWrap: 'wrap',
     background: 'rgba(255,255,255,0.02)',
     border: '1px solid rgba(255,255,255,0.06)',
     borderRadius: '10px',
-    flexWrap: 'wrap'
+    [theme.breakpoints.down('sm')]: { gap: '14px', padding: '12px 14px' }
   },
-  totalItem: { fontSize: 12, color: '#8891b8' },
-  totalValue: { fontWeight: 700, fontVariantNumeric: 'tabular-nums' },
+  statBlock: {
+    display: 'flex', flexDirection: 'column', minWidth: 0,
+    [theme.breakpoints.down('sm')]: { flex: '1 0 30%' }
+  },
+  statLabel: { fontSize: 10, color: '#8891b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 },
+  statValue: { fontWeight: 800, fontSize: 16, fontVariantNumeric: 'tabular-nums', lineHeight: 1.25 },
+  // Filter bar
+  filterBar: { display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'stretch' },
+  searchField: {
+    flex: 1, minWidth: '200px',
+    '& .MuiOutlinedInput-root': {
+      height: 42, borderRadius: '10px',
+      background: 'rgba(255,255,255,0.04)', fontSize: 14, color: '#e4e8f5',
+      paddingLeft: '12px',
+      '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+      '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+      '&.Mui-focused fieldset': { borderColor: '#5b7fff', borderWidth: '1px' }
+    },
+    '& .MuiOutlinedInput-input': { padding: '0 8px', color: '#e4e8f5' },
+    '& .MuiOutlinedInput-input::placeholder': { color: '#6a7190', opacity: 1 }
+  },
+  fixedToggleBtn: {
+    height: 42, fontSize: 13, fontWeight: 700, textTransform: 'none',
+    borderRadius: '10px', paddingLeft: '16px', paddingRight: '16px', whiteSpace: 'nowrap',
+    [theme.breakpoints.down('sm')]: { flex: 1 }
+  },
   // Category accordion section
   section: {
     marginBottom: '8px',
@@ -42,15 +89,17 @@ const useStyles = makeStyles()((theme) => ({
   },
   sectionExpanded: { borderColor: 'rgba(255,255,255,0.13)' },
   sectionHeader: {
-    display: 'flex', alignItems: 'center', gap: '10px',
+    display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '8px',
     padding: '12px 14px',
     cursor: 'pointer',
     userSelect: 'none',
     background: '#181b28',
     '&:hover': { background: 'rgba(255,255,255,0.025)' },
+    '&:focus-visible': { outline: '2px solid #5b7fff', outlineOffset: '-2px' },
     transition: 'background 0.15s'
   },
   sectionHeaderExpanded: { background: 'rgba(255,255,255,0.03)' },
+  sectionHeaderRow: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%' },
   colorDot: {
     width: 10, height: 10, borderRadius: '50%', flexShrink: 0
   },
@@ -59,7 +108,10 @@ const useStyles = makeStyles()((theme) => ({
     textTransform: 'uppercase', color: '#c8cfea', flex: 1,
     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
   },
-  catMeta: { fontSize: 12, color: '#8891b8', whiteSpace: 'nowrap' },
+  catMeta: {
+    fontSize: 12, color: '#8891b8', whiteSpace: 'nowrap',
+    [theme.breakpoints.down('sm')]: { display: 'none' }
+  },
   catTotal: {
     fontSize: 14, fontWeight: 800, color: '#e4e8f5',
     fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
@@ -80,19 +132,17 @@ const useStyles = makeStyles()((theme) => ({
   expenseList: { background: '#101218' },
   expenseRow: {
     display: 'flex', alignItems: 'center', gap: '10px',
-    padding: '10px 16px 10px 36px',
+    padding: '10px 16px 10px 36px', minHeight: 52,
     borderTop: '1px solid rgba(255,255,255,0.04)',
     '&:hover': { background: 'rgba(255,255,255,0.015)' },
-    transition: 'background 0.12s'
+    transition: 'background 0.12s',
+    [theme.breakpoints.down('sm')]: {
+      padding: '14px 12px', minHeight: 64, gap: '8px'
+    }
   },
   expenseName: {
     flex: 1, fontWeight: 600, fontSize: '13px',
     color: '#e4e8f5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-  },
-  expenseNote: {
-    fontSize: '11px', color: '#8891b8', fontStyle: 'italic',
-    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-    maxWidth: '180px'
   },
   fixedBadge: {
     fontSize: 9, background: 'rgba(91,127,255,0.15)',
@@ -135,12 +185,26 @@ const useStyles = makeStyles()((theme) => ({
   menuIcon: { minWidth: '28px', color: 'inherit' }
 }))
 
+// Compact budget-vs-actual text shown in a category header when a budget is set.
+function CategoryBudgetText({ actual, budget }) {
+  const pct = budget > 0 ? Math.round((actual / budget) * 100) : 0
+  const over = actual > budget
+  const color = over ? '#ff7a7a' : pct > 80 ? '#ffb03a' : '#8891b8'
+  return (
+    <Typography sx={{ fontSize: 11, color, fontWeight: 600, pl: '20px' }}>
+      Budget {fmt(actual)} / {fmt(budget)} · {pct}%{over ? ' · over' : ''}
+    </Typography>
+  )
+}
+
 export default function ExpensesByCategory({
-  expenses, categories, year, month, availableYears,
+  expenses, income = [], categories, year, month, availableYears,
   onYearChange, onMonthChange,
   onAddExpense, onEditExpense, onDeleteExpense,
   onAddCategory, onEditCategory, onDeleteCategory,
   onReorderCategory, onCopyToNextMonth,
+  selectedIds = [], onSelectionChange, onBulkPin, onBulkDelete,
+  onSaveComment,
   canEdit
 }) {
   const { classes, cx } = useStyles()
@@ -149,6 +213,11 @@ export default function ExpensesByCategory({
   const [expanded, setExpanded] = useState(new Set())
   const [menuAnchor, setMenuAnchor] = useState(null)
   const [menuCat, setMenuCat] = useState(null)
+  const [commentExp, setCommentExp] = useState(null)
+  const [commentSaving, setCommentSaving] = useState(false)
+  const [search, setSearch] = useState('')
+  const [fixedOnly, setFixedOnly] = useState(false)
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
 
   const monthExps = useMemo(() =>
     expenses.filter(e => String(e.year) === String(year) && String(e.month) === String(month))
@@ -158,9 +227,60 @@ export default function ExpensesByCategory({
     Object.fromEntries(categories.map(c => [c.id, c]))
   , [categories])
 
-  // Totals for the summary bar
+  // Group this month's expenses by category once — avoids re-filtering per category each render.
+  const monthByCat = useMemo(() => {
+    const m = new Map()
+    monthExps.forEach(e => {
+      const key = catMap[e.categoryId] ? e.categoryId : '_uncategorized'
+      if (!m.has(key)) m.set(key, [])
+      m.get(key).push(e)
+    })
+    return m
+  }, [monthExps, catMap])
+
+  // ── Search + fixed-only filter ─────────────────────────────────────────────
+  const q = search.trim().toLowerCase()
+  const filterActive = !!q || fixedOnly
+  const matches = (e) =>
+    (!q || String(e.itemName || '').toLowerCase().includes(q)) &&
+    (!fixedOnly || e.isFixed === 'TRUE')
+
+  // ── Money-story summary ────────────────────────────────────────────────────
+  const monthIncomeTotal = useMemo(() =>
+    income
+      .filter(i => String(i.year) === String(year) && String(i.month) === String(month))
+      .reduce((s, i) => s + (+i.amount || 0), 0)
+  , [income, year, month])
   const grandTotal = monthExps.reduce((s, e) => s + (+e.amount || 0), 0)
   const itemCount = monthExps.length
+  const saved = monthIncomeTotal - grandTotal
+  const spentPct = monthIncomeTotal > 0 ? Math.min(100, Math.round((grandTotal / monthIncomeTotal) * 100)) : 0
+
+  // ── Multi-select for bulk actions ──────────────────────────────────────────
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
+  const selectedExpenses = useMemo(
+    () => monthExps.filter(e => selectedSet.has(e.id)),
+    [monthExps, selectedSet]
+  )
+
+  // Selection is per-period — clear it when the year/month changes so stale
+  // ids from another month don't linger.
+  useEffect(() => { onSelectionChange?.([]) }, [year, month]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Reset the inline delete-confirm whenever the selection changes.
+  useEffect(() => { setBulkDeleteConfirm(false) }, [selectedIds])
+
+  const toggleExpense = (id, checked) => {
+    if (checked) onSelectionChange([...selectedIds, id])
+    else onSelectionChange(selectedIds.filter(x => x !== id))
+  }
+  const toggleCategoryAll = (catExps, checked) => {
+    const ids = catExps.map(e => e.id)
+    if (checked) onSelectionChange(Array.from(new Set([...selectedIds, ...ids])))
+    else {
+      const rm = new Set(ids)
+      onSelectionChange(selectedIds.filter(x => !rm.has(x)))
+    }
+  }
 
   const toggle = (catId) => {
     setExpanded(prev => {
@@ -199,13 +319,80 @@ export default function ExpensesByCategory({
   }
 
   const handleCopyCat = () => {
-    const catExps = monthExps.filter(e => e.categoryId === menuCat.id)
+    const catExps = monthByCat.get(menuCat.id) || []
     if (catExps.length) onCopyToNextMonth(catExps.map(e => e.id))
     closeMenu()
   }
 
-  // Expenses that don't match any known category
-  const uncategorized = monthExps.filter(e => !catMap[e.categoryId])
+  // Unified expense-row renderer — used by both category and uncategorized sections.
+  const renderExpenseRow = (exp) => {
+    const commentCount = parseComments(exp.note).length
+    return (
+      <Box key={exp.id} className={classes.expenseRow}
+        sx={selectedSet.has(exp.id) ? { background: 'rgba(91,127,255,0.06)' } : undefined}>
+        {canEdit && (
+          <Checkbox
+            size="small"
+            checked={selectedSet.has(exp.id)}
+            onChange={e => toggleExpense(exp.id, e.target.checked)}
+            sx={{ p: 0, mr: '2px', color: '#3d4466', '&.Mui-checked': { color: '#5b7fff' } }}
+          />
+        )}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography className={classes.expenseName} sx={{ flex: 'unset' }}>{exp.itemName}</Typography>
+          {fmtUpdated(exp.updatedAt) && (
+            <Typography sx={{ fontSize: 10, color: '#3d4466', display: 'block', lineHeight: 1.4 }}>
+              Updated {fmtUpdated(exp.updatedAt)}
+            </Typography>
+          )}
+        </Box>
+        {exp.isFixed === 'TRUE' && (
+          <Box component="span" className={classes.fixedBadge}>📌</Box>
+        )}
+        <Typography className={classes.expenseAmount}>{fmt(exp.amount)}</Typography>
+        <Tooltip title={commentCount > 0 ? `${commentCount} comment${commentCount !== 1 ? 's' : ''}` : 'Add comment'} arrow>
+          <IconButton
+            size="small"
+            onClick={() => setCommentExp(exp)}
+            sx={{
+              p: '3px', position: 'relative',
+              color: commentCount > 0 ? '#5b7fff' : '#4a5072',
+              '&:hover': { color: '#5b7fff', background: 'rgba(91,127,255,0.1)' }
+            }}
+          >
+            <ChatBubbleOutlinedIcon sx={{ fontSize: 14 }} />
+            {commentCount > 0 && (
+              <Box component="span" sx={{
+                position: 'absolute', top: 0, right: 0,
+                fontSize: 8, fontWeight: 800, lineHeight: 1,
+                background: '#5b7fff', color: '#fff',
+                borderRadius: '50%', width: 12, height: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {commentCount > 9 ? '9+' : commentCount}
+              </Box>
+            )}
+          </IconButton>
+        </Tooltip>
+        {canEdit && (
+          <>
+            <Tooltip title="Edit" arrow>
+              <IconButton size="small" className={classes.rowAction} onClick={() => onEditExpense(exp)}>
+                <EditOutlinedIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Delete" arrow>
+              <IconButton size="small" className={classes.rowDelete} onClick={() => onDeleteExpense(exp)}>
+                <DeleteOutlinedIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
+      </Box>
+    )
+  }
+
+  const uncategorized = monthByCat.get('_uncategorized') || []
 
   return (
     <Box>
@@ -242,16 +429,140 @@ export default function ExpensesByCategory({
         </Box>
       </Box>
 
-      {/* ── Summary bar ── */}
+      {/* ── Money-story summary bar ── */}
       {itemCount > 0 && (
         <Box className={classes.totalBar}>
-          <Typography className={classes.totalItem}>
-            {MONTHS[month - 1]} {year} &nbsp;·&nbsp;
-            <Box component="span" className={classes.totalValue} sx={{ color: '#ff7a7a' }}>
-              {fmt(grandTotal)}
+          <Box className={classes.statBlock}>
+            <Typography className={classes.statLabel}>{MONTHS[month - 1]} Income</Typography>
+            <Typography className={classes.statValue} sx={{ color: '#3de8a0' }}>{fmt(monthIncomeTotal)}</Typography>
+          </Box>
+          <Box className={classes.statBlock}>
+            <Typography className={classes.statLabel}>Spent</Typography>
+            <Typography className={classes.statValue} sx={{ color: '#ff7a7a' }}>{fmt(grandTotal)}</Typography>
+          </Box>
+          <Box className={classes.statBlock}>
+            <Typography className={classes.statLabel}>{saved >= 0 ? 'Saved' : 'Over budget'}</Typography>
+            <Typography className={classes.statValue} sx={{ color: saved >= 0 ? '#a0b4ff' : '#ff7a7a' }}>
+              {fmt(Math.abs(saved))}
+            </Typography>
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 120 }}>
+            <Box sx={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+              <Box sx={{
+                width: `${spentPct}%`, height: '100%', transition: 'width 0.3s',
+                background: spentPct >= 100 ? '#ff7a7a' : spentPct > 80 ? '#ffb03a' : '#5b7fff'
+              }} />
             </Box>
-            &nbsp;spent &nbsp;·&nbsp; {itemCount} item{itemCount !== 1 ? 's' : ''}
+            <Typography sx={{ fontSize: 10, color: '#8891b8', mt: '4px' }}>
+              {monthIncomeTotal > 0 ? `${spentPct}% of income spent · ${itemCount} item${itemCount !== 1 ? 's' : ''}` : `${itemCount} item${itemCount !== 1 ? 's' : ''}`}
+            </Typography>
+          </Box>
+        </Box>
+      )}
+
+      {/* ── Search + filter bar ── */}
+      {itemCount > 0 && (
+        <Box className={classes.filterBar}>
+          <TextField
+            className={classes.searchField}
+            placeholder="Search expenses…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            size="small"
+            InputProps={{
+              startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: '#5a6080' }} /></InputAdornment>
+            }}
+          />
+          <Button
+            variant={fixedOnly ? 'contained' : 'outlined'}
+            startIcon={<PushPinIcon sx={{ fontSize: 15 }} />}
+            onClick={() => setFixedOnly(v => !v)}
+            className={classes.fixedToggleBtn}
+            sx={fixedOnly ? {
+              background: '#5b7fff', '&:hover': { background: '#4a6def' }
+            } : {
+              color: '#a0b4ff', borderColor: 'rgba(91,127,255,0.35)',
+              '&:hover': { borderColor: 'rgba(91,127,255,0.6)', background: 'rgba(91,127,255,0.07)' }
+            }}
+          >
+            Fixed only
+          </Button>
+        </Box>
+      )}
+
+      {/* ── Bulk action bar ── */}
+      {canEdit && selectedExpenses.length > 0 && (
+        <Box sx={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          padding: '10px 14px', marginBottom: '10px', flexWrap: 'wrap',
+          background: 'rgba(91,127,255,0.1)',
+          border: '1px solid rgba(91,127,255,0.35)',
+          borderRadius: '10px', position: 'sticky', top: 8, zIndex: 5,
+          backdropFilter: 'blur(6px)'
+        }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#a0b4ff' }}>
+            {selectedExpenses.length} selected
           </Typography>
+          <Box sx={{ flex: 1 }} />
+          {bulkDeleteConfirm ? (
+            <>
+              <Typography sx={{ fontSize: 12, color: '#ff9b9b' }}>
+                Delete {selectedExpenses.length}?
+              </Typography>
+              <Button
+                size="small" variant="contained"
+                onClick={() => { onBulkDelete(selectedExpenses); setBulkDeleteConfirm(false) }}
+                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', background: '#ff5f5f', '&:hover': { background: '#e64a4a' } }}
+              >
+                Yes, delete
+              </Button>
+              <Button
+                size="small" variant="text"
+                onClick={() => setBulkDeleteConfirm(false)}
+                sx={{ fontSize: 12, color: '#8891b8', textTransform: 'none', minWidth: 0 }}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                size="small" variant="contained" startIcon={<PushPinIcon sx={{ fontSize: 15 }} />}
+                onClick={() => onBulkPin(selectedExpenses, true)}
+                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', background: '#5b7fff', '&:hover': { background: '#4a6def' } }}
+              >
+                Pin
+              </Button>
+              <Button
+                size="small" variant="outlined"
+                onClick={() => onBulkPin(selectedExpenses, false)}
+                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', color: '#a0b4ff', borderColor: 'rgba(91,127,255,0.4)', '&:hover': { borderColor: 'rgba(91,127,255,0.7)', background: 'rgba(91,127,255,0.08)' } }}
+              >
+                Unpin
+              </Button>
+              <Button
+                size="small" variant="outlined"
+                onClick={() => onCopyToNextMonth(selectedExpenses.map(e => e.id))}
+                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', color: '#c8cfea', borderColor: 'rgba(255,255,255,0.15)', '&:hover': { borderColor: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.04)' } }}
+              >
+                📋 Copy to next month
+              </Button>
+              <Button
+                size="small" variant="outlined" startIcon={<DeleteOutlinedIcon sx={{ fontSize: 15 }} />}
+                onClick={() => setBulkDeleteConfirm(true)}
+                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', color: '#ff7a7a', borderColor: 'rgba(255,95,95,0.4)', '&:hover': { borderColor: 'rgba(255,95,95,0.7)', background: 'rgba(255,95,95,0.08)' } }}
+              >
+                Delete
+              </Button>
+              <Button
+                size="small" variant="text"
+                onClick={() => onSelectionChange([])}
+                sx={{ fontSize: 12, color: '#8891b8', textTransform: 'none', minWidth: 0 }}
+              >
+                Clear
+              </Button>
+            </>
+          )}
         </Box>
       )}
 
@@ -262,10 +573,15 @@ export default function ExpensesByCategory({
         </Box>
       )}
 
-      {categories.map((cat, idx) => {
-        const catExps = monthExps.filter(e => e.categoryId === cat.id)
-        const catTotal = catExps.reduce((s, e) => s + (+e.amount || 0), 0)
-        const isOpen = expanded.has(cat.id)
+      {categories.map((cat) => {
+        const catExpsFull = monthByCat.get(cat.id) || []
+        const catTotalFull = catExpsFull.reduce((s, e) => s + (+e.amount || 0), 0)
+        const visibleExps = filterActive ? catExpsFull.filter(matches) : catExpsFull
+        // When a filter is active, hide categories with no matching rows.
+        if (filterActive && visibleExps.length === 0) return null
+        const isOpen = filterActive ? true : expanded.has(cat.id)
+        const catAllSelected = catExpsFull.length > 0 && catExpsFull.every(e => selectedSet.has(e.id))
+        const catSomeSelected = catExpsFull.some(e => selectedSet.has(e.id))
 
         return (
           <Box key={cat.id} className={cx(classes.section, isOpen && classes.sectionExpanded)}>
@@ -273,69 +589,69 @@ export default function ExpensesByCategory({
             <Box
               className={cx(classes.sectionHeader, isOpen && classes.sectionHeaderExpanded)}
               onClick={() => toggle(cat.id)}
+              role="button"
+              tabIndex={0}
+              aria-expanded={isOpen}
+              onKeyDown={e => {
+                if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault(); toggle(cat.id)
+                }
+              }}
             >
-              {isOpen
-                ? <ExpandLessIcon className={classes.expandIcon} />
-                : <ExpandMoreIcon className={classes.expandIcon} />
-              }
-              <Box className={classes.colorDot} style={{ background: cat.color || '#5b7fff' }} />
-              <Typography className={classes.catName}>{cat.name}</Typography>
-              {catExps.length > 0 && (
-                <Typography className={classes.catMeta}>{catExps.length} item{catExps.length !== 1 ? 's' : ''}</Typography>
-              )}
-              <Typography className={classes.catTotal} style={{ color: catTotal > 0 ? '#e4e8f5' : '#5a6080' }}>
-                {catTotal > 0 ? fmt(catTotal) : '—'}
-              </Typography>
+              <Box className={classes.sectionHeaderRow}>
+                {isOpen
+                  ? <ExpandLessIcon className={classes.expandIcon} />
+                  : <ExpandMoreIcon className={classes.expandIcon} />
+                }
+                {canEdit && catExpsFull.length > 0 && (
+                  <Tooltip title={catAllSelected ? 'Deselect all' : 'Select all in category'} arrow>
+                    <Checkbox
+                      size="small"
+                      checked={catAllSelected}
+                      indeterminate={catSomeSelected && !catAllSelected}
+                      onClick={e => e.stopPropagation()}
+                      onChange={e => toggleCategoryAll(catExpsFull, e.target.checked)}
+                      sx={{
+                        p: 0, color: '#4a5072',
+                        '&.Mui-checked': { color: '#5b7fff' },
+                        '&.MuiCheckbox-indeterminate': { color: '#5b7fff' }
+                      }}
+                    />
+                  </Tooltip>
+                )}
+                <Box className={classes.colorDot} style={{ background: cat.color || '#5b7fff' }} />
+                <Typography className={classes.catName}>{cat.name}</Typography>
+                {catExpsFull.length > 0 && (
+                  <Typography className={classes.catMeta}>{catExpsFull.length} item{catExpsFull.length !== 1 ? 's' : ''}</Typography>
+                )}
+                <Typography className={classes.catTotal} style={{ color: catTotalFull > 0 ? '#e4e8f5' : '#5a6080' }}>
+                  {catTotalFull > 0 ? fmt(catTotalFull) : '—'}
+                </Typography>
 
-              {canEdit && (
-                <Button
-                  size="small" variant="outlined"
-                  className={classes.addBtn}
-                  onClick={e => { e.stopPropagation(); onAddExpense(cat.id) }}
-                >
-                  + Add
-                </Button>
-              )}
+                {canEdit && (
+                  <Button
+                    size="small" variant="outlined"
+                    className={classes.addBtn}
+                    onClick={e => { e.stopPropagation(); onAddExpense(cat.id) }}
+                  >
+                    + Add
+                  </Button>
+                )}
 
-              <IconButton size="small" className={classes.menuBtn} onClick={e => openMenu(e, cat)}>
-                <MoreVertIcon sx={{ fontSize: 16 }} />
-              </IconButton>
+                <IconButton size="small" className={classes.menuBtn} onClick={e => openMenu(e, cat)}>
+                  <MoreVertIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Box>
+              {cat.budget > 0 && <CategoryBudgetText actual={catTotalFull} budget={cat.budget} />}
             </Box>
 
             {/* Expense rows */}
             <Collapse in={isOpen} timeout={150}>
               <Box className={classes.expenseList}>
-                {catExps.length === 0 ? (
+                {visibleExps.length === 0 ? (
                   <Box className={classes.emptyRow}>No expenses this month</Box>
                 ) : (
-                  catExps.map(exp => (
-                    <Box key={exp.id} className={classes.expenseRow}>
-                      <Typography className={classes.expenseName}>{exp.itemName}</Typography>
-                      {exp.note && (
-                        <Typography className={classes.expenseNote}>💬 {exp.note}</Typography>
-                      )}
-                      {exp.isFixed === 'TRUE' && (
-                        <Box component="span" className={classes.fixedBadge}>📌</Box>
-                      )}
-                      <Typography className={classes.expenseAmount}>{fmt(exp.amount)}</Typography>
-                      {canEdit && (
-                        <>
-                          <Tooltip title="Edit" arrow>
-                            <IconButton size="small" className={classes.rowAction}
-                              onClick={() => onEditExpense(exp)}>
-                              <EditOutlinedIcon sx={{ fontSize: 14 }} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Delete" arrow>
-                            <IconButton size="small" className={classes.rowDelete}
-                              onClick={() => onDeleteExpense(exp)}>
-                              <DeleteOutlinedIcon sx={{ fontSize: 14 }} />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      )}
-                    </Box>
-                  ))
+                  visibleExps.map(exp => renderExpenseRow(exp))
                 )}
               </Box>
             </Collapse>
@@ -344,46 +660,62 @@ export default function ExpensesByCategory({
       })}
 
       {/* Uncategorized section */}
-      {uncategorized.length > 0 && (
-        <Box className={cx(classes.section, expanded.has('_uncategorized') && classes.sectionExpanded)}>
-          <Box
-            className={cx(classes.sectionHeader, expanded.has('_uncategorized') && classes.sectionHeaderExpanded)}
-            onClick={() => toggle('_uncategorized')}
-          >
-            {expanded.has('_uncategorized')
-              ? <ExpandLessIcon className={classes.expandIcon} />
-              : <ExpandMoreIcon className={classes.expandIcon} />
-            }
-            <Box className={classes.colorDot} style={{ background: '#8891b8' }} />
-            <Typography className={classes.catName}>Uncategorized</Typography>
-            <Typography className={classes.catMeta}>{uncategorized.length} item{uncategorized.length !== 1 ? 's' : ''}</Typography>
-            <Typography className={classes.catTotal}>{fmt(uncategorized.reduce((s, e) => s + (+e.amount || 0), 0))}</Typography>
-          </Box>
-          <Collapse in={expanded.has('_uncategorized')} timeout={150}>
-            <Box className={classes.expenseList}>
-              {uncategorized.map(exp => (
-                <Box key={exp.id} className={classes.expenseRow}>
-                  <Typography className={classes.expenseName}>{exp.itemName}</Typography>
-                  <Typography className={classes.expenseAmount}>{fmt(exp.amount)}</Typography>
-                  {canEdit && (
-                    <>
-                      <Tooltip title="Edit" arrow>
-                        <IconButton size="small" className={classes.rowAction} onClick={() => onEditExpense(exp)}>
-                          <EditOutlinedIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete" arrow>
-                        <IconButton size="small" className={classes.rowDelete} onClick={() => onDeleteExpense(exp)}>
-                          <DeleteOutlinedIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      </Tooltip>
-                    </>
-                  )}
-                </Box>
-              ))}
+      {(() => {
+        const visibleUncat = filterActive ? uncategorized.filter(matches) : uncategorized
+        if (uncategorized.length === 0 || (filterActive && visibleUncat.length === 0)) return null
+        const uncatTotal = uncategorized.reduce((s, e) => s + (+e.amount || 0), 0)
+        const isOpen = filterActive ? true : expanded.has('_uncategorized')
+        return (
+          <Box className={cx(classes.section, isOpen && classes.sectionExpanded)}>
+            <Box
+              className={cx(classes.sectionHeader, isOpen && classes.sectionHeaderExpanded)}
+              onClick={() => toggle('_uncategorized')}
+              role="button"
+              tabIndex={0}
+              aria-expanded={isOpen}
+              onKeyDown={e => {
+                if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault(); toggle('_uncategorized')
+                }
+              }}
+            >
+              <Box className={classes.sectionHeaderRow}>
+                {isOpen
+                  ? <ExpandLessIcon className={classes.expandIcon} />
+                  : <ExpandMoreIcon className={classes.expandIcon} />
+                }
+                <Box className={classes.colorDot} style={{ background: '#8891b8' }} />
+                <Typography className={classes.catName}>Uncategorized</Typography>
+                <Typography className={classes.catMeta}>{uncategorized.length} item{uncategorized.length !== 1 ? 's' : ''}</Typography>
+                <Typography className={classes.catTotal}>{fmt(uncatTotal)}</Typography>
+              </Box>
             </Box>
-          </Collapse>
-        </Box>
+            <Collapse in={isOpen} timeout={150}>
+              <Box className={classes.expenseList}>
+                {visibleUncat.map(exp => renderExpenseRow(exp))}
+              </Box>
+            </Collapse>
+          </Box>
+        )
+      })()}
+
+      {/* ── Comment Modal ── */}
+      {commentExp && (
+        <ExpenseCommentsModal
+          expense={commentExp}
+          saving={commentSaving}
+          onClose={() => { if (!commentSaving) setCommentExp(null) }}
+          onSave={async (exp, noteJson) => {
+            setCommentSaving(true)
+            try {
+              await onSaveComment?.(exp, noteJson)
+              // Refresh the local expense so the modal shows the new comment immediately
+              setCommentExp(prev => prev ? { ...prev, note: noteJson } : null)
+            } finally {
+              setCommentSaving(false)
+            }
+          }}
+        />
       )}
 
       {/* ── Category ⋮ Menu ── */}
@@ -404,7 +736,7 @@ export default function ExpensesByCategory({
           <Divider key="d1" sx={{ borderColor: 'rgba(255,255,255,0.07)', my: '4px' }} />,
           <MenuItem key="copy" className={classes.menuItem}
             onClick={handleCopyCat}
-            disabled={!monthExps.filter(e => e.categoryId === menuCat?.id).length}>
+            disabled={!(monthByCat.get(menuCat?.id) || []).length}>
             <ListItemIcon className={classes.menuIcon}>📋</ListItemIcon>
             Copy to Next Month
           </MenuItem>,

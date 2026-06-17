@@ -42,6 +42,29 @@ function getCellText(cell) {
   return String(cell.value).trim()
 }
 
+// Read a cell's comment/note (ExcelJS may store it as a string or { texts: [...] }).
+function getCellNote(cell) {
+  const n = cell.note
+  if (!n) return ''
+  if (typeof n === 'string') return n
+  if (Array.isArray(n.texts)) return n.texts.map(t => t.text || '').join('')
+  if (typeof n.text === 'string') return n.text
+  return ''
+}
+
+// exportExcel.js writes notes as `• <note> (₹<amount>)`, one per line if several.
+// Strip that decoration so re-importing recovers the original note text without
+// compounding the bullet/amount on the next export. Plain hand-written comments
+// (no decoration) pass through unchanged.
+function cleanNote(raw) {
+  if (!raw) return ''
+  return String(raw)
+    .split('\n')
+    .map(line => line.replace(/^\s*•\s*/, '').replace(/\s*\(₹[\d,]+\)\s*$/, '').trim())
+    .filter(Boolean)
+    .join(' / ')
+}
+
 // ─── SKIP ROW DETECTOR ───────────────────────────────────────
 // STOP_LABELS is imported from constants.js
 
@@ -124,10 +147,13 @@ function parseYearSheet(sheet, year, categories) {
       return
     }
 
-    // ── Read monthly values ────────────────────────────────────
+    // ── Read monthly values (and any cell-comment notes) ───────
     const amounts = []
+    const notes = []
     for (let c = MONTH_COL_START; c <= MONTH_COL_END; c++) {
-      amounts.push(getCellValue(row.getCell(c)))
+      const cell = row.getCell(c)
+      amounts.push(getCellValue(cell))
+      notes.push(cleanNote(getCellNote(cell)))
     }
     const hasValues = amounts.some(a => a !== 0)
 
@@ -168,6 +194,7 @@ function parseYearSheet(sheet, year, categories) {
           id: uid(), year: String(year), month: String(idx + 1),
           categoryId: currentCat.id, itemName: rawA,
           amount: String(Math.round(amt)), isFixed: 'FALSE',
+          note: notes[idx] || '',
         })
       })
     }

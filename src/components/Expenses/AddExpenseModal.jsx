@@ -31,6 +31,8 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
   })
 
   const [saving, setSaving] = useState(false)
+  // applyMode: 'single' | 'all_year' | 'this_and_forward'
+  const [applyMode, setApplyMode] = useState('single')
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const valid = form.itemName.trim() && form.amount && form.categoryId
@@ -39,7 +41,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
     if (!valid || saving) return
     setSaving(true)
     try {
-      await onSave(form)
+      await onSave(form, applyMode)
     } catch (err) {
       console.error(err)
       setSaving(false)
@@ -149,19 +151,6 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             className={classes.fieldStyles}
           />
 
-          {/* Note */}
-          <TextField
-            label="Note (Optional)"
-            value={form.note}
-            onChange={e => set('note', e.target.value)}
-            placeholder="e.g. 20k given to Ramesh"
-            fullWidth
-            variant="outlined"
-            size="small"
-            InputLabelProps={{ shrink: true }}
-            className={classes.fieldStyles}
-          />
-
           {/* Fixed / Recurring toggle */}
           <Box sx={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -187,6 +176,31 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
                 '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#5b7fff' }
               }}
             />
+          </Box>
+
+          {/* Apply Mode Selector */}
+          <Box style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <Typography variant="caption" className={classes.applyLabel}>
+              Apply to
+            </Typography>
+            <Box className={classes.applyButtonContainer}>
+              {[
+                { value: 'single', label: 'This month only' },
+                { value: 'all_year', label: 'Whole year' },
+                { value: 'this_and_forward', label: `${MONTHS[(form.month || 1) - 1]} → Dec` },
+              ].map(opt => (
+                <Button
+                  key={opt.value}
+                  variant={applyMode === opt.value ? 'contained' : 'outlined'}
+                  size="small"
+                  onClick={() => setApplyMode(opt.value)}
+                  disabled={saving}
+                  className={applyMode === opt.value ? classes.applyButtonActive : classes.applyButtonInactive}
+                >
+                  {opt.label}
+                </Button>
+              ))}
+            </Box>
           </Box>
         </Box>
 

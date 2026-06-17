@@ -1,6 +1,6 @@
 # BudgetIQ — Personal Budget Intelligence Dashboard
 
-BudgetIQ is a premium, client-side React web application for personal budget tracking, financial analysis, and AI-powered insights. It uses Google Sheets as a personal cloud database, Firebase Firestore for categories, and Google Drive for automatic Excel backup — all with zero backend server required.
+BudgetIQ is a premium, client-side React web application for personal budget tracking, financial analysis, and AI-powered insights. It uses Google Sheets as a personal cloud database, Firebase Firestore for categories and app-only metadata (pins, comments, PIN lock), and Google Drive for automatic Excel backup — all with zero backend server required.
 
 ---
 
@@ -19,18 +19,30 @@ BudgetIQ is a premium, client-side React web application for personal budget tra
 - **Charts** — Income vs Expenses monthly bar/line chart + Category spend donut, side by side on desktop
 
 ### Transactions
-- **Expenses tab** — expenses grouped by category for selected month, with add/edit/delete, bulk copy to next month, and category management
-- **Income tab** — income entries by month (salary, freelance, dividend, ITR return, other)
+- **Expenses tab** — expenses grouped by collapsible category accordions for the selected month, with add/edit/delete and full category management
+- **Money-story summary** — Income · Spent · Saved for the month, with a spend-vs-income progress bar
+- **Search & filter** — live search by item name plus a "Fixed only" toggle; matching categories auto-expand
+- **Per-category budget** — a compact `Budget ₹spent / ₹limit · %` readout in each category header (amber over 80%, red when exceeded)
+- **Comment threads** — a 💬 icon on every row opens a modal of timestamped comments; add new ones inline. Stored as a JSON thread in the Sheet (column H) and mirrored to Firestore, with backward-compatibility for legacy single notes and recovery of older notes that survive only as Excel cell comments
+- **Bulk actions** — multi-select rows (or a whole category) to **pin/unpin as fixed, copy to next month, or delete** in one operation
+- **Apply across months** — when adding an expense, apply it to this month only, the whole year, or this month → December
+- **Last-updated stamp** and a 📌 badge for fixed/recurring items per row
+- **Income tab** — income entries by month (salary, freelance, dividend, ITR return, other) as a responsive card list
 - Both tabs live under one **Transactions** nav item with a pill switcher
 
 ### AI Insights
 - Powered by **Google Gemini** — summarises your spending patterns, flags anomalies, and gives personalised suggestions for the selected period
 
+### Security
+- **PIN lock** — a 4-digit PIN (stored in Firestore) gates the app after sign-in, verified once per session
+- **Biometric unlock** — optional fingerprint/Face ID bypass via the WebAuthn platform authenticator
+
 ### Data & Sync
 - **Google Sheets** as primary database — `{user} budgetIQ_Data` spreadsheet with Categories, Expenses, and Income tabs
-- **Firebase Firestore** for category metadata (name, color, budget, type)
-- **Auto-sync to Google Drive** — exports a full `.xlsx` balance sheet after every write
+- **Firebase Firestore** for category metadata (name, color, budget, type) and app-only expense metadata — the **pin** (`isFixed`) and **comment thread** (`note`) that the Excel round-trip can't reliably carry, keyed by `year-month-categoryId-itemName`
+- **Auto-sync to Google Drive** — exports a full `.xlsx` balance sheet after every write (debounced so rapid edits coalesce into one upload)
 - **PWA** — installable on desktop and mobile, works offline with Workbox service worker
+- **Mobile-first UI** — responsive accordions/cards, taller touch-friendly rows, and an avatar-only account menu in the header
 
 ### Export
 - **Excel export** (`.xlsx`) via ExcelJS — formatted balance sheet
@@ -79,7 +91,10 @@ budget-app/
 ├── src/
 │   ├── api/
 │   │   ├── sheets.js          # Google Sheets + Drive CRUD, OAuth token management
-│   │   ├── firestoreCategories.js  # Firebase Firestore category operations
+│   │   ├── firestoreCategories.js   # Firestore category operations
+│   │   ├── firestoreExpenseMeta.js  # Firestore app-only expense meta (pin + comments)
+│   │   ├── firestoreSettings.js     # Firestore PIN storage
+│   │   ├── biometric.js       # WebAuthn fingerprint / Face ID unlock
 │   │   └── gemini.js          # Gemini AI API calls
 │   ├── components/
 │   │   ├── Dashboard/
@@ -94,15 +109,16 @@ budget-app/
 │   │   │   │   └── CategoryDetailsDialog.jsx # Monthly drill-down for a category
 │   │   │   └── styles/
 │   │   ├── Expenses/
-│   │   │   ├── ExpensesByCategory.jsx  # Expenses grouped by category
-│   │   │   ├── ExpenseTable.jsx
+│   │   │   ├── ExpensesByCategory.jsx   # Expenses grouped by category + search/filter/bulk
+│   │   │   ├── ExpenseCommentsModal.jsx # Timestamped comment thread per expense
 │   │   │   └── AddExpenseModal.jsx
 │   │   ├── Income/
-│   │   │   ├── IncomeTable.jsx
+│   │   │   ├── IncomeTable.jsx          # Responsive income card list
 │   │   │   └── AddIncomeModal.jsx
-│   │   └── Category/
-│   │       ├── CategoryManager.jsx
-│   │       └── CategoryModal.jsx
+│   │   ├── Category/
+│   │   │   ├── CategoryManager.jsx
+│   │   │   └── CategoryModal.jsx
+│   │   └── PinScreen.jsx        # PIN setup / entry + biometric unlock gate
 │   ├── hooks/
 │   │   ├── useAuth.js          # Google OAuth2 sign-in / sign-out
 │   │   ├── useBudgetData.js    # Loads all expenses, income, categories
@@ -174,7 +190,16 @@ npm run build
 | `categoryId` | string | Firestore category ID |
 | `itemName` | string | Description |
 | `amount` | number | INR |
-| `isFixed` | `'TRUE'`/`'FALSE'` | Recurring flag |
+| `isFixed` | `'TRUE'`/`'FALSE'` | Recurring flag (mirrored to Firestore) |
+| `note` | string | JSON comment thread `[{text, ts}]`; legacy plain strings still parse |
+| `updatedAt` | string | `'U'`-prefixed epoch ms (letter prefix keeps Sheets from coercing it to a date) |
+
+### Expense metadata (Firestore — `sheets/{sheetId}/expenseMeta/{key}`)
+App-only fields that the Excel backup can't reliably carry. Key = sanitized `year_month_categoryId_itemName`.
+| Field | Type | Notes |
+|---|---|---|
+| `isFixed` | boolean | Pin / recurring flag — Firestore wins on load |
+| `note` | string | Comment thread JSON — fallback used only when the Sheet's column H is empty |
 
 ### Income (Google Sheets)
 | Field | Type | Notes |

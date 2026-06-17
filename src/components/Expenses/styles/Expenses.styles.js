@@ -1,186 +1,5 @@
 import { makeStyles } from 'tss-react/mui'
 
-export const useExpenseTableStyles = makeStyles()((theme) => ({
-  container: {
-    width: '100%'
-  },
-  filterRow: {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    alignItems: 'stretch',
-    gap: '16px',
-    marginTop: '16px',
-    marginBottom: '16px',
-    paddingLeft: '8px',
-    paddingRight: '8px',
-    [theme.breakpoints.up('sm')]: {
-      flexDirection: 'row',
-      alignItems: 'center'
-    }
-  },
-  searchField: {
-    maxWidth: '100%',
-    marginTop: '8px',
-    marginBottom: '8px',
-    width: '100%',
-    [theme.breakpoints.up('sm')]: {
-      maxWidth: '260px'
-    },
-    '& .MuiOutlinedInput-root': {
-      borderRadius: '8px',
-      backgroundColor: 'rgba(255, 255, 255, 0.03)',
-      '& fieldset': {
-        borderColor: 'rgba(255, 255, 255, 0.08)'
-      },
-      '&:hover fieldset': {
-        borderColor: 'rgba(255, 255, 255, 0.15)'
-      },
-      '&.Mui-focused fieldset': {
-        borderColor: '#5b7fff'
-      }
-    }
-  },
-  totalText: {
-    color: '#8891b8',
-    fontSize: '13px',
-    textAlign: 'left',
-    [theme.breakpoints.up('sm')]: {
-      textAlign: 'right'
-    }
-  },
-  tableContainer: {
-    backgroundColor: '#181b28',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    borderRadius: '12px',
-    backgroundImage: 'none',
-    boxShadow: '0 4px 20px 0 rgba(0, 0, 0, 0.25)',
-    overflowX: 'auto',
-    width: '100%'
-  },
-  tableHead: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)'
-  },
-  headerCell: {
-    color: '#8891b8',
-    fontWeight: 700,
-    fontSize: '11px',
-    paddingTop: '14px',
-    paddingBottom: '14px',
-    paddingLeft: '20px',
-    paddingRight: '20px',
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase'
-  },
-  thCheckboxCell: {
-    width: '48px',
-    paddingTop: '14px',
-    paddingBottom: '14px',
-    paddingLeft: '20px',
-    paddingRight: '20px'
-  },
-  checkbox: {
-    color: 'rgba(255, 255, 255, 0.3)',
-    padding: 0,
-    '&.Mui-checked': { color: '#5b7fff' },
-    '&.MuiCheckbox-indeterminate': { color: '#5b7fff' }
-  },
-  tableRow: {
-    borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
-    '&:last-child': { borderBottom: 0 },
-    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.015)' },
-    transition: 'background-color 0.15s ease'
-  },
-  emptyCell: {
-    paddingTop: '48px',
-    paddingBottom: '48px',
-    color: '#8891b8'
-  },
-  emptyText: {
-    fontStyle: 'italic'
-  },
-  tdCheckboxCell: {
-    paddingTop: '12px',
-    paddingBottom: '12px',
-    paddingLeft: '20px',
-    paddingRight: '20px'
-  },
-  rowCheckbox: {
-    color: 'rgba(255, 255, 255, 0.3)',
-    padding: 0,
-    '&.Mui-checked': { color: '#5b7fff' }
-  },
-  itemNameCell: {
-    paddingTop: '12px',
-    paddingBottom: '12px',
-    paddingLeft: '20px',
-    paddingRight: '20px'
-  },
-  itemName: {
-    fontWeight: 600,
-    fontSize: '13.5px',
-    color: '#e4e8f5'
-  },
-  itemNote: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    color: '#8891b8',
-    marginTop: '4px',
-    fontStyle: 'italic'
-  },
-  categoryCell: {
-    paddingTop: '12px',
-    paddingBottom: '12px',
-    paddingLeft: '20px',
-    paddingRight: '20px'
-  },
-  categoryChip: {
-    fontWeight: 700,
-    fontSize: '10.5px',
-    borderRadius: '4px'
-  },
-  categoryFallbackText: {
-    color: '#8891b8',
-    fontSize: '12px'
-  },
-  amountCell: {
-    paddingTop: '12px',
-    paddingBottom: '12px',
-    paddingLeft: '20px',
-    paddingRight: '20px',
-    fontWeight: 700,
-    fontSize: '14px',
-    color: '#e4e8f5',
-    fontVariantNumeric: 'tabular-nums'
-  },
-  actionsCell: {
-    paddingTop: '8px',
-    paddingBottom: '8px',
-    paddingLeft: '20px',
-    paddingRight: '20px'
-  },
-  actionsContainer: {
-    display: 'flex',
-    gap: '4px',
-    justifyContent: 'flex-end'
-  },
-  actionButton: {
-    color: '#8891b8',
-    '&:hover': {
-      color: '#5b7fff',
-      backgroundColor: 'rgba(91, 127, 255, 0.1)'
-    }
-  },
-  deleteButton: {
-    color: '#8891b8',
-    '&:hover': {
-      color: '#ff5f5f',
-      backgroundColor: 'rgba(255, 95, 95, 0.1)'
-    }
-  }
-}))
-
 export const useAddExpenseModalStyles = makeStyles()((theme) => ({
   dialog: {
     '& .MuiDialog-paper': {
@@ -234,6 +53,46 @@ export const useAddExpenseModalStyles = makeStyles()((theme) => ({
   rowGrid: {
     display: 'flex',
     gap: '16px'
+  },
+  applyLabel: {
+    color: '#8891b8',
+    fontWeight: 600,
+    marginBottom: '10px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    fontSize: '11px'
+  },
+  applyButtonContainer: {
+    display: 'flex',
+    gap: '8px',
+    flexWrap: 'wrap'
+  },
+  applyButtonActive: {
+    textTransform: 'none',
+    fontSize: '11.5px',
+    paddingTop: '5px',
+    paddingBottom: '5px',
+    paddingLeft: '12px',
+    paddingRight: '12px',
+    borderRadius: '6px',
+    fontWeight: 600
+  },
+  applyButtonInactive: {
+    textTransform: 'none',
+    fontSize: '11.5px',
+    paddingTop: '5px',
+    paddingBottom: '5px',
+    paddingLeft: '12px',
+    paddingRight: '12px',
+    borderRadius: '6px',
+    fontWeight: 600,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    color: '#8891b8',
+    '&:hover': {
+      borderColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: 'rgba(255, 255, 255, 0.04)',
+      color: '#e4e8f5'
+    }
   },
   actionsContainer: {
     display: 'flex',

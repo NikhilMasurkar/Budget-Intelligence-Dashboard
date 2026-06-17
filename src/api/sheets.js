@@ -312,6 +312,7 @@ function rowsToObjects(rows) {
   const [sheetHeaders, ...data] = rows
   const headers = [...sheetHeaders]
   if (headers.includes('categoryId') && !headers.includes('note')) headers.push('note')
+  if (headers.includes('note') && !headers.includes('updatedAt')) headers.push('updatedAt')
   return data.map(r => {
     const validEntries = []
     headers.forEach((h, i) => { if (h) validEntries.push([h, r[i] ?? '']) })
@@ -357,16 +358,21 @@ export async function fetchExpenses(year, token) {
 }
 
 export async function saveExpense(exp, token) {
-  const all = rowsToObjects(await readRange(TABS.EXPENSES, '', token))
+  const rawRows = await readRange(TABS.EXPENSES, '', token)
+  // One-time: write 'updatedAt' header to column I if missing (existing users)
+  if (rawRows.length > 0 && rawRows[0][8] !== 'updatedAt') {
+    await writeRange(TABS.EXPENSES, 'I1', [['updatedAt']], token)
+  }
+  const all = rowsToObjects(rawRows)
   const idx = all.findIndex(e => e.id === exp.id)
-  const row = [exp.id || uid(), String(exp.year), String(exp.month), exp.categoryId, exp.itemName, exp.amount, exp.isFixed ? 'TRUE' : 'FALSE', exp.note || '']
+  const row = [exp.id || uid(), String(exp.year), String(exp.month), exp.categoryId, exp.itemName, exp.amount, exp.isFixed ? 'TRUE' : 'FALSE', exp.note || '', 'U' + Date.now()]
   if (idx >= 0) await writeRange(TABS.EXPENSES, `A${idx + 2}`, [row], token)
   else           await appendRows(TABS.EXPENSES, [row], token)
 }
 
 export async function deleteExpense(expId, token) {
   const all = rowsToObjects(await readRange(TABS.EXPENSES, '', token))
-  await clearAndWrite(TABS.EXPENSES, all.filter(e => e.id !== expId).map(e => [e.id, String(e.year), String(e.month), e.categoryId, e.itemName, e.amount, e.isFixed, e.note || '']), token)
+  await clearAndWrite(TABS.EXPENSES, all.filter(e => e.id !== expId).map(e => [e.id, String(e.year), String(e.month), e.categoryId, e.itemName, e.amount, e.isFixed, e.note || '', e.updatedAt || '']), token)
 }
 
 export async function copyExpensesToNextMonth(fromYear, fromMonth, selectedIds, token) {
@@ -377,7 +383,7 @@ export async function copyExpensesToNextMonth(fromYear, fromMonth, selectedIds, 
   const exist  = all.filter(e => String(e.year) === String(toYear) && String(e.month) === String(toMonth))
   const newRows = selected
     .filter(f => !exist.some(x => x.categoryId === f.categoryId && x.itemName === f.itemName))
-    .map(f => [uid(), String(toYear), String(toMonth), f.categoryId, f.itemName, f.amount, 'FALSE', f.note || ''])
+    .map(f => [uid(), String(toYear), String(toMonth), f.categoryId, f.itemName, f.amount, 'FALSE', f.note || '', 'U' + Date.now()])
   if (newRows.length) await appendRows(TABS.EXPENSES, newRows, token)
   return { copied: newRows.length, toYear, toMonth }
 }
@@ -399,7 +405,7 @@ export async function autoFixedCopyToMonth(toYear, toMonth, token) {
   const destRows = allRows.filter(r => String(r[1]) === String(toYear) && String(r[2]) === String(toMonth))
   const newRows = fixedRows
     .filter(f => !destRows.some(d => d[3] === f[3] && d[4] === f[4]))
-    .map(f => [uid(), String(toYear), String(toMonth), f[3], f[4], f[5], 'TRUE', f[7] || ''])
+    .map(f => [uid(), String(toYear), String(toMonth), f[3], f[4], f[5], 'TRUE', f[7] || '', 'U' + Date.now()])
 
   if (newRows.length) await appendRows(TABS.EXPENSES, newRows, token)
   return newRows.length
@@ -494,7 +500,7 @@ export async function setupSheet(token) {
 
   // 3. Write headers
   await writeRange(TABS.CATEGORIES, 'A1', [['id', 'name', 'type', 'color', 'budget']], token)
-  await writeRange(TABS.EXPENSES, 'A1', [['id', 'year', 'month', 'categoryId', 'itemName', 'amount', 'isFixed', 'note']], token)
+  await writeRange(TABS.EXPENSES, 'A1', [['id', 'year', 'month', 'categoryId', 'itemName', 'amount', 'isFixed', 'note', 'updatedAt']], token)
   await writeRange(TABS.INCOME, 'A1', [['id', 'year', 'month', 'source', 'amount']], token)
 
   // 4. Write default categories

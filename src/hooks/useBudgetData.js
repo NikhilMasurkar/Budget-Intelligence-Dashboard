@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'react-hot-toast'
 import {
   fetchCategories, fetchExpenses, fetchIncome,
@@ -11,6 +11,7 @@ import {
 import {
   fetchCategoriesFS, saveAllCategoriesFS
 } from '../api/firestoreCategories'
+import { fetchExpenseMetaFS, expensePinKey } from '../api/firestoreExpenseMeta'
 import { YEAR_NOW, toSentenceCase } from '../utils/constants'
 
 export function useBudgetData({ authd, userName, onUnauthorized }) {
@@ -101,7 +102,12 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
               existing[0], xls.year, xls.month, xls.categoryId,
               toSentenceCase(xls.itemName), xls.amount,
               // Sheets DB wins for isFixed — app pins must not be overwritten by stale Excel
-              existing[6] || xls.isFixed || 'FALSE', existing[7] || ''
+              existing[6] || xls.isFixed || 'FALSE',
+              // Sheet note wins; fall back to the Excel cell-comment note so
+              // older notes that only survive as Excel comments are recovered.
+              existing[7] || xls.note || '',
+              // Preserve the in-app last-updated timestamp (col I)
+              existing[8] || ''
             ])
             dbExpMap.delete(key)
           } else {
@@ -109,7 +115,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
             expensesChanged = true
             reconciledExpenses.push([
               xls.id, xls.year, xls.month, xls.categoryId,
-              toSentenceCase(xls.itemName), xls.amount, xls.isFixed || 'FALSE', ''
+              toSentenceCase(xls.itemName), xls.amount, xls.isFixed || 'FALSE', xls.note || '', ''
             ])
           }
         })
@@ -147,7 +153,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
 
         rawExps = reconciledExpenses.map(r => ({
           id: r[0], year: r[1], month: r[2], categoryId: r[3],
-          itemName: r[4], amount: r[5], isFixed: r[6], note: r[7]
+          itemName: r[4], amount: r[5], isFixed: r[6], note: r[7], updatedAt: r[8]
         }))
         rawInc = reconciledIncome.map(r => ({
           id: r[0], year: r[1], month: r[2], source: r[3], amount: r[4]
@@ -157,8 +163,31 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
         rawInc = await fetchIncome(null, t)
       }
 
-      const exps = rawExps.map(e => ({ ...e, itemName: toSentenceCase(e.itemName) }))
+      let exps = rawExps.map(e => ({ ...e, itemName: toSentenceCase(e.itemName) }))
       const inc = rawInc.map(i => ({ ...i, source: toSentenceCase(i.source) }))
+
+      // ── App-only metadata overlay ────────────────────────────────────────
+      // The Excel backup can't store isFixed (and mangles notes), so Firestore
+      // is the authority for the PIN — re-apply it on every load.
+      //
+      // The note/comment thread is different: it lives in Sheet column H, which
+      // IS preserved through the Sheet↔Excel reconciliation (kept as existing[7]).
+      // That live Sheet value must win — Firestore is only a FALLBACK to restore
+      // comments if the Sheet copy is ever lost. Letting a stale/empty Firestore
+      // note overwrite the Sheet's was wiping comments from the UI even though
+      // they were still visible in the Sheet.
+      const metaMap = await fetchExpenseMetaFS(sid)
+      if (Object.keys(metaMap).length) {
+        exps = exps.map(e => {
+          const m = metaMap[expensePinKey(e)]
+          if (!m) return e
+          const next = { ...e }
+          if ('isFixed' in m) next.isFixed = m.isFixed ? 'TRUE' : 'FALSE'
+          // Keep the Sheet's note; only fall back to Firestore when it's empty.
+          if (!next.note && 'note' in m && m.note) next.note = m.note
+          return next
+        })
+      }
 
       setExpenses(exps)
       setIncome(inc)
@@ -240,7 +269,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
       })
   }, [authd])
 
-  const autoSyncToDrive = useCallback(async () => {
+  const _syncToDriveNow = useCallback(async () => {
     const t = getToken()
     const sid = getSheetId()
     if (!t || !sid) return
@@ -269,6 +298,21 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
       console.error('[BudgetIQ] Auto-sync failed:', e)
     }
   }, [userName])
+
+  // Debounced Drive backup. The Google Sheet is the source of truth and is
+  // written synchronously in each handler; the Excel-on-Drive copy is just a
+  // backup, so coalescing rapid edits (e.g. several comments) into a single
+  // upload a couple seconds after the last change saves a lot of round-trips.
+  const _syncTimerRef = useRef(null)
+  const autoSyncToDrive = useCallback(() => {
+    if (_syncTimerRef.current) clearTimeout(_syncTimerRef.current)
+    _syncTimerRef.current = setTimeout(() => {
+      _syncTimerRef.current = null
+      _syncToDriveNow()
+    }, 2500)
+  }, [_syncToDriveNow])
+
+  useEffect(() => () => { if (_syncTimerRef.current) clearTimeout(_syncTimerRef.current) }, [])
 
   return {
     categories, expenses, income, loading, needsSetup, availableYears,

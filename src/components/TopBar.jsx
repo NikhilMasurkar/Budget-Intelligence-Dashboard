@@ -22,7 +22,6 @@ import DownloadIcon from '@mui/icons-material/Download'
 import GetAppIcon from '@mui/icons-material/GetApp'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import LogoutIcon from '@mui/icons-material/Logout'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import MenuIcon from '@mui/icons-material/Menu'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
@@ -155,37 +154,23 @@ const useStyles = makeStyles()((theme) => ({
     fontSize: '18px',
   },
   profileButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(1),
-    paddingTop: theme.spacing(0.5),
-    paddingBottom: theme.spacing(0.5),
-    paddingLeft: theme.spacing(1.5),
-    paddingRight: theme.spacing(1.5),
-    borderRadius: '20px',
-    backgroundColor: theme.palette.background.default,
+    padding: theme.spacing(0.5),
+    borderRadius: '50%',
     border: '1px solid',
     borderColor: theme.palette.divider,
-    color: theme.palette.text.primary,
+    backgroundColor: theme.palette.background.default,
     '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      borderColor: theme.palette.primary.main,
     },
   },
-  arrowIcon: {
-    fontSize: '14px',
-    color: theme.palette.text.secondary,
-  },
   avatarSmall: {
-    width: '24px',
-    height: '24px',
-    fontSize: '12px',
+    width: '30px',
+    height: '30px',
+    fontSize: '13px',
     fontWeight: 800,
     backgroundColor: theme.palette.primary.main,
     color: 'white',
-  },
-  profileText: {
-    fontWeight: 600,
-    fontSize: '13px',
   },
   menuPaper: {
     marginTop: theme.spacing(1.5),
@@ -502,22 +487,21 @@ export default function TopBar({
 
           {authd ? (
             <Box>
-              <Button
-                onClick={handleProfileClick}
-                endIcon={<KeyboardArrowDownIcon className={classes.arrowIcon} />}
-                className={classes.profileButton}
-              >
-                <Avatar
-                  src={userPicture}
-                  alt={userName}
-                  className={classes.avatarSmall}
+              <Tooltip title="Account">
+                <IconButton
+                  onClick={handleProfileClick}
+                  className={classes.profileButton}
+                  aria-label="Account menu"
                 >
-                  {userName ? userName.charAt(0).toUpperCase() : 'U'}
-                </Avatar>
-                <Typography variant="body2" className={classes.profileText}>
-                  {userName}
-                </Typography>
-              </Button>
+                  <Avatar
+                    src={userPicture}
+                    alt={userName}
+                    className={classes.avatarSmall}
+                  >
+                    {userName ? userName.charAt(0).toUpperCase() : 'U'}
+                  </Avatar>
+                </IconButton>
+              </Tooltip>
 
               <Menu
                 anchorEl={anchorEl}

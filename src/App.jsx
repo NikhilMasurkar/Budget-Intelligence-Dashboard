@@ -93,7 +93,7 @@ export default function App() {
   } = useBudgetData({ authd, userName, onUnauthorized: handleSignOut })
 
   // ── CRUD hooks ────────────────────────────────────────────────
-  const { handleSaveExpense, handleDeleteExpense, handleCopySelected } = useExpenses({
+  const { handleSaveExpense, handleDeleteExpense, handleCopySelected, handleBulkPin, handleBulkDelete, handleSaveComment } = useExpenses({
     loadAll, autoSyncToDrive, year, month, setDeleteConfirm, closeModal,
     clearSelection: () => setSelectedExpenseIds([])
   })
@@ -180,28 +180,24 @@ export default function App() {
   // ── PIN gate ──────────────────────────────────────────────────
   if (authd && !pinVerified && pinMode) {
     const sid = getSheetId()
+    const unlock = () => {
+      sessionStorage.setItem('budgetiq_pin_verified', '1')
+      setPinVerified(true)
+      setPinMode(null)
+    }
     return (
       <PinScreen
         mode={pinMode}
         userName={userName}
-        onSetPin={async (pin) => {
-          await setPinFS(sid, pin)
-        }}
+        sheetId={sid}
+        onSetPin={async (pin) => { await setPinFS(sid, pin) }}
         onSuccess={async (enteredPin) => {
-          if (pinMode === 'setup') {
-            sessionStorage.setItem('budgetiq_pin_verified', '1')
-            setPinVerified(true)
-            setPinMode(null)
-            return true
-          }
-          // Entry mode — verify against Firestore
+          if (pinMode === 'setup') { unlock(); return true }
+          // null = biometric bypass (fingerprint verified by PinScreen)
+          if (enteredPin === null) { unlock(); return true }
+          // PIN entry — verify against Firestore
           const stored = await getPinFS(sid)
-          if (enteredPin === stored) {
-            sessionStorage.setItem('budgetiq_pin_verified', '1')
-            setPinVerified(true)
-            setPinMode(null)
-            return true
-          }
+          if (enteredPin === stored) { unlock(); return true }
           return false
         }}
       />
@@ -337,6 +333,7 @@ export default function App() {
                 {txnTab === 'expenses' ? (
                   <ExpensesByCategory
                     expenses={expenses.filter(e => String(e.year) === String(year))}
+                    income={income.filter(i => String(i.year) === String(year))}
                     categories={categories}
                     year={year}
                     month={month}
@@ -354,6 +351,11 @@ export default function App() {
                     onDeleteCategory={handleDeleteCategory}
                     onReorderCategory={handleReorderCategory}
                     onCopyToNextMonth={handleCopySelected}
+                    selectedIds={selectedExpenseIds}
+                    onSelectionChange={setSelectedExpenseIds}
+                    onBulkPin={handleBulkPin}
+                    onBulkDelete={handleBulkDelete}
+                    onSaveComment={handleSaveComment}
                     canEdit={authd && !isLocked}
                   />
                 ) : (
