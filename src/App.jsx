@@ -191,15 +191,15 @@ export default function App() {
         userName={userName}
         sheetId={sid}
         onSetPin={async (pin) => { await setPinFS(sid, pin) }}
-        onSuccess={async (enteredPin) => {
-          if (pinMode === 'setup') { unlock(); return true }
-          // null = biometric bypass (fingerprint verified by PinScreen)
-          if (enteredPin === null) { unlock(); return true }
-          // PIN entry — verify against Firestore
-          const stored = await getPinFS(sid)
-          if (enteredPin === stored) { unlock(); return true }
-          return false
+        onVerify={async (enteredPin) => {
+          // Verify only — do NOT unlock here. PinScreen calls onUnlock when it's
+          // truly done, so it can offer biometric enrollment before unmounting.
+          if (pinMode === 'setup') return true
+          if (enteredPin === null) return true            // biometric bypass
+          const stored = await getPinFS(sid)              // PIN entry
+          return enteredPin === stored
         }}
+        onUnlock={unlock}
       />
     )
   }

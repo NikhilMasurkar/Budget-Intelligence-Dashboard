@@ -111,7 +111,7 @@ function PinDots({ count, shake }) {
 }
 
 // ── Main component ───────────────────────────────────────────
-export default function PinScreen({ mode, userName, sheetId, onSuccess, onSetPin }) {
+export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock, onSetPin }) {
   const isSetup = mode === 'setup'
 
   // screen: 'pin' | 'biometric' | 'biometric-enable'
@@ -162,7 +162,7 @@ export default function PinScreen({ mode, userName, sheetId, onSuccess, onSetPin
       const ok = await verifyBiometric(sheetId)
       if (ok) {
         setBioStatus('idle')
-        await onSuccess(null) // null = biometric bypass
+        onUnlock() // biometric verified — unlock
       } else {
         // No stored credential on this device — fall back to the PIN pad.
         setHasCred(false)
@@ -191,23 +191,28 @@ export default function PinScreen({ mode, userName, sheetId, onSuccess, onSetPin
       setLoading(true)
       try {
         await onSetPin(pin)
-        // After setup: offer biometric if available
+        // After setup: offer biometric if available, otherwise unlock now.
         if (biometricAvail && sheetId) {
-          pendingSuccessRef.current = () => onSuccess(null)
+          pendingSuccessRef.current = onUnlock
           setScreen('biometric-enable')
         } else {
-          onSuccess(null)
+          onUnlock()
         }
       } catch (e) { triggerError(e.message) }
       finally { setLoading(false) }
     } else {
       setLoading(true)
       try {
-        const ok = await onSuccess(value)
+        const ok = await onVerify(value)
         if (!ok) { triggerError('Incorrect PIN'); setPin('') }
+        // Correct PIN: if biometrics are available but not yet set up on this
+        // device, offer enrollment FIRST, then unlock. Unlocking immediately
+        // would unmount this screen before the prompt could appear.
         else if (biometricAvail && sheetId && !hasCred) {
-          pendingSuccessRef.current = () => {}
+          pendingSuccessRef.current = onUnlock
           setScreen('biometric-enable')
+        } else {
+          onUnlock()
         }
       } finally { setLoading(false) }
     }
