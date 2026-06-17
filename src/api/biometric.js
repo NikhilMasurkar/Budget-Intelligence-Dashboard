@@ -12,7 +12,12 @@ function fromBase64(b64) {
 
 export async function isBiometricsAvailable() {
   try {
+    if (typeof window === 'undefined') return false
+    // WebAuthn only works in a secure context (https or localhost). Installed
+    // PWAs are always https, but this guards LAN/http testing from erroring.
+    if (!window.isSecureContext) return false
     if (!window.PublicKeyCredential) return false
+    if (!navigator.credentials || !navigator.credentials.get) return false
     return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
   } catch {
     return false

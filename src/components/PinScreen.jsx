@@ -5,7 +5,25 @@ import {
   hasBiometricCredential,
   registerBiometric,
   verifyBiometric,
+  clearBiometric,
 } from '../api/biometric'
+
+// Turn a WebAuthn DOMException into something a user can act on.
+function bioErrorMessage(e) {
+  switch (e?.name) {
+    case 'NotAllowedError':
+      return 'Cancelled or timed out — tap to try again.'
+    case 'SecurityError':
+      return 'Biometrics need a secure (https) connection.'
+    case 'InvalidStateError':
+    case 'NotReadableError':
+      return 'This device’s saved fingerprint is no longer valid. Use your PIN, then re-enable it.'
+    case 'AbortError':
+      return 'Tap the fingerprint to try again.'
+    default:
+      return 'Couldn’t verify — use your PIN instead.'
+  }
+}
 
 const PIN_LENGTH = 4
 
@@ -107,6 +125,7 @@ export default function PinScreen({ mode, userName, sheetId, onSuccess, onSetPin
   const [biometricAvail, setBiometricAvail] = useState(false)
   const [hasCred, setHasCred]         = useState(false)
   const [bioStatus, setBioStatus]     = useState('idle') // 'idle' | 'scanning' | 'error'
+  const [bioError, setBioError]       = useState('')
   const pendingSuccessRef             = useRef(null)
 
   const current    = step === 'confirm' ? confirmPin : pin
@@ -125,10 +144,10 @@ export default function PinScreen({ mode, userName, sheetId, onSuccess, onSetPin
     })
   }, [])
 
-  // Auto-trigger biometric when biometric screen mounts
-  useEffect(() => {
-    if (screen === 'biometric') triggerBiometric()
-  }, [screen])
+  // NOTE: we deliberately do NOT auto-invoke biometrics when the screen mounts.
+  // navigator.credentials.get() requires a user gesture on mobile (iOS Safari,
+  // installed PWAs) — calling it on mount throws NotAllowedError and looks like
+  // a failure. The user taps the fingerprint button instead (a real gesture).
 
   // Auto-submit when PIN is complete
   useEffect(() => {
@@ -136,18 +155,28 @@ export default function PinScreen({ mode, userName, sheetId, onSuccess, onSetPin
   }, [current])
 
   async function triggerBiometric() {
-    if (!sheetId) return
+    if (!sheetId || bioStatus === 'scanning') return
     setBioStatus('scanning')
+    setBioError('')
     try {
       const ok = await verifyBiometric(sheetId)
       if (ok) {
         setBioStatus('idle')
         await onSuccess(null) // null = biometric bypass
       } else {
-        setBioStatus('error')
+        // No stored credential on this device — fall back to the PIN pad.
+        setHasCred(false)
+        setScreen('pin')
       }
-    } catch {
+    } catch (e) {
+      console.warn('[BudgetIQ] Biometric verify failed:', e?.name, e?.message)
+      // A stale/unusable credential should be dropped so the user can re-enable.
+      if (e?.name === 'InvalidStateError' || e?.name === 'NotReadableError') {
+        clearBiometric(sheetId)
+        setHasCred(false)
+      }
       setBioStatus('error')
+      setBioError(bioErrorMessage(e))
     }
   }
 
@@ -196,7 +225,8 @@ export default function PinScreen({ mode, userName, sheetId, onSuccess, onSetPin
       await registerBiometric(sheetId, userName)
       setHasCred(true)
     } catch (e) {
-      // Registration cancelled or failed — just proceed
+      // Registration cancelled or failed — log for diagnostics, then proceed.
+      console.warn('[BudgetIQ] Biometric registration failed:', e?.name, e?.message)
     } finally {
       setLoading(false)
       pendingSuccessRef.current?.()
@@ -245,7 +275,9 @@ export default function PinScreen({ mode, userName, sheetId, onSuccess, onSetPin
           <LogoBox />
           <p style={styles.title}>Welcome back{userName ? `, ${userName}` : ''}!</p>
           <p style={{ ...styles.subtitle, marginBottom: 32 }}>
-            {bioStatus === 'error' ? 'Fingerprint not recognised.' : 'Touch the fingerprint sensor to continue.'}
+            {bioStatus === 'error'
+              ? (bioError || 'Fingerprint not recognised.')
+              : 'Tap the fingerprint below to unlock.'}
           </p>
 
           {/* Fingerprint button */}
@@ -269,10 +301,10 @@ export default function PinScreen({ mode, userName, sheetId, onSuccess, onSetPin
           </button>
 
           <p style={{ fontSize: 12, color: bioStatus === 'error' ? '#ff5f5f' : '#6a7190', marginBottom: 28, minHeight: 16 }}>
-            {bioStatus === 'scanning' ? 'Scanning…' : bioStatus === 'error' ? 'Try again or use your PIN' : 'Tap to authenticate'}
+            {bioStatus === 'scanning' ? 'Scanning…' : bioStatus === 'error' ? (bioError || 'Try again or use your PIN') : 'Tap to authenticate'}
           </p>
 
-          <button onClick={() => { setBioStatus('idle'); setScreen('pin') }} style={styles.ghostBtn}>
+          <button onClick={() => { setBioStatus('idle'); setBioError(''); setScreen('pin') }} style={styles.ghostBtn}>
             Use PIN instead
           </button>
         </Card>
