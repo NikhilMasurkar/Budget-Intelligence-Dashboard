@@ -1,10 +1,25 @@
+// Human-readable app version (single-sourced from package.json via Vite define).
+// The `typeof` guard keeps non-Vite contexts (e.g. node test scripts) from crashing.
+export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0'
+
+// Bump ONLY when the Excel/Sheet export FORMAT or its calculations change
+// (exportExcel.js, parseExcel.js, summary math). On load, if the version stored
+// in Firestore is lower, the app regenerates the Drive sheet once and records
+// this number — so format changes roll out automatically without manual export.
+// v1 = original (pre-versioning) format · v2 = investments excluded from Total
+// Expenses + "Net Savings" + red/purple withdrawal styling.
+export const SHEET_FORMAT_VERSION = 2
+
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 export const SOURCES = ['Salary', 'Freelance', 'Dividend', 'ITR Return', 'Other']
 export const YEAR_NOW = new Date().getFullYear()
 export const MONTH_NOW = new Date().getMonth() // 0-indexed
 export const MONTH_NOW_1 = new Date().getMonth() + 1 // 1-indexed
 
-export const fmt = (n) => '₹' + Math.round(+n || 0).toLocaleString('en-IN')
+export const fmt = (n) => {
+  const v = Math.round(+n || 0)
+  return (v < 0 ? '-₹' : '₹') + Math.abs(v).toLocaleString('en-IN')
+}
 
 export const fmtK = (n) => {
   const v = Math.round(+n || 0)
@@ -48,6 +63,10 @@ export const EXCEL_COLORS = {
   SUMMARY_HDR: '243F60',
   SAVINGS_POS: 'D9F0D5', // light green for positive savings
   SAVINGS_NEG: 'FCE4D6', // blush for negative savings
+  INVEST_HDR:  'E6D9F5', // light purple – investment/savings section headers
+  INVEST_TEXT: '5B2E91', // deep purple  – investment/savings section labels
+  WITHDRAW_BG: 'F8D7DA', // soft red     – withdrawal (negative) cells
+  WITHDRAW_TX: 'C00000', // deep red     – withdrawal (negative) text
 }
 
 export const EXCEL_FONT = 'Verdana'

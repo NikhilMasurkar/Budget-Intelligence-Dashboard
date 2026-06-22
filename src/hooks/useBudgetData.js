@@ -12,7 +12,8 @@ import {
   fetchCategoriesFS, saveAllCategoriesFS
 } from '../api/firestoreCategories'
 import { fetchExpenseMetaFS, expensePinKey } from '../api/firestoreExpenseMeta'
-import { YEAR_NOW, toSentenceCase } from '../utils/constants'
+import { getSheetSyncMetaFS, setSheetFormatVersionFS } from '../api/firestoreSettings'
+import { YEAR_NOW, SHEET_FORMAT_VERSION, toSentenceCase } from '../utils/constants'
 
 export function useBudgetData({ authd, userName, onUnauthorized }) {
   const [categories, setCategories] = useState([])
@@ -21,6 +22,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
   const [loading, setLoading] = useState(false)
   const [needsSetup, setNeedsSetup] = useState(false)
   const [availableYears, setAvailableYears] = useState([YEAR_NOW])
+  const [didInitialLoad, setDidInitialLoad] = useState(false)
 
   const missingConfig = !import.meta.env.VITE_GOOGLE_SHEETS_API_KEY ||
     !import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID ||
@@ -214,6 +216,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
       }
     } finally {
       setLoading(false)
+      setDidInitialLoad(true)
     }
   }, [missingConfig, userName, authd])
 
@@ -269,10 +272,13 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
       })
   }, [authd])
 
+  // Regenerate the Drive Excel from the current Sheet data + current export code.
+  // Returns true when it completes without error (including the "no data yet"
+  // case — nothing to back up is not a failure), false if the upload errored.
   const _syncToDriveNow = useCallback(async () => {
     const t = getToken()
     const sid = getSheetId()
-    if (!t || !sid) return
+    if (!t || !sid) return false
     try {
       const [allExpRows, allIncRows, freshCats] = await Promise.all([
         readAllExpenseRows(t),
@@ -284,7 +290,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
       })
       const exps = toObjs(allExpRows, ['id', 'year', 'month', 'categoryId', 'itemName', 'amount', 'isFixed', 'note'])
       const incs = toObjs(allIncRows, ['id', 'year', 'month', 'source', 'amount'])
-      if (exps.length === 0 && incs.length === 0) return
+      if (exps.length === 0 && incs.length === 0) return true
       const years = new Set([
         String(new Date().getFullYear()),
         ...exps.map(e => String(e.year)),
@@ -294,10 +300,47 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
       const { exportToExcel } = await import('../utils/exportExcel')
       const buffer = await exportToExcel(freshCats.length > 0 ? freshCats : DEFAULT_CATEGORIES, exps, incs, Array.from(years))
       await uploadExcelToDrive(buffer, userName, t)
+      return true
     } catch (e) {
       console.error('[BudgetIQ] Auto-sync failed:', e)
+      return false
     }
   }, [userName])
+
+  // After the initial load, regenerate the Drive sheet ONCE if it was last
+  // written with an older export format than the running code. If it's already
+  // current, do nothing (no wasteful re-upload). Guarded so it runs once/mount.
+  const formatCheckedRef = useRef(false)
+  const syncFormatIfStale = useCallback(async () => {
+    if (formatCheckedRef.current) return
+    const t = getToken()
+    const sid = getSheetId()
+    if (!t || !sid) return
+    formatCheckedRef.current = true
+    try {
+      const meta = await getSheetSyncMetaFS(sid)
+      if ((meta?.formatVersion || 0) >= SHEET_FORMAT_VERSION) return  // sheet already on latest format
+      toast.loading('Updating your sheet to the latest format…', { id: 'fmt-sync' })
+      const ok = await _syncToDriveNow()
+      if (ok) {
+        await setSheetFormatVersionFS(sid, SHEET_FORMAT_VERSION)
+        toast.success('Sheet updated to the latest format ✓', { id: 'fmt-sync', duration: 3000 })
+      } else {
+        toast.dismiss('fmt-sync')
+        formatCheckedRef.current = false   // allow a retry on the next load
+      }
+    } catch (e) {
+      console.warn('[BudgetIQ] format sync skipped:', e)
+      toast.dismiss('fmt-sync')
+      formatCheckedRef.current = false
+    }
+  }, [_syncToDriveNow])
+
+  // Run the format check once the first data load has finished — fetch first,
+  // then sync only if the Drive sheet's format is behind the current code.
+  useEffect(() => {
+    if (didInitialLoad) syncFormatIfStale()
+  }, [didInitialLoad, syncFormatIfStale])
 
   // Debounced Drive backup. The Google Sheet is the source of truth and is
   // written synchronously in each handler; the Excel-on-Drive copy is just a
@@ -316,6 +359,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
 
   return {
     categories, expenses, income, loading, needsSetup, availableYears,
-    loadAll, autoSyncToDrive, setCategories, setNeedsSetup, missingConfig
+    loadAll, autoSyncToDrive, syncToDriveNow: _syncToDriveNow,
+    setCategories, setNeedsSetup, missingConfig
   }
 }

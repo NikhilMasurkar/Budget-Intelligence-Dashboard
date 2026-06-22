@@ -28,7 +28,9 @@ function border(cell, { bottom = 'thin', top = 'thin' } = {}) {
 }
 
 function currencyFmt(cell) {
-  cell.numFmt = '₹#,##0;(₹#,##0);"-"'
+  // Negatives (withdrawals) render red & in parentheses so they stand out
+  // from normal positive amounts everywhere this format is applied.
+  cell.numFmt = '₹#,##0;[Red](₹#,##0);"-"'
 }
 
 // Banner row: full-width colored row with a label
@@ -88,8 +90,9 @@ function dataRow(sheet, rowNum, label, amounts, isAlt = false, notes = null) {
   amounts.forEach((amt, i) => {
     const cell = sheet.getCell(rowNum, i + 2)
     cell.value = amt || 0
-    font(cell, { size: 11 })
-    fill(cell, bg)
+    const isOut = (amt || 0) < 0   // withdrawal — make it unmistakable
+    font(cell, { size: 11, bold: isOut, color: isOut ? C.WITHDRAW_TX : C.TEXT_BLACK })
+    fill(cell, isOut ? C.WITHDRAW_BG : bg)
     currencyFmt(cell)
     align(cell, 'right')
     border(cell)
@@ -151,6 +154,12 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
   const workbook = new ExcelJS.Workbook()
   workbook.creator = 'Personal Budget'
   workbook.created = new Date()
+
+  // Investment/Savings categories are wealth transfers, not consumption — they
+  // are listed in the expense section but kept OUT of "Total Expenses" so the
+  // bottom-line savings = Income − real expenses (a withdrawal must not inflate
+  // it, nor make Total Expenses negative). Tracked separately as "Investments".
+  const savingsCatIds = new Set(categories.filter(c => c.type === 'savings').map(c => c.id))
 
   let years = Array.from(new Set([
     ...expenses.map(e => String(e.year)),
@@ -230,7 +239,8 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
     // ════════════════════════════════════════════════════════════════════════
     const expItems    = expenses.filter(e => String(e.year) === year)
     const activeCats  = categories.filter(c => c.type !== 'income')
-    const catTotalRows = []
+    const spendCatTotalRows  = []   // real expense category subtotals
+    const investCatTotalRows = []   // investment/savings category subtotals
 
     activeCats.forEach(cat => {
       // Category items grouped by name
@@ -246,29 +256,35 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
         }
       })
 
+      // Investment/savings categories get a purple header so they read as
+      // separate from real expenses (they're excluded from Total Expenses).
+      const isSavingsCat = savingsCatIds.has(cat.id)
+      const hdrFill = isSavingsCat ? C.INVEST_HDR  : C.BLUSH
+      const hdrText = isSavingsCat ? C.INVEST_TEXT : C.NAVY
+
       spacer(sheet, r, 6); r++
 
       // Category sub-header
       sheet.getRow(r).height = 22
       const catCell = sheet.getCell(r, 1)
-      catCell.value = `  ${cat.name.toUpperCase()}`
-      font(catCell, { color: C.NAVY, size: 11, bold: true })
-      fill(catCell, C.BLUSH)
+      catCell.value = `  ${cat.name.toUpperCase()}${isSavingsCat ? '  (deposits − withdrawals)' : ''}`
+      font(catCell, { color: hdrText, size: 11, bold: true })
+      fill(catCell, hdrFill)
       align(catCell, 'left')
       border(catCell, { top: 'medium' })
 
       MONTHS.forEach((m, i) => {
         const cell = sheet.getCell(r, i + 2)
         cell.value = m
-        font(cell, { color: C.NAVY, size: 10, bold: true })
-        fill(cell, C.BLUSH)
+        font(cell, { color: hdrText, size: 10, bold: true })
+        fill(cell, hdrFill)
         align(cell, 'center')
         border(cell, { top: 'medium' })
       })
       const yrCell = sheet.getCell(r, 14)
       yrCell.value = 'YEAR'
-      font(yrCell, { color: C.NAVY, size: 10, bold: true })
-      fill(yrCell, C.BLUSH)
+      font(yrCell, { color: hdrText, size: 10, bold: true })
+      fill(yrCell, hdrFill)
       align(yrCell, 'center')
       border(yrCell, { top: 'medium' })
       r++
@@ -279,9 +295,9 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
         r++
       })
 
-      // Category total
-      totalRow(sheet, r, `Total ${cat.name}`, catDataStart, C.ROSE)
-      catTotalRows.push(r)
+      // Category total — purple for investment/savings, rose for expenses
+      totalRow(sheet, r, `Total ${cat.name}`, catDataStart, isSavingsCat ? C.INVEST_HDR : C.ROSE)
+      ;(isSavingsCat ? investCatTotalRows : spendCatTotalRows).push(r)
       r++
     })
 
@@ -304,8 +320,8 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
     for (let i = 0; i < 12; i++) {
       const cell = sheet.getCell(r, i + 2)
       const col  = String.fromCharCode(66 + i)
-      cell.value = catTotalRows.length
-        ? { formula: catTotalRows.map(tr => `${col}${tr}`).join('+') }
+      cell.value = spendCatTotalRows.length
+        ? { formula: spendCatTotalRows.map(tr => `${col}${tr}`).join('+') }
         : 0
       font(cell, { size: 11, bold: true })
       fill(cell, C.ROSE)
@@ -314,8 +330,8 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
       border(cell, { bottom: 'medium' })
     }
     const totExpN = sheet.getCell(r, 14)
-    totExpN.value = catTotalRows.length
-      ? { formula: catTotalRows.map(tr => `N${tr}`).join('+') }
+    totExpN.value = spendCatTotalRows.length
+      ? { formula: spendCatTotalRows.map(tr => `N${tr}`).join('+') }
       : 0
     font(totExpN, { size: 11, bold: true })
     fill(totExpN, C.ROSE)
@@ -326,10 +342,42 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
     const totExpRow = r
     r++
 
-    // Cash short / extra row
+    // Total Investments / Savings row — net money moved into investments this
+    // period (negative = net withdrawal). Shown for transparency since these
+    // categories are excluded from Total Expenses above.
+    if (investCatTotalRows.length) {
+      sheet.getRow(r).height = 21
+      const invA = sheet.getCell(r, 1)
+      invA.value = 'Total Investments / Savings'
+      font(invA, { color: C.INVEST_TEXT, size: 11, bold: true })
+      fill(invA, C.INVEST_HDR)
+      align(invA, 'left')
+      border(invA, { bottom: 'medium' })
+
+      for (let i = 0; i < 12; i++) {
+        const cell = sheet.getCell(r, i + 2)
+        const col  = String.fromCharCode(66 + i)
+        cell.value = { formula: investCatTotalRows.map(tr => `${col}${tr}`).join('+') }
+        font(cell, { color: C.INVEST_TEXT, size: 11, bold: true })
+        fill(cell, C.INVEST_HDR)
+        currencyFmt(cell)
+        align(cell, 'right')
+        border(cell, { bottom: 'medium' })
+      }
+      const invN = sheet.getCell(r, 14)
+      invN.value = { formula: investCatTotalRows.map(tr => `N${tr}`).join('+') }
+      font(invN, { color: C.INVEST_TEXT, size: 11, bold: true })
+      fill(invN, C.INVEST_HDR)
+      currencyFmt(invN)
+      align(invN, 'right')
+      border(invN, { bottom: 'medium' })
+      r++
+    }
+
+    // Net savings row (Income − real expenses; investments are not subtracted)
     sheet.getRow(r).height = 22
     const cashA = sheet.getCell(r, 1)
-    cashA.value = 'Cash Short / Extra'
+    cashA.value = 'Net Savings'
     font(cashA, { color: C.TEXT_WHITE, size: 11, bold: true })
     fill(cashA, C.NAVY)
     align(cashA, 'left')
@@ -416,7 +464,9 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
   Array.from(years).sort().forEach((year, idx) => {
     const incTot = income.filter(i => String(i.year) === year)
       .reduce((s, i) => s + Number(i.amount), 0)
-    const expTot = expenses.filter(e => String(e.year) === year)
+    // Total Expenses excludes investment/savings categories (see savingsCatIds);
+    // Net Savings = Income − real expenses, matching the per-year sheet & the app.
+    const expTot = expenses.filter(e => String(e.year) === year && !savingsCatIds.has(e.categoryId))
       .reduce((s, e) => s + Number(e.amount), 0)
     const savings = incTot - expTot
 

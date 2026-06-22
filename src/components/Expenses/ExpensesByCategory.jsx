@@ -150,6 +150,12 @@ const useStyles = makeStyles()((theme) => ({
     borderRadius: '4px', padding: '1px 5px', fontWeight: 700,
     letterSpacing: '0.3px', flexShrink: 0
   },
+  withdrawBadge: {
+    fontSize: 9, background: 'rgba(255,95,95,0.15)',
+    color: '#ff7a7a', border: '1px solid rgba(255,95,95,0.3)',
+    borderRadius: '4px', padding: '1px 5px', fontWeight: 700,
+    letterSpacing: '0.3px', flexShrink: 0, whiteSpace: 'nowrap'
+  },
   expenseAmount: {
     fontWeight: 700, fontSize: '13px', color: '#e4e8f5',
     fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap'
@@ -251,10 +257,17 @@ export default function ExpensesByCategory({
       .filter(i => String(i.year) === String(year) && String(i.month) === String(month))
       .reduce((s, i) => s + (+i.amount || 0), 0)
   , [income, year, month])
-  const grandTotal = monthExps.reduce((s, e) => s + (+e.amount || 0), 0)
+  // "Spent" and "Saved" exclude Investment/Savings categories — money moved
+  // into or out of investments is a wealth transfer, not consumption. (A
+  // deposit is still "saved", just not as cash; a withdrawal is previously
+  // saved money, not new income.) Counting them would drag Spent negative and
+  // inflate Saved past income whenever there's a withdrawal.
+  const realSpend = monthExps
+    .filter(e => catMap[e.categoryId]?.type !== 'savings')
+    .reduce((s, e) => s + (+e.amount || 0), 0)
   const itemCount = monthExps.length
-  const saved = monthIncomeTotal - grandTotal
-  const spentPct = monthIncomeTotal > 0 ? Math.min(100, Math.round((grandTotal / monthIncomeTotal) * 100)) : 0
+  const saved = monthIncomeTotal - realSpend
+  const spentPct = monthIncomeTotal > 0 ? Math.min(100, Math.round((realSpend / monthIncomeTotal) * 100)) : 0
 
   // ── Multi-select for bulk actions ──────────────────────────────────────────
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
@@ -349,7 +362,15 @@ export default function ExpensesByCategory({
         {exp.isFixed === 'TRUE' && (
           <Box component="span" className={classes.fixedBadge}>📌</Box>
         )}
-        <Typography className={classes.expenseAmount}>{fmt(exp.amount)}</Typography>
+        {+exp.amount < 0 && (
+          <Box component="span" className={classes.withdrawBadge}>↓ WITHDRAWN</Box>
+        )}
+        <Typography
+          className={classes.expenseAmount}
+          sx={+exp.amount < 0 ? { color: '#ff7a7a' } : undefined}
+        >
+          {fmt(exp.amount)}
+        </Typography>
         <Tooltip title={commentCount > 0 ? `${commentCount} comment${commentCount !== 1 ? 's' : ''}` : 'Add comment'} arrow>
           <IconButton
             size="small"
@@ -438,7 +459,7 @@ export default function ExpensesByCategory({
           </Box>
           <Box className={classes.statBlock}>
             <Typography className={classes.statLabel}>Spent</Typography>
-            <Typography className={classes.statValue} sx={{ color: '#ff7a7a' }}>{fmt(grandTotal)}</Typography>
+            <Typography className={classes.statValue} sx={{ color: '#ff7a7a' }}>{fmt(realSpend)}</Typography>
           </Box>
           <Box className={classes.statBlock}>
             <Typography className={classes.statLabel}>{saved >= 0 ? 'Saved' : 'Over budget'}</Typography>
@@ -624,8 +645,8 @@ export default function ExpensesByCategory({
                 {catExpsFull.length > 0 && (
                   <Typography className={classes.catMeta}>{catExpsFull.length} item{catExpsFull.length !== 1 ? 's' : ''}</Typography>
                 )}
-                <Typography className={classes.catTotal} style={{ color: catTotalFull > 0 ? '#e4e8f5' : '#5a6080' }}>
-                  {catTotalFull > 0 ? fmt(catTotalFull) : '—'}
+                <Typography className={classes.catTotal} style={{ color: catTotalFull < 0 ? '#ff7a7a' : catTotalFull > 0 ? '#e4e8f5' : '#5a6080' }}>
+                  {catTotalFull !== 0 ? fmt(catTotalFull) : '—'}
                 </Typography>
 
                 {canEdit && (

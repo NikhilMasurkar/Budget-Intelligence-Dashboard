@@ -67,12 +67,12 @@ export default function WealthCardsSection({
         </Typography>
 
         {/* Sub text */}
-        <Typography sx={{ fontSize: 12, color: '#6a4a9a', mb: selInvest > 0 ? '12px' : 0 }}>
+        <Typography sx={{ fontSize: 12, color: '#6a4a9a', mb: investBreakdown.length > 0 ? '12px' : 0 }}>
           {investRate}% of income invested
         </Typography>
 
         {/* Breakdown */}
-        {selInvest > 0 && (
+        {investBreakdown.length > 0 && (
           <Box sx={{
             background: 'rgba(185,127,255,0.05)',
             border: '1px solid rgba(185,127,255,0.1)',
@@ -83,35 +83,60 @@ export default function WealthCardsSection({
               fontSize: 11,
               color: '#7a5aaa',
               fontWeight: 600,
-              mb: investBreakdown.length ? '8px' : 0,
+              mb: '8px',
             }}>
               Avg {fmt(selInvest / selMonths.length)}/month
             </Typography>
 
-            {investBreakdown.length > 0 && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                {investBreakdown.map(([name, amount]) => (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              {investBreakdown.map(([name, amount]) => {
+                const isOut = amount < 0
+                return (
                   <Box key={name} sx={{
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                   }}>
-                    <Typography sx={{ fontSize: 12, color: '#9a80c0', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <Box component="span" sx={{ color: '#b97fff', fontSize: 14, lineHeight: 1 }}>•</Box>
-                      {name}
+                    <Typography sx={{ fontSize: 12, color: isOut ? '#c08a8a' : '#9a80c0', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Box component="span" sx={{ color: isOut ? '#ff7a7a' : '#b97fff', fontSize: 14, lineHeight: 1 }}>
+                        {isOut ? '↓' : '•'}
+                      </Box>
+                      {name}{isOut ? ' (withdrawal)' : ''}
                     </Typography>
                     <Typography sx={{
                       fontSize: 12,
                       fontWeight: 700,
-                      color: '#b97fff',
+                      color: isOut ? '#ff7a7a' : '#b97fff',
                       fontVariantNumeric: 'tabular-nums',
                     }}>
                       {fmt(amount)}
                     </Typography>
                   </Box>
-                ))}
+                )
+              })}
+
+              {/* Net reconciliation — deposits − withdrawals = net invested */}
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mt: '4px',
+                pt: '7px',
+                borderTop: '1px solid rgba(185,127,255,0.18)',
+              }}>
+                <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#b97fff' }}>
+                  = Net invested
+                </Typography>
+                <Typography sx={{
+                  fontSize: 12.5,
+                  fontWeight: 800,
+                  color: selInvest < 0 ? '#ff7a7a' : '#b97fff',
+                  fontVariantNumeric: 'tabular-nums',
+                }}>
+                  {fmt(selInvest)}
+                </Typography>
               </Box>
-            )}
+            </Box>
           </Box>
         )}
       </Box>

@@ -77,7 +77,9 @@ export default function Dashboard({ expenses, income, categories, year, month, s
     return Object.entries(t).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1])
   }, [expenses, catMap, selMonths])
 
-  // Investment breakdown by item for selected months
+  // Investment breakdown by item for selected months. Keep negative (net
+  // withdrawal) lines too — dropping them made the list stop reconciling to the
+  // headline (deposits − withdrawals = net invested). Only exact-zero nets hide.
   const investBreakdown = useMemo(() => {
     const breakdown = {}
     expenses.filter(e => selMonths.includes(+e.month - 1)).forEach(e => {
@@ -86,7 +88,7 @@ export default function Dashboard({ expenses, income, categories, year, month, s
         breakdown[name] = (breakdown[name] || 0) + (+e.amount || 0)
       }
     })
-    return Object.entries(breakdown).filter(([,v]) => v > 0).sort((a,b) => b[1] - a[1])
+    return Object.entries(breakdown).filter(([,v]) => v !== 0).sort((a,b) => b[1] - a[1])
   }, [expenses, selMonths, investCatIds])
 
   // Selected period totals

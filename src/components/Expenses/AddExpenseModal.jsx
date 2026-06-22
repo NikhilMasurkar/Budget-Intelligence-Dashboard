@@ -19,13 +19,16 @@ import { MONTHS } from '../../utils/constants'
 
 export default function AddExpenseModal({ initial, categories, year, month, availableYears = [new Date().getFullYear()], onSave, onClose }) {
   const { classes } = useAddExpenseModalStyles()
+  const initialAmt = initial?.amount
   const [form, setForm] = useState({
     id: initial?.id || '',
     year: initial?.year || year,
     month: initial?.month || month,
     categoryId: initial?.categoryId || categories[0]?.id || '',
     itemName: initial?.itemName || '',
-    amount: initial?.amount || '',
+    // The amount field always shows a positive number; direction (deposit vs
+    // withdraw) is tracked separately and re-applied as a sign on save.
+    amount: initialAmt ? String(Math.abs(+initialAmt)) : '',
     isFixed: initial?.isFixed === 'TRUE' || false,
     note: initial?.note || '',
   })
@@ -33,15 +36,23 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
   const [saving, setSaving] = useState(false)
   // applyMode: 'single' | 'all_year' | 'this_and_forward'
   const [applyMode, setApplyMode] = useState('single')
+  // txnDir: 'deposit' | 'withdraw' — only meaningful for savings/investment
+  // categories. A withdrawal is stored as a negative amount so it reduces the
+  // invested balance and returns the money to spendable cash.
+  const [txnDir, setTxnDir] = useState(+initialAmt < 0 ? 'withdraw' : 'deposit')
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const valid = form.itemName.trim() && form.amount && form.categoryId
+  const isSavings = categories.find(c => c.id === form.categoryId)?.type === 'savings'
+  const isWithdraw = isSavings && txnDir === 'withdraw'
+  const valid = form.itemName.trim() && parseFloat(form.amount) > 0 && form.categoryId
 
   const handleSave = async () => {
     if (!valid || saving) return
     setSaving(true)
     try {
-      await onSave(form, applyMode)
+      const amt = Math.abs(parseFloat(form.amount) || 0)
+      const payload = { ...form, amount: isWithdraw ? -amt : amt }
+      await onSave(payload, applyMode)
     } catch (err) {
       console.error(err)
       setSaving(false)
@@ -63,7 +74,9 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
 
         {/* Title */}
         <Typography variant="h6" className={classes.title}>
-          {form.id ? 'Edit Expense' : 'Add Expense'}
+          {isWithdraw
+            ? (form.id ? 'Edit Withdrawal' : 'Withdraw from Savings')
+            : (form.id ? 'Edit Expense' : 'Add Expense')}
         </Typography>
 
         {/* Form Controls */}
@@ -121,6 +134,42 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             </Select>
           </FormControl>
 
+          {/* Deposit / Withdraw toggle — only for savings / investment categories */}
+          {isSavings && (
+            <Box style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+              <Typography variant="caption" className={classes.applyLabel}>
+                Transaction type
+              </Typography>
+              <Box className={classes.applyButtonContainer}>
+                {[
+                  { value: 'deposit', label: '➕ Deposit' },
+                  { value: 'withdraw', label: '➖ Withdraw' },
+                ].map(opt => (
+                  <Button
+                    key={opt.value}
+                    variant={txnDir === opt.value ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => setTxnDir(opt.value)}
+                    disabled={saving}
+                    className={txnDir === opt.value ? classes.applyButtonActive : classes.applyButtonInactive}
+                    sx={txnDir === opt.value && opt.value === 'withdraw' ? {
+                      background: '#ff5f5f !important',
+                      borderColor: '#ff5f5f !important',
+                      '&:hover': { background: '#e64a4a !important' },
+                    } : undefined}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </Box>
+              <Typography sx={{ fontSize: 11, color: '#8891b8', mt: '6px' }}>
+                {isWithdraw
+                  ? 'Reduces this investment’s balance; the money returns to your spendable cash.'
+                  : 'Adds money into this investment / savings pot.'}
+              </Typography>
+            </Box>
+          )}
+
           {/* Item Name */}
           <TextField
             label="Item Name"
@@ -136,7 +185,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
 
           {/* Amount */}
           <TextField
-            label="Amount"
+            label={isWithdraw ? 'Withdrawal Amount' : 'Amount'}
             type="number"
             value={form.amount}
             onChange={e => set('amount', e.target.value)}
@@ -151,7 +200,8 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             className={classes.fieldStyles}
           />
 
-          {/* Fixed / Recurring toggle */}
+          {/* Fixed / Recurring toggle — not shown for one-off withdrawals */}
+          {!isWithdraw && (
           <Box sx={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '8px 12px', borderRadius: '8px',
@@ -177,6 +227,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
               }}
             />
           </Box>
+          )}
 
           {/* Apply Mode Selector */}
           <Box style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
@@ -212,7 +263,11 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             disabled={saving || !valid}
             className={classes.saveButton}
           >
-            {saving ? (form.id ? 'Updating...' : 'Adding...') : (form.id ? 'Update Expense' : 'Add Expense')}
+            {saving
+              ? (form.id ? 'Updating...' : (isWithdraw ? 'Withdrawing...' : 'Adding...'))
+              : isWithdraw
+                ? (form.id ? 'Update Withdrawal' : 'Withdraw')
+                : (form.id ? 'Update Expense' : 'Add Expense')}
           </Button>
           <Button
             variant="outlined"

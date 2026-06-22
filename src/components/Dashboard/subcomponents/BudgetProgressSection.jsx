@@ -77,7 +77,7 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
         {/* Data rows — every row is single-line, same height */}
         {catData.map((cat, i) => {
           const sharePct   = selExpense > 0 ? (cat.total / selExpense) * 100 : 0
-          const shareBarW  = (cat.total / maxTotal) * 100   // scaled to max category
+          const shareBarW  = Math.max(0, (cat.total / maxTotal) * 100)   // scaled to max category; clamp negatives (net withdrawals)
           const budgetLimit = cat.budget * selMonths.length
           const isOver     = budgetLimit > 0 && cat.total > budgetLimit
           const isWarn     = !isOver && budgetLimit > 0 && (cat.total / budgetLimit) >= 0.80
@@ -118,7 +118,7 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
               </Box>
 
               {/* Total spent */}
-              <Typography sx={{ fontSize: 13, fontWeight: 800, color: '#e4e8f5', textAlign: 'right', fontVariantNumeric: 'tabular-nums', pr: '12px' }}>
+              <Typography sx={{ fontSize: 13, fontWeight: 800, color: cat.total < 0 ? '#ff5f5f' : '#e4e8f5', textAlign: 'right', fontVariantNumeric: 'tabular-nums', pr: '12px' }}>
                 {fmt(cat.total)}
               </Typography>
 

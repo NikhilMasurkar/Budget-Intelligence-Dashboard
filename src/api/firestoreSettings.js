@@ -23,3 +23,25 @@ export async function setPinFS(sheetId, pin) {
     createdAt: new Date().toISOString()
   })
 }
+
+// ─── Sheet format/sync metadata ──────────────────────────────────────────────
+// Tracks which export FORMAT version the Drive Excel was last generated with,
+// so the app can auto-regenerate it after a format/calc change (see
+// SHEET_FORMAT_VERSION). Returns null on any error so callers can no-op safely.
+const syncRef = (sheetId) => doc(db, 'sheets', sheetId, 'settings', 'sync')
+
+export async function getSheetSyncMetaFS(sheetId) {
+  try {
+    const snap = await getDoc(syncRef(sheetId))
+    return snap.exists() ? snap.data() : null
+  } catch {
+    return null
+  }
+}
+
+export async function setSheetFormatVersionFS(sheetId, version) {
+  await setDoc(syncRef(sheetId), {
+    formatVersion: version,
+    updatedAt: new Date().toISOString()
+  }, { merge: true })
+}

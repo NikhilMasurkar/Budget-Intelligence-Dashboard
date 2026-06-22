@@ -126,10 +126,10 @@ export default function CategoryDetailsDialog({ detailModal, onClose, selMonths,
                           align="right"
                           className={classes.valueCell}
                           style={{
-                            color: val > 0 ? '#e4e8f5' : '#8891b8'
+                            color: val < 0 ? '#ff7a7a' : val > 0 ? '#e4e8f5' : '#8891b8'
                           }}
                         >
-                          {val > 0 ? fmt(val) : '—'}
+                          {val !== 0 ? fmt(val) : '—'}
                         </TableCell>
                       )
                     })}

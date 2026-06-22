@@ -27,6 +27,7 @@ import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 
 import { makeStyles } from 'tss-react/mui'
+import { APP_VERSION } from '../utils/constants'
 
 const useStyles = makeStyles()((theme) => ({
   '@keyframes spin': {
@@ -547,6 +548,13 @@ export default function TopBar({
                     }}
                   />
                 </MenuItem>
+
+                <Typography
+                  variant="caption"
+                  sx={{ display: 'block', textAlign: 'center', color: '#4a5072', fontSize: 10, py: '6px' }}
+                >
+                  BudgetIQ v{APP_VERSION}
+                </Typography>
               </Menu>
             </Box>
           ) : (
