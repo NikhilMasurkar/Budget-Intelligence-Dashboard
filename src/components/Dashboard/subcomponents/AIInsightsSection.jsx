@@ -9,7 +9,7 @@ import RefreshIcon      from '@mui/icons-material/Refresh'
 import SendIcon         from '@mui/icons-material/Send'
 import {
   getAIInsights, calcInstantScore,
-  getChatResponseStream, buildFinancialContext
+  getChatResponseStream, buildFinancialContext, AI_ENABLED
 } from '../../../api/gemini'
 
 const CACHE_PREFIX = 'budgetiq_ai_v7_'
@@ -139,7 +139,7 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
   const chatEndRef  = useRef(null)
   const fetchingRef = useRef(false)  // prevents concurrent analysis fetches
 
-  const hasKey        = !!import.meta.env.VITE_GEMINI_API_KEY
+  const hasKey        = AI_ENABLED
   const effectiveMonths = selMonths?.length ? selMonths : [0,1,2,3,4,5,6,7,8,9,10,11]
   const cacheKey      = makeCacheKey(year, effectiveMonths, expenses, income)
   const periodKey     = `${year}_${[...effectiveMonths].sort((a,b)=>a-b).join(',')}`
