@@ -10,7 +10,7 @@ import {
   getToken, getSheetId, setupSheet, getDriveExcelUrl
 } from './api/sheets'
 import { deleteCategoryFS } from './api/firestoreCategories'
-import { getPinFS, setPinFS } from './api/firestoreSettings'
+import { hasPinFS, setPinFS, verifyPinFS } from './api/firestoreSettings'
 import PinScreen from './components/PinScreen'
 
 
@@ -74,8 +74,8 @@ export default function App() {
     if (!authd || pinVerified) return
     const sid = getSheetId()
     if (!sid) return
-    getPinFS(sid).then(existing => {
-      setPinMode(existing === null ? 'setup' : 'entry')
+    hasPinFS(sid).then(exists => {
+      setPinMode(exists ? 'entry' : 'setup')
     }).catch(() => {
       // Firebase error — skip PIN gate rather than block the app
       setPinVerified(true)
@@ -197,8 +197,7 @@ export default function App() {
           // truly done, so it can offer biometric enrollment before unmounting.
           if (pinMode === 'setup') return true
           if (enteredPin === null) return true            // biometric bypass
-          const stored = await getPinFS(sid)              // PIN entry
-          return enteredPin === stored
+          return verifyPinFS(sid, enteredPin)
         }}
         onUnlock={unlock}
       />

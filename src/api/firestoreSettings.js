@@ -1,5 +1,12 @@
 import { db, getFirebaseUid } from '../firebase'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, deleteDoc, deleteField } from 'firebase/firestore'
+
+// SHA-256 the PIN digits so raw numbers are never stored in Firestore.
+// Web Crypto is available in all modern browsers and Node 18+.
+export async function hashPin(pin) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin))
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
 
 // ── Ownership ────────────────────────────────────────────────────────────────
 // Security rules gate every sheets/{sheetId}/** doc on the ownerUid stored in
@@ -26,24 +33,81 @@ export async function ensureSheetOwnerFS(sheetId) {
 const securityRef = (sheetId) =>
   doc(db, 'sheets', sheetId, 'settings', 'security')
 
-export async function getPinFS(sheetId) {
+// Returns true when a PIN (hashed or legacy plaintext) is configured.
+export async function hasPinFS(sheetId) {
   try {
     const snap = await getDoc(securityRef(sheetId))
-    return snap.exists() ? (snap.data().pin ?? null) : null
+    if (!snap.exists()) return false
+    const d = snap.data()
+    return 'pinHash' in d || ('pin' in d && d.pin != null)
   } catch {
-    return null
+    return false
   }
 }
 
-// Only works the first time — once a PIN is set it cannot be changed from the app.
-// To recover: open Firebase console → sheets/{sheetId}/settings/security → pin field.
+// Verify a PIN and silently migrate plaintext → hash on first correct entry.
+// Returns true/false. Never throws — on any Firestore error returns false.
+export async function verifyPinFS(sheetId, enteredPin) {
+  try {
+    const snap = await getDoc(securityRef(sheetId))
+    if (!snap.exists()) return false
+    const d = snap.data()
+
+    if (d.pinHash) {
+      return (await hashPin(enteredPin)) === d.pinHash
+    }
+
+    if (d.pin) {
+      if (enteredPin !== d.pin) return false
+      // Correct — one-time migration: store hash, remove plaintext.
+      try {
+        await setDoc(securityRef(sheetId), {
+          pinHash: await hashPin(enteredPin),
+          pin: deleteField(),
+        }, { merge: true })
+      } catch (e) {
+        console.warn('[BudgetIQ] PIN migration failed (will retry next login):', e.message)
+      }
+      return true
+    }
+
+    return false
+  } catch {
+    return false
+  }
+}
+
+// Store a hashed PIN. Only works once — once set it cannot be changed from the app.
+// To reset: open Firebase console → sheets/{sheetId}/settings/security → delete the doc.
 export async function setPinFS(sheetId, pin) {
-  const existing = await getPinFS(sheetId)
-  if (existing !== null) throw new Error('PIN already set')
+  const exists = await hasPinFS(sheetId)
+  if (exists) throw new Error('PIN already set')
   await setDoc(securityRef(sheetId), {
-    pin,
-    createdAt: new Date().toISOString()
+    pinHash: await hashPin(pin),
+    createdAt: new Date().toISOString(),
   })
+}
+
+// ─── PIN reset (OTP flow) ────────────────────────────────────────────────────
+const pinResetRef = (sheetId) =>
+  doc(db, 'sheets', sheetId, 'settings', 'pinReset')
+
+// Store the server-generated OTP hash + expiry during a "Forgot PIN" flow.
+// Covered by the existing sheets/{sheetId}/** Firestore rule (owner-only).
+export async function savePinResetOtpFS(sheetId, otpHash, expiresAt) {
+  await setDoc(pinResetRef(sheetId), { otpHash, expiresAt })
+}
+
+export async function clearPinResetOtpFS(sheetId) {
+  try { await deleteDoc(pinResetRef(sheetId)) } catch { /* ignore */ }
+}
+
+// Overwrite PIN without the "already set" guard — only reachable after OTP verification.
+export async function resetPinFS(sheetId, newPin) {
+  await setDoc(securityRef(sheetId), {
+    pinHash: await hashPin(newPin),
+    updatedAt: new Date().toISOString(),
+  }, { merge: true })
 }
 
 // ─── Sheet format/sync metadata ──────────────────────────────────────────────

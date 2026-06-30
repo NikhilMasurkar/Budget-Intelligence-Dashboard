@@ -7,8 +7,9 @@ export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSIO
 // in Firestore is lower, the app regenerates the Drive sheet once and records
 // this number — so format changes roll out automatically without manual export.
 // v1 = original (pre-versioning) format · v2 = investments excluded from Total
-// Expenses + "Net Savings" + red/purple withdrawal styling.
-export const SHEET_FORMAT_VERSION = 2
+// Expenses + "Net Savings" + red/purple withdrawal styling · v3 = stable row ids
+// embedded in cell-A notes (__biq:{month→id}__) for rename-safe reconciliation.
+export const SHEET_FORMAT_VERSION = 3
 
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 export const SOURCES = ['Salary', 'Freelance', 'Dividend', 'ITR Return', 'Other']
