@@ -48,14 +48,36 @@ describe('reconcileExpenses — current (name-composite) behaviour', () => {
     expect(rows[0][0]).toBe('NEWID')
   })
 
-  // CHARACTERIZATION of the known bug milestone 3 will fix: a rename breaks the
-  // name-based match, so the row is DUPLICATED (new id) and the old one lingers.
-  it('BUG: renaming an item duplicates it (name key no longer matches)', () => {
+  // Legacy behaviour (no id embedded): a rename still duplicates because we fall
+  // back to the name-composite key and the names differ. Old backups from before
+  // SHEET_FORMAT_VERSION 3 will hit this path on the first load post-upgrade.
+  it('without stable id: rename still duplicates (legacy name-composite fallback)', () => {
     const db = [dbExp({ id: 'db1', itemName: 'Electrcity' })] // typo in DB
-    const xls = [xlsExp({ itemName: 'Electricity' })]          // fixed in Excel
+    const xls = [xlsExp({ itemName: 'Electricity' })]          // no id — legacy export
     const { rows } = reconcileExpenses(xls, db, ID)
-    expect(rows).toHaveLength(2) // <-- duplicate; should be 1 after the fix
+    expect(rows).toHaveLength(2)
     expect(rows.map(r => r[4]).sort()).toEqual(['Electrcity', 'Electricity'])
+  })
+
+  // Stable-id fix (SHEET_FORMAT_VERSION >= 3): Excel carries the DB row id in the
+  // cell-A note; parseExcel recovers it → reconcile matches by id, rename merges.
+  it('with stable id: rename merges correctly instead of duplicating', () => {
+    const db = [dbExp({ id: 'db1', itemName: 'Electrcity' })]
+    const xls = [xlsExp({ id: 'db1', itemName: 'Electricity' })] // Excel has the fixed name + same id
+    const { rows, changed } = reconcileExpenses(xls, db, ID)
+    expect(rows).toHaveLength(1)
+    expect(rows[0][0]).toBe('db1')         // DB id preserved
+    expect(rows[0][4]).toBe('Electricity') // new name from Excel propagated
+    expect(changed).toBe(true)             // name changed → write-back triggered
+  })
+
+  it('with stable id: recategorising an item merges correctly', () => {
+    // DB has item in category c1; Excel (after user recategorised it) has it in c2 with same id.
+    const db = [dbExp({ id: 'db1', categoryId: 'c1', itemName: 'Gym' })]
+    const xls = [xlsExp({ id: 'db1', categoryId: 'c2', itemName: 'Gym' })]
+    const { rows } = reconcileExpenses(xls, db, ID)
+    expect(rows).toHaveLength(1)
+    expect(rows[0][3]).toBe('c2') // new categoryId from Excel
   })
 })
 

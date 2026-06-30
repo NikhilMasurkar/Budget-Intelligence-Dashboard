@@ -52,6 +52,20 @@ function getCellNote(cell) {
   return ''
 }
 
+// Extract the month→id map embedded by exportExcel in column-A cell notes.
+// Format: __biq:{"1":"abc","3":"def"}__ (month as string key → DB row id).
+// Returns {} for old/hand-crafted files that don't have it.
+function extractMonthIds(cell) {
+  const note = getCellNote(cell)
+  if (!note) return {}
+  const start = note.indexOf('__biq:')
+  if (start === -1) return {}
+  const jsonStart = start + 6
+  const end = note.indexOf('__', jsonStart)
+  if (end === -1) return {}
+  try { return JSON.parse(note.slice(jsonStart, end)) } catch { return {} }
+}
+
 // exportExcel.js writes notes as `• <note> (₹<amount>)`, one per line if several.
 // Strip that decoration so re-importing recovers the original note text without
 // compounding the bullet/amount on the next export. Plain hand-written comments
@@ -178,20 +192,24 @@ function parseYearSheet(sheet, year, categories) {
 
     // ── Data row (has at least one non-zero month value) ───────
     if (section === 'INCOME') {
+      const monthIds = extractMonthIds(row.getCell(1))
       amounts.forEach((amt, idx) => {
         if (amt === 0) return
+        const m = String(idx + 1)
         income.push({
-          id: uid(), year: String(year), month: String(idx + 1),
+          id: monthIds[m] || uid(), year: String(year), month: m,
           source: rawA, amount: String(Math.round(amt)),
         })
       })
     }
 
     if (section === 'EXPENSE' && currentCat) {
+      const monthIds = extractMonthIds(row.getCell(1))
       amounts.forEach((amt, idx) => {
         if (amt === 0) return
+        const m = String(idx + 1)
         expenses.push({
-          id: uid(), year: String(year), month: String(idx + 1),
+          id: monthIds[m] || uid(), year: String(year), month: m,
           categoryId: currentCat.id, itemName: rawA,
           amount: String(Math.round(amt)), isFixed: 'FALSE',
           note: notes[idx] || '',

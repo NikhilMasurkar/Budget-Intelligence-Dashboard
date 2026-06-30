@@ -210,13 +210,17 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
     const incBySource = {}
     incItems.forEach(i => {
       const source = toSentenceCase(i.source)
-      if (!incBySource[source]) incBySource[source] = Array(12).fill(0)
-      incBySource[source][i.month - 1] += Number(i.amount)
+      if (!incBySource[source]) incBySource[source] = { amounts: Array(12).fill(0), monthIds: {} }
+      incBySource[source].amounts[i.month - 1] += Number(i.amount)
+      // Record stable DB id for each month so parseExcel can recover it on import.
+      incBySource[source].monthIds[String(i.month)] = i.id
     })
 
     const incDataStart = r
-    Object.entries(incBySource).forEach(([source, amounts], idx) => {
-      dataRow(sheet, r, source, amounts, idx % 2 === 1)
+    Object.entries(incBySource).forEach(([source, data], idx) => {
+      dataRow(sheet, r, source, data.amounts, idx % 2 === 1)
+      if (Object.keys(data.monthIds).length)
+        sheet.getCell(r, 1).note = `__biq:${JSON.stringify(data.monthIds)}__`
       r++
     })
 
@@ -248,8 +252,10 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
       const itemsMap = {}
       itemsForCat.forEach(e => {
         const itemName = toSentenceCase(e.itemName)
-        if (!itemsMap[itemName]) itemsMap[itemName] = { amounts: Array(12).fill(0), notes: Array(12).fill('') }
+        if (!itemsMap[itemName]) itemsMap[itemName] = { amounts: Array(12).fill(0), notes: Array(12).fill(''), monthIds: {} }
         itemsMap[itemName].amounts[e.month - 1] += Number(e.amount)
+        // Record stable DB id per month so parseExcel can recover it on import.
+        itemsMap[itemName].monthIds[String(e.month)] = e.id
         if (e.note) {
           const prefix = itemsMap[itemName].notes[e.month - 1] ? '\n' : ''
           itemsMap[itemName].notes[e.month - 1] += `${prefix}• ${e.note} (₹${e.amount})`
@@ -292,6 +298,8 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
       const catDataStart = r
       Object.entries(itemsMap).forEach(([name, data], idx) => {
         dataRow(sheet, r, name, data.amounts, idx % 2 === 1, data.notes)
+        if (Object.keys(data.monthIds).length)
+          sheet.getCell(r, 1).note = `__biq:${JSON.stringify(data.monthIds)}__`
         r++
       })
 
