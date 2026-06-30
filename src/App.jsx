@@ -36,6 +36,7 @@ import CategoryModal from './components/Category/CategoryModal'
 import ErrorBoundary from './components/ErrorBoundary'
 
 import { MONTHS, YEAR_NOW, MONTH_NOW_1 as MONTH_NOW, toSentenceCase, defaultMonths } from './utils/constants'
+import { AI_ENABLED } from './api/gemini'
 
 export default function App() {
   const { classes, cx } = useStyles()
@@ -221,7 +222,7 @@ export default function App() {
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}
         onAIInsights={() => setAiOpen(true)}
-        hasAIKey={!!import.meta.env.VITE_GEMINI_API_KEY}
+        hasAIKey={AI_ENABLED}
       />
 
       <Box className={globalClasses.contentArea}>

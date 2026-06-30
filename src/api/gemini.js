@@ -1,4 +1,17 @@
-const BASE = 'https://generativelanguage.googleapis.com/v1beta'
+// All Gemini calls go through our Netlify Function so the API key stays
+// server-side (never bundled). Override the path with VITE_GEMINI_PROXY if your
+// function is hosted elsewhere.
+const PROXY = import.meta.env.VITE_GEMINI_PROXY || '/.netlify/functions/gemini'
+
+// Whether to surface AI features in the UI. Defaults on; set VITE_AI_ENABLED=false
+// to hide them (e.g. plain `vite` dev without the function running).
+export const AI_ENABLED = import.meta.env.VITE_AI_ENABLED !== 'false'
+
+function proxyUrl(path, { sse = false } = {}) {
+  const qs = new URLSearchParams({ path })
+  if (sse) qs.set('alt', 'sse')
+  return `${PROXY}?${qs.toString()}`
+}
 
 const FALLBACK_MODELS = [
   'gemini-2.0-flash-lite',
@@ -23,12 +36,12 @@ function isThinkingModel(modelId) {
   return /gemini-2\.5|gemini-3\.[0-9]/.test(modelId)
 }
 
-async function getAvailableModels(apiKey) {
+async function getAvailableModels() {
   const SESSION_KEY = 'budgetiq_gemini_models_v2'
   try {
     const cached = sessionStorage.getItem(SESSION_KEY)
     if (cached) return JSON.parse(cached)
-    const res = await fetch(`${BASE}/models?key=${apiKey}`)
+    const res = await fetch(proxyUrl('models'))
     if (!res.ok) return FALLBACK_MODELS
     const data = await res.json()
     const models = (data.models || [])
@@ -52,9 +65,9 @@ async function getAvailableModels(apiKey) {
   }
 }
 
-async function callModel(modelId, apiKey, prompt) {
+async function callModel(modelId, prompt) {
   const thinking = isThinkingModel(modelId)
-  const res = await fetch(`${BASE}/models/${modelId}:generateContent?key=${apiKey}`, {
+  const res = await fetch(proxyUrl(`models/${modelId}:generateContent`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -98,9 +111,6 @@ function calcIncomeTax(annualGross) {
 
 // ── Main export ──────────────────────────────────────────────────────────────
 export async function getAIInsights({ expenses, income, categories, selMonths, year, userName }) {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY
-  if (!apiKey) throw new Error('VITE_GEMINI_API_KEY not set in .env')
-
   const catMap = Object.fromEntries(categories.map(c => [c.id, c.name]))
   const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
   const name = userName || 'you'
@@ -261,7 +271,7 @@ color must be exactly: "red", "green", "amber", or "neutral"
   ]
 }`
 
-  const models = await getAvailableModels(apiKey)
+  const models = await getAvailableModels()
   // Put the last working model at the front to skip the search next time
   const ordered = _workingModel
     ? [_workingModel, ...models.filter(m => m !== _workingModel)]
@@ -270,7 +280,7 @@ color must be exactly: "red", "green", "amber", or "neutral"
 
   for (const modelId of ordered) {
     try {
-      const text = await callModel(modelId, apiKey, prompt)
+      const text = await callModel(modelId, prompt)
       const clean = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim()
       const result = JSON.parse(clean)
       _saveModel(modelId)
@@ -413,10 +423,7 @@ Guidelines:
 
 // ── Streaming chat ────────────────────────────────────────────────────────────
 export async function getChatResponseStream({ messages, financialContext, onChunk }) {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY
-  if (!apiKey) throw new Error('VITE_GEMINI_API_KEY not set')
-
-  const models  = await getAvailableModels(apiKey)
+  const models  = await getAvailableModels()
   const ordered = _workingModel
     ? [_workingModel, ...models.filter(m => m !== _workingModel)]
     : models
@@ -429,7 +436,7 @@ export async function getChatResponseStream({ messages, financialContext, onChun
   for (const modelId of ordered) {
     try {
       const res = await fetch(
-        `${BASE}/models/${modelId}:streamGenerateContent?key=${apiKey}&alt=sse`,
+        proxyUrl(`models/${modelId}:streamGenerateContent`, { sse: true }),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
