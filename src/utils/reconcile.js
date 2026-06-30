@@ -51,8 +51,10 @@ export function reconcileExpenses(xlsxExps, dbExpRows, makeId = defaultMakeId) {
         existing[0], xls.year, xls.month, xls.categoryId,
         toSentenceCase(xls.itemName), xls.amount,
         // Sheets DB wins for isFixed (app pins) and note; Excel is the fallback.
+        // Use ?? (not ||) for the note so an explicitly-cleared '' in the DB
+        // isn't treated as falsy and overwritten by a stale Excel note.
         existing[6] || xls.isFixed || 'FALSE',
-        existing[7] || xls.note || '',
+        existing[7] ?? xls.note ?? '',
         existing[8] || '',
       ])
     } else {

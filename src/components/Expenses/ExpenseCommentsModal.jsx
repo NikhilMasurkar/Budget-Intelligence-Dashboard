@@ -5,6 +5,7 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import ChatBubbleOutlinedIcon from '@mui/icons-material/ChatBubbleOutlined'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 
 export function parseComments(note) {
   if (!note) return []
@@ -33,6 +34,12 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving 
     const updated = [...comments, { text: text.trim(), ts: Date.now() }]
     onSave(expense, JSON.stringify(updated))
     setText('')
+  }
+
+  const handleDelete = (idx) => {
+    if (saving) return
+    const updated = comments.filter((_, i) => i !== idx)
+    onSave(expense, JSON.stringify(updated))
   }
 
   return (
@@ -78,14 +85,31 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving 
                 background: 'rgba(255,255,255,0.03)',
                 border: '1px solid rgba(255,255,255,0.06)',
                 borderRadius: '10px',
-                padding: '10px 12px'
+                padding: '10px 12px',
+                position: 'relative',
+                '&:hover .comment-delete': { opacity: 1 }
               }}>
-                <Typography sx={{ fontSize: 13, color: '#e4e8f5', lineHeight: 1.5, wordBreak: 'break-word' }}>
+                <Typography sx={{ fontSize: 13, color: '#e4e8f5', lineHeight: 1.5, wordBreak: 'break-word', pr: '28px' }}>
                   {c.text}
                 </Typography>
                 <Typography sx={{ fontSize: 10, color: '#5a6080', mt: '4px' }}>
                   {fmtTs(c.ts)}
                 </Typography>
+                <IconButton
+                  className="comment-delete"
+                  size="small"
+                  onClick={() => handleDelete(i)}
+                  disabled={saving}
+                  sx={{
+                    position: 'absolute', top: 6, right: 6,
+                    opacity: 0, transition: 'opacity 0.15s',
+                    color: '#5a6080',
+                    '&:hover': { color: '#e05555', background: 'rgba(224,85,85,0.1)' },
+                    p: '3px'
+                  }}
+                >
+                  <DeleteOutlineIcon sx={{ fontSize: 15 }} />
+                </IconButton>
               </Box>
             ))}
           </Box>
