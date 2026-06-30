@@ -1,5 +1,0 @@
-# Only declares where serverless functions live — build command and publish dir
-# stay as configured in the Netlify dashboard.
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"

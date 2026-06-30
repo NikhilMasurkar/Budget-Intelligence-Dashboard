@@ -1,7 +1,7 @@
-// All Gemini calls go through our Netlify Function so the API key stays
-// server-side (never bundled). Override the path with VITE_GEMINI_PROXY if your
-// function is hosted elsewhere.
-const PROXY = import.meta.env.VITE_GEMINI_PROXY || '/.netlify/functions/gemini'
+// All Gemini calls go through our Netlify Edge Function so the API key stays
+// server-side (never bundled) and responses stream from the edge. Override with
+// VITE_GEMINI_PROXY if hosted elsewhere.
+const PROXY = import.meta.env.VITE_GEMINI_PROXY || '/api/gemini'
 
 // Whether to surface AI features in the UI. Defaults on; set VITE_AI_ENABLED=false
 // to hide them (e.g. plain `vite` dev without the function running).
