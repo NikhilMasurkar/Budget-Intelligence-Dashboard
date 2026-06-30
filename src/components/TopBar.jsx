@@ -25,6 +25,9 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import MenuIcon from '@mui/icons-material/Menu'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
+import NotificationsOffIcon from '@mui/icons-material/NotificationsOff'
 
 import { makeStyles } from 'tss-react/mui'
 import { APP_VERSION } from '../utils/constants'
@@ -313,7 +316,9 @@ export default function TopBar({
   onSignIn,
   onSignOut,
   onAIInsights,
-  hasAIKey
+  hasAIKey,
+  notifStatus,
+  onToggleNotifications
 }) {
   const { classes, cx } = useStyles()
   const [anchorEl, setAnchorEl] = useState(null)
@@ -446,6 +451,35 @@ export default function TopBar({
                 }}>
                 <AutoAwesomeIcon sx={{ fontSize: 18 }} />
               </IconButton>
+            </Tooltip>
+          )}
+
+          {authd && notifStatus !== 'unsupported' && (
+            <Tooltip title={
+              notifStatus === 'subscribed'   ? '9 PM daily reminder ON — click to disable' :
+              notifStatus === 'denied'       ? 'Notifications blocked — enable in browser settings' :
+                                              'Enable daily 9 PM expense reminder'
+            }>
+              <span>
+                <IconButton
+                  onClick={notifStatus !== 'denied' ? onToggleNotifications : undefined}
+                  disabled={notifStatus === 'loading'}
+                  className={classes.actionButton}
+                  sx={notifStatus === 'subscribed' ? {
+                    color: '#3de8a0 !important',
+                    borderColor: 'rgba(61,232,160,0.4) !important'
+                  } : notifStatus === 'denied' ? {
+                    opacity: 0.45, cursor: 'default'
+                  } : undefined}
+                >
+                  {notifStatus === 'subscribed'
+                    ? <NotificationsActiveIcon sx={{ fontSize: 18 }} />
+                    : notifStatus === 'denied'
+                      ? <NotificationsOffIcon sx={{ fontSize: 18 }} />
+                      : <NotificationsNoneIcon sx={{ fontSize: 18 }} />
+                  }
+                </IconButton>
+              </span>
             </Tooltip>
           )}
 

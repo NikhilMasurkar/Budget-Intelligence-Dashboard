@@ -45,7 +45,8 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // Cache the app shell aggressively
+        // Include push-handler.js so the generated SW importScripts it for push events
+        importScripts: ['/push-handler.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // Never cache live API calls
         runtimeCaching: [

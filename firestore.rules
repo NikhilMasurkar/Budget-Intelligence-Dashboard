@@ -19,6 +19,13 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/sheets/$(sheetId)).data.ownerUid == request.auth.uid;
     }
 
+    // Push notification subscriptions — each user owns their own record by uid.
+    // The server-side send-push function reads all docs via Firebase Admin SDK,
+    // which bypasses these rules, so no admin read rule is needed here.
+    match /pushSubscriptions/{uid} {
+      allow read, write: if request.auth.uid == uid;
+    }
+
     match /sheets/{sheetId} {
       // Any signed-in user may read the parent doc (it only holds ownerUid),
       // so the client can detect whether a sheet is already claimed.
