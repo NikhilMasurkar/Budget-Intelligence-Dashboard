@@ -1,7 +1,13 @@
 // All Gemini calls go through our Netlify Edge Function so the API key stays
 // server-side (never bundled) and responses stream from the edge. Override with
 // VITE_GEMINI_PROXY if hosted elsewhere.
-const PROXY = import.meta.env.VITE_GEMINI_PROXY || '/api/gemini'
+const PROXY = (() => {
+  let p = import.meta.env.VITE_GEMINI_PROXY || '/api/gemini'
+  if (p && !p.startsWith('/') && !p.startsWith('http')) {
+    p = '/' + p
+  }
+  return p
+})()
 
 // Whether to surface AI features in the UI. Defaults on; set VITE_AI_ENABLED=false
 // to hide them (e.g. plain `vite` dev without the function running).
@@ -101,7 +107,7 @@ function detectEmployment(income) {
 
 // India new tax regime FY 2025-26 (Budget 2025)
 // Standard deduction ₹75,000 for salaried; rebate u/s 87A if taxable ≤ ₹12L
-function calcIncomeTax(annualGross) {
+export function calcIncomeTax(annualGross) {
   const taxable = Math.max(0, annualGross - 75000)
   if (taxable <= 1200000) return 0  // full rebate u/s 87A
   if (taxable <= 1600000) return (taxable - 1200000) * 0.20

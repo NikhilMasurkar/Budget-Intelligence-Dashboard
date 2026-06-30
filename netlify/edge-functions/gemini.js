@@ -48,5 +48,5 @@ function json(obj, status) {
   })
 }
 
-// Registers this edge function at /api/gemini (same-origin → no CORS needed).
-export const config = { path: '/api/gemini' }
+// Registers this edge function at both paths to handle custom proxy settings.
+export const config = { path: ['/api/gemini', '/gemini'] }

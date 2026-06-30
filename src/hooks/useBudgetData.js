@@ -14,6 +14,7 @@ import {
 import { fetchExpenseMetaFS, expensePinKey } from '../api/firestoreExpenseMeta'
 import { getSheetSyncMetaFS, setSheetFormatVersionFS } from '../api/firestoreSettings'
 import { YEAR_NOW, SHEET_FORMAT_VERSION, toSentenceCase } from '../utils/constants'
+import { reconcileExpenses, reconcileIncome } from '../utils/reconcile'
 
 export function useBudgetData({ authd, userName, onUnauthorized }) {
   const [categories, setCategories] = useState([])
@@ -84,73 +85,13 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
           readAllIncomeRows(t)
         ])
 
-        const reconciledExpenses = []
-        const dbExpMap = new Map()
-        dbExpRows.forEach(row => {
-          const key = `${row[1]}-${row[2]}-${row[3]}-${toSentenceCase(row[4])}`
-          dbExpMap.set(key, row)
-        })
-
-        let expensesChanged = false
-        xlsxExps.forEach(xls => {
-          const key = `${xls.year}-${xls.month}-${xls.categoryId}-${toSentenceCase(xls.itemName)}`
-          const existing = dbExpMap.get(key)
-          if (existing) {
-            xls.id = existing[0]
-            const amountDiff = String(existing[5]) !== String(xls.amount)
-            const fixedDiff = String(existing[6]) !== String(xls.isFixed || 'FALSE')
-            if (amountDiff || fixedDiff) expensesChanged = true
-            reconciledExpenses.push([
-              existing[0], xls.year, xls.month, xls.categoryId,
-              toSentenceCase(xls.itemName), xls.amount,
-              // Sheets DB wins for isFixed — app pins must not be overwritten by stale Excel
-              existing[6] || xls.isFixed || 'FALSE',
-              // Sheet note wins; fall back to the Excel cell-comment note so
-              // older notes that only survive as Excel comments are recovered.
-              existing[7] || xls.note || '',
-              // Preserve the in-app last-updated timestamp (col I)
-              existing[8] || ''
-            ])
-            dbExpMap.delete(key)
-          } else {
-            if (!xls.id) xls.id = uid()
-            expensesChanged = true
-            reconciledExpenses.push([
-              xls.id, xls.year, xls.month, xls.categoryId,
-              toSentenceCase(xls.itemName), xls.amount, xls.isFixed || 'FALSE', xls.note || '', ''
-            ])
-          }
-        })
-        // Preserve Sheets-only rows (added in app, not yet in Drive Excel backup)
-        dbExpMap.forEach(row => { expensesChanged = true; reconciledExpenses.push(row) })
+        // Reconcile the Drive Excel backup against the Sheet DB (pure + tested).
+        const { rows: reconciledExpenses, changed: expensesChanged } =
+          reconcileExpenses(xlsxExps, dbExpRows, uid)
         if (expensesChanged) await writeAllExpenseRows(reconciledExpenses, t)
 
-        const reconciledIncome = []
-        const dbIncMap = new Map()
-        dbIncRows.forEach(row => {
-          const key = `${row[1]}-${row[2]}-${toSentenceCase(row[3])}`
-          dbIncMap.set(key, row)
-        })
-
-        let incomeChanged = false
-        xlsxInc.forEach(xls => {
-          const key = `${xls.year}-${xls.month}-${toSentenceCase(xls.source)}`
-          const existing = dbIncMap.get(key)
-          if (existing) {
-            xls.id = existing[0]
-            if (String(existing[4]) !== String(xls.amount)) incomeChanged = true
-            reconciledIncome.push([
-              existing[0], xls.year, xls.month, toSentenceCase(xls.source), xls.amount
-            ])
-            dbIncMap.delete(key)
-          } else {
-            if (!xls.id) xls.id = uid()
-            incomeChanged = true
-            reconciledIncome.push([xls.id, xls.year, xls.month, toSentenceCase(xls.source), xls.amount])
-          }
-        })
-        // Preserve Sheets-only income rows (added in app, not yet in Drive Excel backup)
-        dbIncMap.forEach(row => { incomeChanged = true; reconciledIncome.push(row) })
+        const { rows: reconciledIncome, changed: incomeChanged } =
+          reconcileIncome(xlsxInc, dbIncRows, uid)
         if (incomeChanged) await writeAllIncomeRows(reconciledIncome, t)
 
         rawExps = reconciledExpenses.map(r => ({
