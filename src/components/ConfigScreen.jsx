@@ -101,7 +101,7 @@ export default function ConfigScreen() {
           </Typography>
 
           <Box component="pre" className={classes.preCode}>
-            {`VITE_GOOGLE_SHEETS_API_KEY=your_api_key\nVITE_GOOGLE_OAUTH_CLIENT_ID=your_oauth_client_id`}
+            {`VITE_GOOGLE_SHEETS_API_KEY=your_api_key\nVITE_GOOGLE_OAUTH_CLIENT_ID=your_oauth_client_id\nVITE_FIREBASE_PROJECT_ID=your_firebase_project_id\nVITE_FIREBASE_API_KEY=your_firebase_api_key\nVITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com\nVITE_FIREBASE_APP_ID=your_firebase_app_id`}
           </Box>
 
           <Box className={classes.infoBox}>

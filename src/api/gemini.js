@@ -168,10 +168,18 @@ export async function getAIInsights({ expenses, income, categories, selMonths, y
   const benchLoans    = monthlyIncome * 0.40
   const benchSavings  = monthlyIncome * 0.20
   const benchEmergFund = monthlyExpense * 6
-  const totalSavingsInvested = (catTotals['Investments & Savings'] || 0) +
-    Object.entries(catTotals)
-      .filter(([k]) => k.toLowerCase().includes('saving') || k.toLowerCase().includes('invest') || k.toLowerCase().includes('return'))
-      .reduce((s, [, v]) => s + v, 0)
+  // Sum only genuine savings/investment categories. Prefer the explicit
+  // type='savings' flag; fall back to a name match for un-typed categories.
+  // (Deliberately excludes "Return money" — money coming back isn't invested.)
+  const savingsCatNames = new Set(
+    categories.filter(c => c.type === 'savings').map(c => c.name)
+  )
+  const totalSavingsInvested = Object.entries(catTotals)
+    .filter(([k]) =>
+      savingsCatNames.has(k) ||
+      k.toLowerCase().includes('saving') ||
+      k.toLowerCase().includes('invest'))
+    .reduce((s, [, v]) => s + v, 0)
 
   const monthsLabel = `${activeMonths} month${activeMonths > 1 ? 's' : ''} with data`
   const periodMonths = [...new Set(filteredExp.map(e => +e.month - 1))]

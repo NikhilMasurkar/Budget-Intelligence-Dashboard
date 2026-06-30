@@ -28,18 +28,73 @@ function bioErrorMessage(e) {
 const PIN_LENGTH = 4
 
 // ── Fingerprint icon SVG ─────────────────────────────────────
-function FingerprintIcon({ size = 48, color = '#5b7fff' }) {
+// A full thumb-print: a loop core surrounded by many concentric ridges,
+// with the divergence delta on the lower-left — reads as a real fingerprint
+// rather than a minimal line glyph.
+const FP_RIDGES = [
+  // loop core
+  'M44 58 C42 49 54 48 54 57',
+  'M47.5 57 C46.5 52.5 51 52.5 50 56',
+  // core-hugging ridges
+  'M42 53 A6 7 0 0 1 54 53',
+  'M42 57 A6 6 0 0 0 54 57',
+  // upper concentric ridges (loop opening downward)
+  'M38 56 A10 12 0 0 1 58 56',
+  'M33 58 A15 19 0 0 1 63 58',
+  'M28 60 A20 26 0 0 1 68 60',
+  'M23 62 A25 33 0 0 1 73 62',
+  'M18 64 A30 40 0 0 1 78 64',
+  'M14 66 A34 47 0 0 1 82 66',
+  'M10 68 A38 53 0 0 1 86 68',
+  'M7 70 A41 58 0 0 1 89 70',
+  'M5 72 A43 62 0 0 1 91 72',
+  // lower concentric ridges
+  'M37 60 A11 9 0 0 0 59 60',
+  'M31 62 A17 13 0 0 0 65 62',
+  'M25 64 A23 17 0 0 0 71 64',
+  'M19 66 A29 21 0 0 0 77 66',
+  'M14 68 A34 25 0 0 0 82 68',
+  'M10 70 A38 29 0 0 0 86 70',
+  'M7 72 A41 33 0 0 0 89 72',
+  // divergence delta
+  'M28 82 L34 74 L40 82',
+  'M31 82 L34 78 L37 82',
+]
+
+// When `scanning`, a bright band sweeps top→bottom→top, lighting up the ridges
+// it passes over (a second, clipped copy of the print) with a leading scan line.
+function FingerprintIcon({ size = 48, color = '#5b7fff', scanning = false }) {
+  const clipId = 'fpScan-' + React.useId().replace(/:/g, '')
+  const ridges = FP_RIDGES.map((d, i) => <path key={i} d={d} />)
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
-      <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
-      <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
-      <path d="M2 12a10 10 0 0 1 18-6" />
-      <path d="M2 17c1 .5 2.5.5 3.5-.17" />
-      <path d="M22 12a10 10 0 0 1-.28 2.28" />
-      <path d="M6 10a6 6 0 0 1 11.8-1.27" />
-      <path d="M6.18 17.09A6 6 0 0 1 6 16a6 6 0 0 1 3-5.2" />
-      <path d="M20.14 13.33A6 6 0 0 1 18 16" />
+    <svg width={size} height={size} viewBox="0 0 96 114" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      {scanning && (
+        <defs>
+          <clipPath id={clipId}>
+            <rect className="fpBand" x="0" y="-8" width="96" height="26" />
+          </clipPath>
+        </defs>
+      )}
+
+      {/* Base ridges — dimmed while a scan sweeps over them */}
+      <g stroke={color} strokeWidth="2.4" opacity={scanning ? 0.28 : 1}>
+        {ridges}
+      </g>
+
+      {scanning && (
+        <>
+          {/* Bright copy, revealed only inside the moving band */}
+          <g stroke={color} strokeWidth="2.7" clipPath={`url(#${clipId})`}>
+            {ridges}
+          </g>
+          {/* Leading scan line */}
+          <rect className="fpLine" x="4" y="14" width="88" height="2.6" rx="1.3" fill={color} />
+          <style>{`
+            @keyframes fpScanMove { 0% { transform: translateY(0) } 50% { transform: translateY(88px) } 100% { transform: translateY(0) } }
+            .fpBand, .fpLine { animation: fpScanMove 1.9s ease-in-out infinite; }
+          `}</style>
+        </>
+      )}
     </svg>
   )
 }
@@ -302,6 +357,7 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
             <FingerprintIcon
               size={40}
               color={bioStatus === 'error' ? '#ff5f5f' : bioStatus === 'scanning' ? '#5b7fff' : '#6a7190'}
+              scanning={bioStatus === 'scanning'}
             />
           </button>
 

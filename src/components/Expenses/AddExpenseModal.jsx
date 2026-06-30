@@ -51,7 +51,9 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
     setSaving(true)
     try {
       const amt = Math.abs(parseFloat(form.amount) || 0)
-      const payload = { ...form, amount: isWithdraw ? -amt : amt }
+      // A withdrawal can't be "fixed/recurring" (the toggle is hidden for it),
+      // so never persist a stale isFixed=true left over from before the switch.
+      const payload = { ...form, amount: isWithdraw ? -amt : amt, isFixed: isWithdraw ? false : form.isFixed }
       await onSave(payload, applyMode)
     } catch (err) {
       console.error(err)

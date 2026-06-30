@@ -15,11 +15,9 @@ export default function MonthFilterControl({ selMonths, setSelMonths, MONTHS, de
   }
 
   const selectAll = () => {
-    if (selMonths.length === 12) {
-      setSelMonths([])
-    } else {
-      setSelMonths([...Array(12).keys()])
-    }
+    // Always resolve to a non-empty selection — an empty filter zeroes out the
+    // whole dashboard. "All" selects every month; tapping it again is a no-op.
+    setSelMonths([...Array(12).keys()])
   }
 
   return (
@@ -60,11 +58,10 @@ export default function MonthFilterControl({ selMonths, setSelMonths, MONTHS, de
           <Button
             key={q.label}
             onClick={() => {
-              if (isActive) {
-                setSelMonths([])
-              } else {
-                setSelMonths(q.months)
-              }
+              // Selecting a quarter/half always sets exactly those months.
+              // Re-tapping the active one is a no-op rather than clearing to
+              // an empty (all-zero) dashboard.
+              if (!isActive) setSelMonths(q.months)
             }}
             size="small"
             className={cx(classes.qButtonCommon, isActive && classes.qButtonActive)}

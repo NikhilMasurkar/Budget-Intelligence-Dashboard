@@ -29,11 +29,28 @@ function getPeriodLabel(selMonths, year) {
   return s.map(m => MONTH_NAMES[m]).join(', ') + ` ${year}`
 }
 
+// Small stable hash so the cache key reflects WHAT the data is, not just its
+// total — recategorising or renaming an item (same period total) must bust it.
+function hashRows(rows) {
+  let h = 0
+  for (const s of rows.sort()) {
+    for (let i = 0; i < s.length; i++) {
+      h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
+    }
+  }
+  return (h >>> 0).toString(36)
+}
+
 function makeCacheKey(year, selMonths, expenses, income) {
-  const mk  = [...(selMonths || [])].sort((a,b)=>a-b).join(',')
-  const exp = expenses.filter(e => (selMonths||[]).includes(+e.month-1)).reduce((s,e)=>s+(+e.amount||0),0)
-  const inc = income.filter(i  => (selMonths||[]).includes(+i.month-1)).reduce((s,i)=>s+(+i.amount||0),0)
-  return `${CACHE_PREFIX}${year}_${mk}_${Math.round(exp)}_${Math.round(inc)}`
+  const sel = selMonths || []
+  const mk  = [...sel].sort((a,b)=>a-b).join(',')
+  const expRows = expenses
+    .filter(e => sel.includes(+e.month-1))
+    .map(e => `${e.month}|${e.categoryId}|${e.itemName}|${Math.round(+e.amount||0)}`)
+  const incRows = income
+    .filter(i => sel.includes(+i.month-1))
+    .map(i => `${i.month}|${i.source}|${Math.round(+i.amount||0)}`)
+  return `${CACHE_PREFIX}${year}_${mk}_${hashRows(expRows)}_${hashRows(incRows)}`
 }
 
 const TYPE = {
