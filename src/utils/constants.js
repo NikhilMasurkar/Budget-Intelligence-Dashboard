@@ -23,11 +23,13 @@ export const fmt = (n) => {
 
 export const fmtK = (n) => {
   const v = Math.round(+n || 0)
-  return v >= 100000
-    ? '₹' + (v / 100000).toFixed(1) + 'L'
-    : v >= 1000
-    ? '₹' + (v / 1000).toFixed(1) + 'K'
-    : '₹' + v
+  const sign = v < 0 ? '-' : ''
+  const a = Math.abs(v)
+  return a >= 100000
+    ? sign + '₹' + (a / 100000).toFixed(1) + 'L'
+    : a >= 1000
+    ? sign + '₹' + (a / 1000).toFixed(1) + 'K'
+    : sign + '₹' + a
 }
 export function defaultMonths(year) {
   return year >= YEAR_NOW

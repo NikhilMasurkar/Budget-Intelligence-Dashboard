@@ -326,23 +326,9 @@ export const uid = () => Date.now().toString(36) + Math.random().toString(36).sl
 export async function fetchCategories(token) {
   return rowsToObjects(await readRange(TABS.CATEGORIES, '', token))
 }
-
-export async function saveCategory(cat, token) {
-  const all = rowsToObjects(await readRange(TABS.CATEGORIES, '', token))
-  const idx = all.findIndex(c => c.id === cat.id)
-  const row = [cat.id || uid(), cat.name, cat.type, cat.color || '#6c8fff']
-  if (idx >= 0) await writeRange(TABS.CATEGORIES, `A${idx + 2}`, [row], token)
-  else           await appendRows(TABS.CATEGORIES, [row], token)
-}
-
-export async function deleteCategory(catId, token) {
-  const all = rowsToObjects(await readRange(TABS.CATEGORIES, '', token))
-  await clearAndWrite(TABS.CATEGORIES, all.filter(c => c.id !== catId).map(c => [c.id, c.name, c.type, c.color]), token)
-}
-
-export async function reorderCategories(orderedCats, token) {
-  await clearAndWrite(TABS.CATEGORIES, orderedCats.map(c => [c.id, c.name, c.type, c.color]), token)
-}
+// Note: category writes (save/delete/reorder) live in firestoreCategories.js —
+// Firestore is the source of truth for categories. The Sheet "Categories" tab is
+// read-only now (migration source only), so no Sheet category writers here.
 
 // ─── EXPENSES ───────────────────────────────────────────────
 export async function fetchExpenses(year, token) {

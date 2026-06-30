@@ -71,6 +71,11 @@ export async function exportToPdf(categories, expenses, income, filterYears = nu
 
   if (years.length === 0) years = [String(new Date().getFullYear())]
 
+  // Investment/Savings categories are wealth transfers, not consumption — they
+  // are excluded from "Total Expenses" and "Net Savings" so the PDF matches the
+  // app and the Excel export (a withdrawal must not reduce Total Expenses).
+  const savingsCatIds = new Set(categories.filter(c => c.type === 'savings').map(c => c.id))
+
   // ───────────────────────────────────────────────────────────────────────────
   // PAGE 1: COVER / OVERALL BUDGET OVERVIEW
   // ───────────────────────────────────────────────────────────────────────────
@@ -95,7 +100,7 @@ export async function exportToPdf(categories, expenses, income, filterYears = nu
   const summaryBody = years.map(year => {
     const incTot = income.filter(i => String(i.year) === year)
       .reduce((s, i) => s + Number(i.amount), 0)
-    const expTot = expenses.filter(e => String(e.year) === year)
+    const expTot = expenses.filter(e => String(e.year) === year && !savingsCatIds.has(e.categoryId))
       .reduce((s, e) => s + Number(e.amount), 0)
     const savings = incTot - expTot
     const rate = incTot > 0 ? ((savings / incTot) * 100).toFixed(1) + '%' : '0%'
@@ -161,9 +166,11 @@ export async function exportToPdf(categories, expenses, income, filterYears = nu
     const expItems = expenses.filter(e => String(e.year) === year)
     const activeCats = categories.filter(c => c.type !== 'income')
 
-    // Monthly aggregation
+    // Monthly aggregation — investments/savings tracked separately so they are
+    // kept OUT of Total Expenses (matches the app + Excel export).
     const monthlyIncome = Array(12).fill(0)
     const monthlyExpenses = Array(12).fill(0)
+    const monthlyInvest = Array(12).fill(0)
 
     incItems.forEach(i => {
       const m = i.month - 1
@@ -171,7 +178,9 @@ export async function exportToPdf(categories, expenses, income, filterYears = nu
     })
     expItems.forEach(e => {
       const m = e.month - 1
-      if (m >= 0 && m < 12) monthlyExpenses[m] += Number(e.amount) || 0
+      if (m < 0 || m >= 12) return
+      if (savingsCatIds.has(e.categoryId)) monthlyInvest[m] += Number(e.amount) || 0
+      else monthlyExpenses[m] += Number(e.amount) || 0
     })
 
     // ─── 1. INCOME TABLE ─────────────────────────────────────────────────────
@@ -277,12 +286,15 @@ export async function exportToPdf(categories, expenses, income, filterYears = nu
     // ─── 3. SUMMARY TABLE ────────────────────────────────────────────────────
     const summaryTableHeaders = [['Summary', ...MONTHS, 'Year Total']]
     const totalExpSum = monthlyExpenses.reduce((s, v) => s + v, 0)
+    const totalInvestSum = monthlyInvest.reduce((s, v) => s + v, 0)
+    const hasInvest = monthlyInvest.some(v => v !== 0)
     const netCashFlow = monthlyIncome.map((v, i) => v - monthlyExpenses[i])
     const netCashSum = incTotalSum - totalExpSum
 
     const summaryTableBody = [
       ['Total Income', ...monthlyIncome.map(fmtVal), fmtVal(incTotalSum)],
       ['Total Expenses', ...monthlyExpenses.map(fmtVal), fmtVal(totalExpSum)],
+      ...(hasInvest ? [['Total Investments / Savings', ...monthlyInvest.map(fmtVal), fmtVal(totalInvestSum)]] : []),
       ['Cash Short / Extra', ...netCashFlow.map(fmtVal), fmtVal(netCashSum)]
     ]
 
@@ -304,11 +316,18 @@ export async function exportToPdf(categories, expenses, income, filterYears = nu
         styleTotalHeader(data)
         if (data.section !== 'body') return
 
+        const investRowIdx = hasInvest ? 2 : -1
+        const netRowIdx = summaryTableBody.length - 1   // last row = Cash Short / Extra
+
         if (data.row.index === 0) {
           if (data.column.index !== 13) data.cell.styles.fillColor = C.summaryInc // income row
         } else if (data.row.index === 1) {
           if (data.column.index !== 13) data.cell.styles.fillColor = C.summaryExp // expense row
-        } else if (data.row.index === 2) {
+        } else if (data.row.index === investRowIdx) {
+          // Investments / Savings — purple to read as a transfer, not a spend.
+          if (data.column.index !== 13) data.cell.styles.fillColor = [230, 217, 245]
+          data.cell.styles.textColor = [91, 46, 145]
+        } else if (data.row.index === netRowIdx) {
           // Net cash flow — the headline number. Solid navy, full width.
           data.cell.styles.fontStyle = 'bold'
           data.cell.styles.fillColor = C.navy

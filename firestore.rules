@@ -1,0 +1,44 @@
+rules_version = '2';
+
+// BudgetIQ Firestore security rules.
+// Every piece of user data lives under sheets/{sheetId}/**. Access is granted
+// only to the Firebase-authenticated user whose uid matches the ownerUid stamped
+// on the parent sheets/{sheetId} document (see ensureSheetOwnerFS). Without a
+// Firebase identity (request.auth == null) nothing is readable or writable.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // The caller owns the sheet if the parent doc's ownerUid is their uid.
+    function ownerOf(sheetId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/sheets/$(sheetId))
+        && get(/databases/$(database)/documents/sheets/$(sheetId)).data.ownerUid == request.auth.uid;
+    }
+
+    match /sheets/{sheetId} {
+      // Any signed-in user may read the parent doc (it only holds ownerUid),
+      // so the client can detect whether a sheet is already claimed.
+      allow get: if signedIn();
+
+      // Claim an unowned sheet: create with your own uid, or fill in ownerUid
+      // on a legacy doc that doesn't have one yet. Owners may update their doc.
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if signedIn() && (
+        resource.data.ownerUid == request.auth.uid
+        || (!('ownerUid' in resource.data) && request.resource.data.ownerUid == request.auth.uid)
+      );
+      allow delete: if false;
+
+      // All nested data (categories, expenseMeta, settings/security, settings/sync)
+      // is readable/writable only by the sheet's owner.
+      match /{document=**} {
+        allow read, write: if ownerOf(sheetId);
+      }
+    }
+  }
+}

@@ -131,7 +131,9 @@ export default function ChartsSection({
                 labels: catTotals.map(([k]) => k),
                 datasets: [{
                   data: catTotals.map(([, v]) => v),
-                  backgroundColor: catColors,
+                  // Cycle the palette so every slice has a color even when there
+                  // are more categories than palette entries (14 defaults > 10).
+                  backgroundColor: catTotals.map((_, i) => catColors[i % catColors.length]),
                   borderWidth: 2,
                   borderColor: '#13151f'
                 }]

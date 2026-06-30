@@ -89,7 +89,9 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
       setForm({
         id: initial?.id || '',
         name: initial?.name || '',
-        type: initial?.type || 'expense',
+        // Only 'savings' gets special handling everywhere else; collapse any
+        // other/legacy value ('fixed', 'income', …) to 'expense'.
+        type: initial?.type === 'savings' ? 'savings' : 'expense',
         color: initial?.color || defaultColor,
         budget: initial?.budget || 0
       })
@@ -161,9 +163,7 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
               notched
             >
               <MenuItem value="expense" sx={{ fontSize: 13 }}>Expense</MenuItem>
-              <MenuItem value="fixed" sx={{ fontSize: 13 }}>Fixed Expense</MenuItem>
               <MenuItem value="savings" sx={{ fontSize: 13 }}>Savings / Investment</MenuItem>
-              <MenuItem value="income" sx={{ fontSize: 13 }}>Income</MenuItem>
             </Select>
           </FormControl>
 

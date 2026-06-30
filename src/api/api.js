@@ -38,7 +38,7 @@ export const API_CONFIG = {
   // Google OAuth 2.0
   OAUTH: {
     CLIENT_ID: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID,
-    SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile',
+    SCOPES: 'openid https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
     USER_INFO: 'https://www.googleapis.com/oauth2/v3/userinfo',
     GSI_SCRIPT: 'https://accounts.google.com/gsi/client',
   }

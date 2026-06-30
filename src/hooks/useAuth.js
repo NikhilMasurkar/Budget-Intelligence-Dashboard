@@ -4,8 +4,10 @@ import {
   signInWithGoogle, signOut, isSignedIn,
   getUserProfile, findUserSpreadsheet, createUserSpreadsheet,
   setSheetId, setupSheet, silentReauth, getSavedUserName,
-  getTokenExpiry, getSessionValid
+  getTokenExpiry, getSessionValid, getToken, getSheetId
 } from '../api/sheets'
+import { bridgeFirebaseAuth, firebaseSignOut } from '../firebase'
+import { ensureSheetOwnerFS } from '../api/firestoreSettings'
 
 export function useAuth() {
   const [authd, setAuthd] = useState(false)
@@ -36,6 +38,10 @@ export function useAuth() {
   useEffect(() => {
     async function restore() {
       if (isSignedIn()) {
+        // Re-establish the Firebase identity + ownership before exposing data,
+        // so Firestore reads aren't denied by the ownership rules.
+        await bridgeFirebaseAuth(getToken())
+        await ensureSheetOwnerFS(getSheetId())
         setAuthd(true)
         scheduleRefresh()
         return
@@ -44,6 +50,8 @@ export function useAuth() {
       if (saved && getSessionValid()) {
         try {
           await silentReauth()
+          await bridgeFirebaseAuth(getToken())
+          await ensureSheetOwnerFS(getSheetId())
           setAuthd(true)
           scheduleRefresh()
         } catch {}
@@ -75,6 +83,10 @@ export function useAuth() {
       } else {
         setSheetId(sid)
       }
+      // Establish the Firebase identity from the same Google token, then stamp
+      // ownership on this sheet — both must precede any Firestore data access.
+      await bridgeFirebaseAuth(token)
+      await ensureSheetOwnerFS(sid)
       setUserName(name)
       setUserFullName(fullName)
       setUserPicture(pic)
@@ -89,6 +101,7 @@ export function useAuth() {
   const handleSignOut = () => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
     signOut()
+    firebaseSignOut()
     setAuthd(false)
     setUserName('')
     setUserFullName('')
