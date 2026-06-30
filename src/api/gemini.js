@@ -1,6 +1,19 @@
 // All Gemini calls go through our Netlify Edge Function so the API key stays
 // server-side (never bundled) and responses stream from the edge. Override with
 // VITE_GEMINI_PROXY if hosted elsewhere.
+import { auth } from '../firebase'
+
+// Attach a Firebase ID token so the edge function can gate on it.
+// Falls back to an empty object if the user isn't signed in yet (shouldn't
+// happen in practice — Gemini features are only shown post-auth).
+async function authHeaders() {
+  try {
+    const token = await auth.currentUser?.getIdToken()
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  } catch {
+    return {}
+  }
+}
 const PROXY = (() => {
   let p = import.meta.env.VITE_GEMINI_PROXY || '/api/gemini'
   if (p && !p.startsWith('/') && !p.startsWith('http')) {
@@ -47,7 +60,7 @@ async function getAvailableModels() {
   try {
     const cached = sessionStorage.getItem(SESSION_KEY)
     if (cached) return JSON.parse(cached)
-    const res = await fetch(proxyUrl('models'))
+    const res = await fetch(proxyUrl('models'), { headers: await authHeaders() })
     if (!res.ok) return FALLBACK_MODELS
     const data = await res.json()
     const models = (data.models || [])
@@ -75,7 +88,7 @@ async function callModel(modelId, prompt) {
   const thinking = isThinkingModel(modelId)
   const res = await fetch(proxyUrl(`models/${modelId}:generateContent`), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...await authHeaders() },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
@@ -445,7 +458,7 @@ export async function getChatResponseStream({ messages, financialContext, onChun
         proxyUrl(`models/${modelId}:streamGenerateContent`, { sse: true }),
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...await authHeaders() },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: financialContext }] },
             contents,

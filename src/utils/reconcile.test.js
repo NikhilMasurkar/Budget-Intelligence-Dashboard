@@ -79,6 +79,24 @@ describe('reconcileExpenses — current (name-composite) behaviour', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0][3]).toBe('c2') // new categoryId from Excel
   })
+
+  it('explicitly-cleared DB note ("") is not overwritten by a stale Excel note', () => {
+    // User deleted all comments → DB note is empty string.
+    // Excel still has old decorated note from before the delete.
+    // The ?? fix ensures DB empty-string wins over Excel's stale value.
+    const db = [dbExp({ id: 'db1', note: '' })]
+    const xls = [xlsExp({ id: 'db1', note: '[{"text":"old comment","ts":1}]' })]
+    const { rows } = reconcileExpenses(xls, db, ID)
+    expect(rows[0][7]).toBe('')  // DB empty note preserved, not restored from Excel
+  })
+
+  it('undefined DB note falls back to Excel note (first-time or missing column)', () => {
+    // DB row has no note column at all (e.g. old export before column H existed).
+    const db = [['db1', '2030', '1', 'c1', 'Rent', '100', 'FALSE']] // only 7 cols, r[7]=undefined
+    const xls = [xlsExp({ id: 'db1', note: '[{"text":"fallback","ts":1}]' })]
+    const { rows } = reconcileExpenses(xls, db, ID)
+    expect(rows[0][7]).toBe('[{"text":"fallback","ts":1}]') // Excel note applied as fallback
+  })
 })
 
 describe('reconcileIncome — current behaviour', () => {
