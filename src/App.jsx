@@ -37,6 +37,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 
 import { MONTHS, YEAR_NOW, MONTH_NOW_1 as MONTH_NOW, toSentenceCase, defaultMonths } from './utils/constants'
 import { AI_ENABLED } from './api/gemini'
+import { getPushStatus, subscribeToPush, unsubscribeFromPush } from './api/pushSubscription'
 
 export default function App() {
   const { classes, cx } = useStyles()
@@ -63,6 +64,7 @@ export default function App() {
   const [editRow, setEditRow] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [aiOpen, setAiOpen] = useState(false)
+  const [notifStatus, setNotifStatus] = useState('unsubscribed')
 
   const isLocked = parseInt(year) < new Date().getFullYear()
 
@@ -86,6 +88,36 @@ export default function App() {
   useEffect(() => { setSelectedExpenseIds([]) }, [year, month, view])
 
   const closeModal = useCallback(() => { setModal(null); setEditRow(null) }, [])
+
+  // ── Push notifications ────────────────────────────────────────
+  useEffect(() => {
+    if (!authd) return
+    getPushStatus().then(setNotifStatus).catch(() => {})
+  }, [authd])
+
+  const handleToggleNotifications = useCallback(async () => {
+    if (notifStatus === 'subscribed') {
+      setNotifStatus('loading')
+      try {
+        await unsubscribeFromPush()
+        setNotifStatus('unsubscribed')
+        toast.success('Daily reminders disabled')
+      } catch {
+        setNotifStatus('subscribed')
+      }
+    } else {
+      setNotifStatus('loading')
+      try {
+        await subscribeToPush()
+        setNotifStatus('subscribed')
+        toast.success('Daily 9 PM reminders enabled! 🔔')
+      } catch (e) {
+        const status = await getPushStatus().catch(() => 'unsubscribed')
+        setNotifStatus(status)
+        if (!e.message.includes('denied')) toast.error(e.message)
+      }
+    }
+  }, [notifStatus])
 
   // ── Data ──────────────────────────────────────────────────────
   const {
@@ -250,6 +282,8 @@ export default function App() {
         onSignOut={handleSignOut}
         onAIInsights={() => setAiOpen(true)}
         hasAIKey={AI_ENABLED}
+        notifStatus={notifStatus}
+        onToggleNotifications={handleToggleNotifications}
       />
 
       <Box className={globalClasses.contentArea}>
