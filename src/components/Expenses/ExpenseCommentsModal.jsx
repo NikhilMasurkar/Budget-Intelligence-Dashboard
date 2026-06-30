@@ -5,7 +5,7 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import ChatBubbleOutlinedIcon from '@mui/icons-material/ChatBubbleOutlined'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import DeleteIcon from '@mui/icons-material/Delete'
 
 export function parseComments(note) {
   if (!note) return []
@@ -108,7 +108,7 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving 
                     p: '3px'
                   }}
                 >
-                  <DeleteOutlineIcon sx={{ fontSize: 15 }} />
+                  <DeleteIcon sx={{ fontSize: 15 }} />
                 </IconButton>
               </Box>
             ))}

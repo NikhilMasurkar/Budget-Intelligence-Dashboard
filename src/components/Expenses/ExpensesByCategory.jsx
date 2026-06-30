@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react'
 import {
   Box, Typography, Button, IconButton, Tooltip,
   Collapse, Menu, MenuItem, ListItemIcon, Divider,
@@ -203,7 +203,101 @@ function CategoryBudgetText({ actual, budget }) {
   )
 }
 
-export default function ExpensesByCategory({
+// Custom comparator: expense objects are always new refs after loadAll (rebuilt via .map()),
+// so we compare individual field values instead of the object reference.
+function areRowPropsEqual(prev, next) {
+  return (
+    prev.exp.id        === next.exp.id        &&
+    prev.exp.amount    === next.exp.amount    &&
+    prev.exp.itemName  === next.exp.itemName  &&
+    prev.exp.isFixed   === next.exp.isFixed   &&
+    prev.exp.note      === next.exp.note      &&
+    prev.exp.updatedAt === next.exp.updatedAt &&
+    prev.isSelected    === next.isSelected    &&
+    prev.canEdit       === next.canEdit       &&
+    prev.onToggle      === next.onToggle      &&
+    prev.onComment     === next.onComment     &&
+    prev.onEdit        === next.onEdit        &&
+    prev.onDelete      === next.onDelete
+  )
+}
+
+const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected, onToggle, onComment, onEdit, onDelete }) {
+  const commentCount = parseComments(exp.note).length
+  return (
+    <Box className={classes.expenseRow}
+      sx={isSelected ? { background: 'rgba(91,127,255,0.06)' } : undefined}>
+      {canEdit && (
+        <Checkbox
+          size="small"
+          checked={isSelected}
+          onChange={e => onToggle(exp.id, e.target.checked)}
+          sx={{ p: 0, mr: '2px', color: '#3d4466', '&.Mui-checked': { color: '#5b7fff' } }}
+        />
+      )}
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography className={classes.expenseName} sx={{ flex: 'unset' }}>{exp.itemName}</Typography>
+        {fmtUpdated(exp.updatedAt) && (
+          <Typography sx={{ fontSize: 10, color: '#3d4466', display: 'block', lineHeight: 1.4 }}>
+            Updated {fmtUpdated(exp.updatedAt)}
+          </Typography>
+        )}
+      </Box>
+      {exp.isFixed === 'TRUE' && (
+        <Box component="span" className={classes.fixedBadge}>📌</Box>
+      )}
+      {+exp.amount < 0 && (
+        <Box component="span" className={classes.withdrawBadge}>↓ WITHDRAWN</Box>
+      )}
+      <Typography
+        className={classes.expenseAmount}
+        sx={+exp.amount < 0 ? { color: '#ff7a7a' } : undefined}
+      >
+        {fmt(exp.amount)}
+      </Typography>
+      <Tooltip title={commentCount > 0 ? `${commentCount} comment${commentCount !== 1 ? 's' : ''}` : 'Add comment'} arrow>
+        <IconButton
+          size="small"
+          onClick={() => onComment(exp)}
+          sx={{
+            p: '3px', position: 'relative',
+            color: commentCount > 0 ? '#5b7fff' : '#4a5072',
+            '&:hover': { color: '#5b7fff', background: 'rgba(91,127,255,0.1)' }
+          }}
+        >
+          <ChatBubbleOutlinedIcon sx={{ fontSize: 14 }} />
+          {commentCount > 0 && (
+            <Box component="span" sx={{
+              position: 'absolute', top: 0, right: 0,
+              fontSize: 8, fontWeight: 800, lineHeight: 1,
+              background: '#5b7fff', color: '#fff',
+              borderRadius: '50%', width: 12, height: 12,
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              {commentCount > 9 ? '9+' : commentCount}
+            </Box>
+          )}
+        </IconButton>
+      </Tooltip>
+      {canEdit && (
+        <>
+          <Tooltip title="Edit" arrow>
+            <IconButton size="small" className={classes.rowAction} onClick={() => onEdit(exp)}>
+              <EditOutlinedIcon sx={{ fontSize: 14 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete" arrow>
+            <IconButton size="small" className={classes.rowDelete} onClick={() => onDelete(exp)}>
+              <DeleteOutlinedIcon sx={{ fontSize: 14 }} />
+            </IconButton>
+          </Tooltip>
+        </>
+      )}
+    </Box>
+  )
+}, areRowPropsEqual)
+
+export default memo(function ExpensesByCategory({
   expenses, income = [], categories, year, month, availableYears,
   onYearChange, onMonthChange,
   onAddExpense, onEditExpense, onDeleteExpense,
@@ -224,6 +318,11 @@ export default function ExpensesByCategory({
   const [search, setSearch] = useState('')
   const [fixedOnly, setFixedOnly] = useState(false)
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
+
+  // Keep a ref to selectedIds so callbacks that toggle selection don't need
+  // selectedIds as a dep (avoiding new function refs on every selection change).
+  const selectedIdsRef = useRef(selectedIds)
+  useEffect(() => { selectedIdsRef.current = selectedIds }, [selectedIds])
 
   const monthExps = useMemo(() =>
     expenses.filter(e => String(e.year) === String(year) && String(e.month) === String(month))
@@ -282,26 +381,30 @@ export default function ExpensesByCategory({
   // Reset the inline delete-confirm whenever the selection changes.
   useEffect(() => { setBulkDeleteConfirm(false) }, [selectedIds])
 
-  const toggleExpense = (id, checked) => {
-    if (checked) onSelectionChange([...selectedIds, id])
-    else onSelectionChange(selectedIds.filter(x => x !== id))
-  }
-  const toggleCategoryAll = (catExps, checked) => {
+  // Stable toggle — reads selectedIds via ref so this callback never needs to
+  // change when the selection array changes (avoiding row re-renders on every tick).
+  const toggleExpense = useCallback((id, checked) => {
+    const curr = selectedIdsRef.current
+    onSelectionChange(checked ? [...curr, id] : curr.filter(x => x !== id))
+  }, [onSelectionChange])
+
+  const toggleCategoryAll = useCallback((catExps, checked) => {
+    const curr = selectedIdsRef.current
     const ids = catExps.map(e => e.id)
-    if (checked) onSelectionChange(Array.from(new Set([...selectedIds, ...ids])))
+    if (checked) onSelectionChange(Array.from(new Set([...curr, ...ids])))
     else {
       const rm = new Set(ids)
-      onSelectionChange(selectedIds.filter(x => !rm.has(x)))
+      onSelectionChange(curr.filter(x => !rm.has(x)))
     }
-  }
+  }, [onSelectionChange])
 
-  const toggle = (catId) => {
+  const toggle = useCallback((catId) => {
     setExpanded(prev => {
       const next = new Set(prev)
       next.has(catId) ? next.delete(catId) : next.add(catId)
       return next
     })
-  }
+  }, [])
 
   const expandAll = () => setExpanded(new Set(categories.map(c => c.id).concat('_uncategorized')))
   const collapseAll = () => setExpanded(new Set())
@@ -312,6 +415,12 @@ export default function ExpensesByCategory({
     setMenuCat(cat)
   }
   const closeMenu = () => { setMenuAnchor(null); setMenuCat(null) }
+
+  // Stable per-row callbacks passed to memoized ExpenseRow instances.
+  const handleToggle  = toggleExpense
+  const handleComment = useCallback((exp) => setCommentExp(exp), [])
+  const handleEdit    = useCallback((exp) => onEditExpense(exp), [onEditExpense])
+  const handleDelete  = useCallback((exp) => onDeleteExpense(exp), [onDeleteExpense])
 
   const handleMoveUp = () => {
     const idx = categories.findIndex(c => c.id === menuCat.id)
@@ -335,82 +444,6 @@ export default function ExpensesByCategory({
     const catExps = monthByCat.get(menuCat.id) || []
     if (catExps.length) onCopyToNextMonth(catExps.map(e => e.id))
     closeMenu()
-  }
-
-  // Unified expense-row renderer — used by both category and uncategorized sections.
-  const renderExpenseRow = (exp) => {
-    const commentCount = parseComments(exp.note).length
-    return (
-      <Box key={exp.id} className={classes.expenseRow}
-        sx={selectedSet.has(exp.id) ? { background: 'rgba(91,127,255,0.06)' } : undefined}>
-        {canEdit && (
-          <Checkbox
-            size="small"
-            checked={selectedSet.has(exp.id)}
-            onChange={e => toggleExpense(exp.id, e.target.checked)}
-            sx={{ p: 0, mr: '2px', color: '#3d4466', '&.Mui-checked': { color: '#5b7fff' } }}
-          />
-        )}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography className={classes.expenseName} sx={{ flex: 'unset' }}>{exp.itemName}</Typography>
-          {fmtUpdated(exp.updatedAt) && (
-            <Typography sx={{ fontSize: 10, color: '#3d4466', display: 'block', lineHeight: 1.4 }}>
-              Updated {fmtUpdated(exp.updatedAt)}
-            </Typography>
-          )}
-        </Box>
-        {exp.isFixed === 'TRUE' && (
-          <Box component="span" className={classes.fixedBadge}>📌</Box>
-        )}
-        {+exp.amount < 0 && (
-          <Box component="span" className={classes.withdrawBadge}>↓ WITHDRAWN</Box>
-        )}
-        <Typography
-          className={classes.expenseAmount}
-          sx={+exp.amount < 0 ? { color: '#ff7a7a' } : undefined}
-        >
-          {fmt(exp.amount)}
-        </Typography>
-        <Tooltip title={commentCount > 0 ? `${commentCount} comment${commentCount !== 1 ? 's' : ''}` : 'Add comment'} arrow>
-          <IconButton
-            size="small"
-            onClick={() => setCommentExp(exp)}
-            sx={{
-              p: '3px', position: 'relative',
-              color: commentCount > 0 ? '#5b7fff' : '#4a5072',
-              '&:hover': { color: '#5b7fff', background: 'rgba(91,127,255,0.1)' }
-            }}
-          >
-            <ChatBubbleOutlinedIcon sx={{ fontSize: 14 }} />
-            {commentCount > 0 && (
-              <Box component="span" sx={{
-                position: 'absolute', top: 0, right: 0,
-                fontSize: 8, fontWeight: 800, lineHeight: 1,
-                background: '#5b7fff', color: '#fff',
-                borderRadius: '50%', width: 12, height: 12,
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>
-                {commentCount > 9 ? '9+' : commentCount}
-              </Box>
-            )}
-          </IconButton>
-        </Tooltip>
-        {canEdit && (
-          <>
-            <Tooltip title="Edit" arrow>
-              <IconButton size="small" className={classes.rowAction} onClick={() => onEditExpense(exp)}>
-                <EditOutlinedIcon sx={{ fontSize: 14 }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Delete" arrow>
-              <IconButton size="small" className={classes.rowDelete} onClick={() => onDeleteExpense(exp)}>
-                <DeleteOutlinedIcon sx={{ fontSize: 14 }} />
-              </IconButton>
-            </Tooltip>
-          </>
-        )}
-      </Box>
-    )
   }
 
   const uncategorized = monthByCat.get('_uncategorized') || []
@@ -672,7 +705,19 @@ export default function ExpensesByCategory({
                 {visibleExps.length === 0 ? (
                   <Box className={classes.emptyRow}>No expenses this month</Box>
                 ) : (
-                  visibleExps.map(exp => renderExpenseRow(exp))
+                  visibleExps.map(exp => (
+                    <ExpenseRow
+                      key={exp.id}
+                      exp={exp}
+                      classes={classes}
+                      canEdit={canEdit}
+                      isSelected={selectedSet.has(exp.id)}
+                      onToggle={handleToggle}
+                      onComment={handleComment}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  ))
                 )}
               </Box>
             </Collapse>
@@ -713,7 +758,19 @@ export default function ExpensesByCategory({
             </Box>
             <Collapse in={isOpen} timeout={150}>
               <Box className={classes.expenseList}>
-                {visibleUncat.map(exp => renderExpenseRow(exp))}
+                {visibleUncat.map(exp => (
+                  <ExpenseRow
+                    key={exp.id}
+                    exp={exp}
+                    classes={classes}
+                    canEdit={canEdit}
+                    isSelected={selectedSet.has(exp.id)}
+                    onToggle={handleToggle}
+                    onComment={handleComment}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                ))}
               </Box>
             </Collapse>
           </Box>
@@ -783,4 +840,4 @@ export default function ExpensesByCategory({
       </Menu>
     </Box>
   )
-}
+})

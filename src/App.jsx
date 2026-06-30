@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Toaster, toast } from 'react-hot-toast'
 import { Box, Typography, Button, FormControl, Select } from '@mui/material'
 import { useGlobalStyles } from './styles/globalStyles'
@@ -89,7 +89,7 @@ export default function App() {
 
   // ── Data ──────────────────────────────────────────────────────
   const {
-    categories, expenses, income, loading, needsSetup, availableYears,
+    categories, expenses, income, loading, didInitialLoad, needsSetup, availableYears,
     loadAll, autoSyncToDrive, setCategories, setNeedsSetup, missingConfig
   } = useBudgetData({ authd, userName, onUnauthorized: handleSignOut })
 
@@ -104,6 +104,34 @@ export default function App() {
   const { handleSaveCategory, handleDeleteCategory, handleReorderCategory } = useCategories({
     loadAll, autoSyncToDrive, setDeleteConfirm, setCategories
   })
+
+  // ── Stable callbacks for ExpensesByCategory (prevent unnecessary re-renders) ──
+  const handleAddExpense = useCallback((catId) => {
+    setEditRow(catId ? { categoryId: catId } : null)
+    setModal('add-expense')
+  }, [])
+  const handleEditExpense = useCallback((row) => {
+    setEditRow(row)
+    setModal('add-expense')
+  }, [])
+  const handleAddCategory = useCallback(() => {
+    setEditRow(null)
+    setModal('category')
+  }, [])
+  const handleEditCategory = useCallback((row) => {
+    setEditRow(row)
+    setModal('category')
+  }, [])
+
+  // Year-filtered slices — stable reference when data/year hasn't changed.
+  const yearExpenses = useMemo(
+    () => expenses.filter(e => String(e.year) === String(year)),
+    [expenses, year]
+  )
+  const yearIncome = useMemo(
+    () => income.filter(i => String(i.year) === String(year)),
+    [income, year]
+  )
 
   // ── Delete dispatch ───────────────────────────────────────────
   const executeDelete = async (scope) => {
@@ -229,7 +257,9 @@ export default function App() {
           <SignInScreen onSignIn={handleSignIn} />
         ) : (
           <>
-            {loading && (
+            {/* Full-screen loading only on the very first load — after that, keep
+                content mounted so the UI doesn't blank out on every save/refresh. */}
+            {loading && !didInitialLoad && (
               <Typography align="center" sx={{ p: 5, color: '#8891b8' }}>
                 Loading from Google Sheets…
               </Typography>
@@ -254,7 +284,7 @@ export default function App() {
               />
             )}
 
-            {!loading && !needsSetup && view === 'dashboard' && (
+            {didInitialLoad && !needsSetup && view === 'dashboard' && (
               <ErrorBoundary>
                 {isLocked && (
                   <Box className={classes.lockedBanner}>
@@ -292,7 +322,7 @@ export default function App() {
               </ErrorBoundary>
             )}
 
-            {!loading && !needsSetup && view === 'expenses' && (
+            {didInitialLoad && !needsSetup && view === 'expenses' && (
               <ErrorBoundary>
                 {isLocked && (
                   <Box className={classes.lockedBanner}>
@@ -332,22 +362,19 @@ export default function App() {
 
                 {txnTab === 'expenses' ? (
                   <ExpensesByCategory
-                    expenses={expenses.filter(e => String(e.year) === String(year))}
-                    income={income.filter(i => String(i.year) === String(year))}
+                    expenses={yearExpenses}
+                    income={yearIncome}
                     categories={categories}
                     year={year}
                     month={month}
                     availableYears={availableYears}
                     onYearChange={setYear}
                     onMonthChange={setMonth}
-                    onAddExpense={catId => {
-                      setEditRow(catId ? { categoryId: catId } : null)
-                      setModal('add-expense')
-                    }}
-                    onEditExpense={row => { setEditRow(row); setModal('add-expense') }}
+                    onAddExpense={handleAddExpense}
+                    onEditExpense={handleEditExpense}
                     onDeleteExpense={handleDeleteExpense}
-                    onAddCategory={() => { setEditRow(null); setModal('category') }}
-                    onEditCategory={row => { setEditRow(row); setModal('category') }}
+                    onAddCategory={handleAddCategory}
+                    onEditCategory={handleEditCategory}
                     onDeleteCategory={handleDeleteCategory}
                     onReorderCategory={handleReorderCategory}
                     onCopyToNextMonth={handleCopySelected}

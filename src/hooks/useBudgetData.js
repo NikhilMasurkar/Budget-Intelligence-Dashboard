@@ -299,7 +299,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
   useEffect(() => () => { if (_syncTimerRef.current) clearTimeout(_syncTimerRef.current) }, [])
 
   return {
-    categories, expenses, income, loading, needsSetup, availableYears,
+    categories, expenses, income, loading, didInitialLoad, needsSetup, availableYears,
     loadAll, autoSyncToDrive, syncToDriveNow: _syncToDriveNow,
     setCategories, setNeedsSetup, missingConfig
   }
