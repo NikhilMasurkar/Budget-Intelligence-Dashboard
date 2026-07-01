@@ -17,13 +17,15 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY
 )
 
+// Cache at module level so warm-container reuse doesn't rebuild on every call
+const db = admin.firestore()
+
 exports.handler = async (event) => {
-  const params = new URLSearchParams(event.rawQuery || '')
-  if (params.get('secret') !== process.env.PUSH_SECRET) {
+  // Netlify Functions v1 uses queryStringParameters, not rawQuery (rawQuery is Edge-only)
+  const secret = event.queryStringParameters?.secret
+  if (secret !== process.env.PUSH_SECRET) {
     return { statusCode: 401, body: 'Unauthorized' }
   }
-
-  const db = admin.firestore()
   const snap = await db.collection('pushSubscriptions').get()
 
   if (snap.empty) {

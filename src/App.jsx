@@ -103,7 +103,9 @@ export default function App() {
         setNotifStatus('unsubscribed')
         toast.success('Daily reminders disabled')
       } catch {
-        setNotifStatus('subscribed')
+        // Re-fetch actual state — browser sub may have been revoked even if we threw
+        const status = await getPushStatus().catch(() => 'unsubscribed')
+        setNotifStatus(status)
       }
     } else {
       setNotifStatus('loading')
@@ -114,7 +116,7 @@ export default function App() {
       } catch (e) {
         const status = await getPushStatus().catch(() => 'unsubscribed')
         setNotifStatus(status)
-        if (!e.message.includes('denied')) toast.error(e.message)
+        if (!e?.message?.includes('denied')) toast.error(e?.message || String(e))
       }
     }
   }, [notifStatus])

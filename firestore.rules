@@ -23,7 +23,7 @@ service cloud.firestore {
     // The server-side send-push function reads all docs via Firebase Admin SDK,
     // which bypasses these rules, so no admin read rule is needed here.
     match /pushSubscriptions/{uid} {
-      allow read, write: if request.auth.uid == uid;
+      allow read, write: if signedIn() && request.auth.uid == uid;
     }
 
     match /sheets/{sheetId} {
