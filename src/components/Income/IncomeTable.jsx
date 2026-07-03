@@ -52,12 +52,19 @@ export default function IncomeTable({ income, onEdit, onDelete, canEdit }) {
                 transition: 'background 0.12s'
               }}
             >
-              <Typography sx={{
-                flex: 1, minWidth: 0, fontWeight: 600, fontSize: '13.5px', color: '#e4e8f5',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-              }}>
-                {i.source}
-              </Typography>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{
+                  fontWeight: 600, fontSize: '13.5px', color: '#e4e8f5',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                }}>
+                  {i.source}
+                </Typography>
+                {i.date && (
+                  <Typography sx={{ fontSize: '11px', color: '#5a6080', mt: '1px', fontVariantNumeric: 'tabular-nums' }}>
+                    {new Date(i.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </Typography>
+                )}
+              </Box>
               <Typography sx={{
                 fontWeight: 700, fontSize: '14px', color: '#3de8a0',
                 fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap'

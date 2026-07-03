@@ -183,7 +183,45 @@ export async function exportToPdf(categories, expenses, income, filterYears = nu
       else monthlyExpenses[m] += Number(e.amount) || 0
     })
 
-    // ─── 1. INCOME TABLE ─────────────────────────────────────────────────────
+    // ─── 1. INCOME DETAIL TABLE (individual entries with date) ───────────────────────
+    const MONTH_NAMES_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December']
+    const entriesWithDate = incItems.filter(i => i.date)
+    if (entriesWithDate.length > 0) {
+      doc.setFont(FONT_NAME, 'bold')
+      doc.setFontSize(9)
+      doc.setTextColor(31, 56, 100)
+      doc.text('Income Entries (with Date Received)', 14, 29)
+
+      const detailHeaders = [['Source', 'Date Received', 'Month', 'Amount']]
+      const detailBody = incItems
+        .slice()
+        .sort((a, b) => Number(a.month) - Number(b.month))
+        .map(i => [
+          toSentenceCase(i.source),
+          i.date || '—',
+          MONTH_NAMES_FULL[Number(i.month) - 1] || i.month,
+          fmtVal(i.amount)
+        ])
+
+      autoTable(doc, {
+        startY: 33,
+        head: detailHeaders,
+        body: detailBody,
+        theme: 'grid',
+        margin: TABLE_MARGIN,
+        styles: { font: FONT_NAME, fontSize: 8, cellPadding: 2, valign: 'middle' },
+        headStyles: { fillColor: C.incomeHead, textColor: C.white, halign: 'center' },
+        alternateRowStyles: { fillColor: C.incomeStripe },
+        columnStyles: {
+          0: { halign: 'left', fontStyle: 'bold' },
+          1: { halign: 'center' },
+          2: { halign: 'center' },
+          3: { halign: 'right' }
+        }
+      })
+    }
+
+    // ─── 2. INCOME MONTHLY PIVOT TABLE ───────────────────────────────────────────
     const incHeaders = [['Income Source', ...MONTHS, 'Year Total']]
     const incBySource = {}
     incItems.forEach(i => {
@@ -201,8 +239,12 @@ export async function exportToPdf(categories, expenses, income, filterYears = nu
     const incTotalSum = monthlyIncome.reduce((s, v) => s + v, 0)
     incBody.push(['TOTAL INCOME', ...monthlyIncome.map(fmtVal), fmtVal(incTotalSum)])
 
+    const incomeStartY = entriesWithDate.length > 0
+      ? doc.lastAutoTable.finalY + 6
+      : 28
+
     autoTable(doc, {
-      startY: 28,
+      startY: incomeStartY,
       head: incHeaders,
       body: incBody,
       theme: 'grid',

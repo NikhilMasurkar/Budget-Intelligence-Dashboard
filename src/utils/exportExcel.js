@@ -500,6 +500,82 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
     sr++
   })
 
+  // ── INCOME DETAIL SHEET ────────────────────────────────────────────────────
+  // A flat list of every income entry with its individual date, source, month
+  // and amount — the pivot sheets above aggregate by month so the date is lost.
+  const detail = workbook.addWorksheet('Income Detail', {
+    views: [{ showGridLines: false }]
+  })
+
+  detail.getColumn(1).width = 14  // Year
+  detail.getColumn(2).width = 14  // Month
+  detail.getColumn(3).width = 26  // Source
+  detail.getColumn(4).width = 18  // Date Received
+  detail.getColumn(5).width = 16  // Amount
+
+  // Title
+  detail.mergeCells('A1:E1')
+  const dtTitle = detail.getCell('A1')
+  dtTitle.value = 'INCOME DETAIL — ALL ENTRIES'
+  dtTitle.font = { name: FONT, size: 13, bold: true, color: { argb: 'FF' + C.TEXT_WHITE } }
+  dtTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + C.STEEL } }
+  dtTitle.alignment = { horizontal: 'center', vertical: 'middle' }
+  detail.getRow(1).height = 30
+
+  // Header row
+  const dtHdr = detail.getRow(2)
+  dtHdr.height = 22
+  ;['Year', 'Month', 'Source', 'Date Received', 'Amount'].forEach((h, i) => {
+    const cell = dtHdr.getCell(i + 1)
+    cell.value = h
+    cell.font = { name: FONT, size: 10, bold: true, color: { argb: 'FF' + C.NAVY } }
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + C.SKY } }
+    cell.alignment = { horizontal: i >= 3 ? 'right' : 'left', vertical: 'middle' }
+    cell.border = {
+      bottom: { style: 'medium', color: { argb: 'FF595959' } },
+      top:    { style: 'thin',   color: { argb: 'FF' + C.MID_GRAY } },
+      left:   { style: 'thin',   color: { argb: 'FF' + C.MID_GRAY } },
+      right:  { style: 'thin',   color: { argb: 'FF' + C.MID_GRAY } },
+    }
+  })
+
+  // Sort income: year asc → month asc → source asc
+  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+  const sortedIncome = [...income].sort((a, b) => {
+    if (String(a.year) !== String(b.year)) return Number(a.year) - Number(b.year)
+    if (Number(a.month) !== Number(b.month)) return Number(a.month) - Number(b.month)
+    return (a.source || '').localeCompare(b.source || '')
+  })
+
+  sortedIncome.forEach((inc, idx) => {
+    const dtRow = detail.getRow(3 + idx)
+    dtRow.height = 18
+    const bg = idx % 2 === 0 ? C.WHITE : C.OFFWHITE
+    const vals = [
+      String(inc.year),
+      MONTH_NAMES[Number(inc.month) - 1] || String(inc.month),
+      toSentenceCase(inc.source),
+      inc.date || '—',
+      Number(inc.amount) || 0,
+    ]
+    vals.forEach((v, ci) => {
+      const cell = dtRow.getCell(ci + 1)
+      cell.value = v
+      cell.font = { name: FONT, size: 11, color: { argb: 'FF' + C.TEXT_BLACK } }
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + bg } }
+      cell.alignment = { horizontal: ci >= 3 ? 'right' : 'left', vertical: 'middle' }
+      cell.border = {
+        top:   { style: 'thin', color: { argb: 'FF' + C.MID_GRAY } },
+        bottom:{ style: 'thin', color: { argb: 'FF' + C.MID_GRAY } },
+        left:  { style: 'thin', color: { argb: 'FF' + C.MID_GRAY } },
+        right: { style: 'thin', color: { argb: 'FF' + C.MID_GRAY } },
+      }
+      if (ci === 4) {
+        cell.numFmt = '₹#,##0;[Red](₹#,##0);"-"'
+      }
+    })
+  })
+
   const buffer = await workbook.xlsx.writeBuffer()
   return buffer
 }

@@ -313,6 +313,8 @@ function rowsToObjects(rows) {
   const headers = [...sheetHeaders]
   if (headers.includes('categoryId') && !headers.includes('note')) headers.push('note')
   if (headers.includes('note') && !headers.includes('updatedAt')) headers.push('updatedAt')
+  // Income: auto-add 'date' column for existing sheets that predate this field
+  if (headers.includes('source') && !headers.includes('date')) headers.push('date')
   return data.map(r => {
     const validEntries = []
     headers.forEach((h, i) => { if (h) validEntries.push([h, r[i] ?? '']) })
@@ -404,16 +406,21 @@ export async function fetchIncome(year, token) {
 }
 
 export async function saveIncome(inc, token) {
-  const all = rowsToObjects(await readRange(TABS.INCOME, '', token))
+  const rawRows = await readRange(TABS.INCOME, '', token)
+  // One-time: write 'date' header to column F if missing (existing users)
+  if (rawRows.length > 0 && rawRows[0][5] !== 'date') {
+    await writeRange(TABS.INCOME, 'F1', [['date']], token)
+  }
+  const all = rowsToObjects(rawRows)
   const idx = all.findIndex(i => i.id === inc.id)
-  const row = [inc.id || uid(), String(inc.year), String(inc.month), inc.source, inc.amount]
+  const row = [inc.id || uid(), String(inc.year), String(inc.month), inc.source, inc.amount, inc.date || '']
   if (idx >= 0) await writeRange(TABS.INCOME, `A${idx + 2}`, [row], token)
   else           await appendRows(TABS.INCOME, [row], token)
 }
 
 export async function deleteIncome(incId, token) {
   const all = rowsToObjects(await readRange(TABS.INCOME, '', token))
-  await clearAndWrite(TABS.INCOME, all.filter(i => i.id !== incId).map(i => [i.id, String(i.year), String(i.month), i.source, i.amount]), token)
+  await clearAndWrite(TABS.INCOME, all.filter(i => i.id !== incId).map(i => [i.id, String(i.year), String(i.month), i.source, i.amount, i.date || '']), token)
 }
 
 // ─── BATCH READ/WRITE (for multi-month saves) ──────────────
@@ -487,7 +494,7 @@ export async function setupSheet(token) {
   // 3. Write headers
   await writeRange(TABS.CATEGORIES, 'A1', [['id', 'name', 'type', 'color', 'budget']], token)
   await writeRange(TABS.EXPENSES, 'A1', [['id', 'year', 'month', 'categoryId', 'itemName', 'amount', 'isFixed', 'note', 'updatedAt']], token)
-  await writeRange(TABS.INCOME, 'A1', [['id', 'year', 'month', 'source', 'amount']], token)
+  await writeRange(TABS.INCOME, 'A1', [['id', 'year', 'month', 'source', 'amount', 'date']], token)
 
   // 4. Write default categories
   await appendRows(TABS.CATEGORIES, DEFAULT_CATEGORIES.map(c => [c.id, c.name, c.type, c.color]), token)

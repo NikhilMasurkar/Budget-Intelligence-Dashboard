@@ -103,10 +103,10 @@ export function reconcileIncome(xlsxInc, dbIncRows, makeId = defaultMakeId) {
       const amountDiff  = String(existing[4]) !== String(xls.amount)
       const sourceDiff  = toSentenceCase(existing[3]) !== toSentenceCase(xls.source)
       if (amountDiff || sourceDiff) changed = true
-      rows.push([existing[0], xls.year, xls.month, toSentenceCase(xls.source), xls.amount])
+      rows.push([existing[0], xls.year, xls.month, toSentenceCase(xls.source), xls.amount, existing[5] || ''])
     } else {
       changed = true
-      rows.push([makeId(), xls.year, xls.month, toSentenceCase(xls.source), xls.amount])
+      rows.push([makeId(), xls.year, xls.month, toSentenceCase(xls.source), xls.amount, ''])
     }
   })
 

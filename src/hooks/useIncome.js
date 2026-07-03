@@ -34,7 +34,7 @@ export function useIncome({ loadAll, autoSyncToDrive, setDeleteConfirm, closeMod
           )
           const row = [
             existIdx >= 0 ? allRows[existIdx][0] : uid(),
-            String(inc.year), String(m), inc.source, inc.amount
+            String(inc.year), String(m), inc.source, inc.amount, inc.date || ''
           ]
           if (existIdx >= 0) allRows[existIdx] = row
           else allRows.push(row)

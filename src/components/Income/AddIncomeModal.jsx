@@ -23,6 +23,7 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
     month: initial?.month || month,
     source: initial?.source || 'Salary',
     amount: initial?.amount || '',
+    date: initial?.date || new Date().toISOString().slice(0, 10),
   })
 
   // applyMode: 'single' | 'all_year' | 'this_and_forward'
@@ -67,19 +68,15 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
     >
       <Box className={classes.content}>
         
-        {/* Top Icon Badge */}
         <Box className={classes.iconBadge}>
           <TrendingUpIcon sx={{ fontSize: 28, color: '#52B788' }} />
         </Box>
 
-        {/* Title */}
         <Typography variant="h6" className={classes.title}>
           {form.id ? 'Edit Income' : 'Add Income'}
         </Typography>
 
-        {/* Form Controls */}
         <Box className={classes.formContainer}>
-          {/* Year & Month Grid */}
           <Box className={classes.rowGrid}>
             <FormControl size="small" className={classes.fieldStyles} style={{ flex: 1 }}>
               <InputLabel id="income-year-label" shrink sx={{ color: 'text.secondary' }}>
@@ -114,7 +111,6 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
             </FormControl>
           </Box>
 
-          {/* Source Select */}
           <FormControl size="small" fullWidth className={classes.fieldStyles}>
             <InputLabel id="income-source-label" shrink sx={{ color: 'text.secondary' }}>
               Source
@@ -131,7 +127,6 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
             </Select>
           </FormControl>
 
-          {/* Custom Source Input */}
           {isOther && (
             <TextField
               label="Custom Source"
@@ -150,7 +145,6 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
             />
           )}
 
-          {/* Amount */}
           <TextField
             label="Amount"
             type="number"
@@ -171,7 +165,19 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
             className={classes.fieldStyles}
           />
 
-          {/* Apply Mode Selector */}
+          {/* Date Received */}
+          <TextField
+            label="Date Received"
+            type="date"
+            value={form.date}
+            onChange={e => set('date', e.target.value)}
+            fullWidth
+            variant="outlined"
+            size="small"
+            InputLabelProps={{ shrink: true }}
+            className={classes.fieldStyles}
+          />
+
           <Box style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
             <Typography variant="caption" className={classes.applyLabel}>
               Apply to
@@ -197,7 +203,6 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
           </Box>
         </Box>
 
-        {/* Actions */}
         <Box className={classes.actionsContainer}>
           <Button
             variant="contained"
