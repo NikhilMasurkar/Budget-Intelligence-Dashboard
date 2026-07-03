@@ -99,7 +99,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
           itemName: r[4], amount: r[5], isFixed: r[6], note: r[7], updatedAt: r[8]
         }))
         rawInc = reconciledIncome.map(r => ({
-          id: r[0], year: r[1], month: r[2], source: r[3], amount: r[4]
+          id: r[0], year: r[1], month: r[2], source: r[3], amount: r[4], date: r[5] || ''
         }))
       } else {
         rawExps = await fetchExpenses(null, t)
@@ -230,7 +230,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
         const obj = {}; fields.forEach((f, i) => obj[f] = r[i]); return obj
       })
       const exps = toObjs(allExpRows, ['id', 'year', 'month', 'categoryId', 'itemName', 'amount', 'isFixed', 'note'])
-      const incs = toObjs(allIncRows, ['id', 'year', 'month', 'source', 'amount'])
+      const incs = toObjs(allIncRows, ['id', 'year', 'month', 'source', 'amount', 'date'])
       if (exps.length === 0 && incs.length === 0) return true
       const years = new Set([
         String(new Date().getFullYear()),

@@ -257,6 +257,11 @@ export const useAddIncomeModalStyles = makeStyles()((theme) => ({
       fontSize: '13px',
       backgroundColor: '#181b28',
       color: '#e4e8f5'
+    },
+    '& input[type="date"]': {
+      colorScheme: 'dark',
+      color: '#e4e8f5',
+      fontSize: '13px'
     }
   }
 }))
