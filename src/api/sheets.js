@@ -155,7 +155,11 @@ export function silentReauth() {
 }
 
 export function signOut() {
-  if (_token && window.google?.accounts?.oauth2) window.google.accounts.oauth2.revoke(_token)
+  // Deliberately does NOT revoke the Google grant. Revoking forces the full
+  // consent screen on the next sign-in and kills silent reauth — and it fires
+  // on automatic sign-outs (a 403 from useBudgetData) too. Clearing the local
+  // token is enough: nobody can reach this data without signing in to Google.
+  // To fully disconnect, users revoke access in their Google account settings.
   _token = null; _exp = 0; _sheetId = null
   _cache.clear()
   localStorage.removeItem('budgetiq_token')
@@ -163,6 +167,7 @@ export function signOut() {
   localStorage.removeItem('budgetiq_session_exp')
   localStorage.removeItem('budgetiq_sheetId')
   localStorage.removeItem('budgetiq_userName')
+  localStorage.removeItem('budgetiq_userFullName')
   localStorage.removeItem('budgetiq_userPicture')
   localStorage.removeItem('budgetiq_userEmail')
   localStorage.removeItem('budgetiq_has_pin')

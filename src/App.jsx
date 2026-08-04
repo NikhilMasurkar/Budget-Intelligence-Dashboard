@@ -58,6 +58,15 @@ export default function App() {
     () => sessionStorage.getItem('budgetiq_pin_verified') === '1'
   )
 
+  // signOut() clears the storage flags, but pinVerified/pinMode are React state
+  // and would survive — letting a second account sign in with the PIN gate
+  // already "passed". Always reset them alongside the sign-out.
+  const handleSignOutFull = async () => {
+    await handleSignOut()
+    setPinVerified(false)
+    setPinMode(null)
+  }
+
   const [txnTab, setTxnTab] = useState('expenses')
   const [selectedExpenseIds, setSelectedExpenseIds] = useState([])
   const [modal, setModal] = useState(null)
@@ -128,7 +137,7 @@ export default function App() {
   const {
     categories, expenses, income, loading, didInitialLoad, needsSetup, availableYears,
     loadAll, autoSyncToDrive, setCategories, setNeedsSetup, missingConfig
-  } = useBudgetData({ authd, userName, onUnauthorized: handleSignOut })
+  } = useBudgetData({ authd, userName, onUnauthorized: handleSignOutFull })
 
   // ── CRUD hooks ────────────────────────────────────────────────
   const { handleSaveExpense, handleDeleteExpense, handleCopySelected, handleBulkPin, handleBulkDelete, handleSaveComment } = useExpenses({
@@ -286,7 +295,7 @@ export default function App() {
         onOpenDrive={handleOpenDrive}
         onExportLocal={() => setModal('export')}
         onSignIn={handleSignIn}
-        onSignOut={handleSignOut}
+        onSignOut={handleSignOutFull}
         onAIInsights={() => setAiOpen(true)}
         hasAIKey={AI_ENABLED}
         notifStatus={notifStatus}
