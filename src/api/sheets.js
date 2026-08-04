@@ -76,7 +76,7 @@ async function clearAndWrite(tab, values, token) {
 // ─── GOOGLE OAUTH (popup, no backend needed) ────────────────
 const CLIENT_ID = API_CONFIG.OAUTH.CLIENT_ID
 const SCOPES    = API_CONFIG.OAUTH.SCOPES
-let _token = null, _exp = 0, _sessionExp = 0
+let _token = null, _exp = 0
 
 // ─── PERSISTENCE ────────────────────────────────────────────
 function _persist() {
@@ -85,11 +85,9 @@ function _persist() {
     localStorage.setItem('budgetiq_token', _token)
     localStorage.setItem('budgetiq_exp', String(_exp))
   }
-  localStorage.setItem('budgetiq_session_exp', String(_sessionExp))
 }
 function _restore() {
   _sheetId = localStorage.getItem('budgetiq_sheetId') || null
-  _sessionExp = parseInt(localStorage.getItem('budgetiq_session_exp') || '0', 10)
   const savedToken = localStorage.getItem('budgetiq_token')
   const savedExp   = parseInt(localStorage.getItem('budgetiq_exp') || '0', 10)
   if (savedToken && savedExp > Date.now()) {
@@ -104,7 +102,6 @@ _restore() // run on module load
 
 export const getToken        = () => (Date.now() < _exp ? _token : null)
 export const getTokenExpiry  = () => _exp
-export const getSessionValid = () => Date.now() < _sessionExp
 export const isSignedIn      = () => !!getToken()
 export const getSavedUserName = () => localStorage.getItem('budgetiq_userName') || null
 
@@ -119,8 +116,6 @@ function _loadGsi() {
   })
 }
 
-const SESSION_24H = 24 * 60 * 60 * 1000
-
 export function signInWithGoogle() {
   return new Promise(async (resolve, reject) => {
     try { await _loadGsi() } catch (e) { reject(e); return }
@@ -131,7 +126,6 @@ export function signInWithGoogle() {
         if (r.error) { reject(r.error); return }
         _token      = r.access_token
         _exp        = Date.now() + (parseInt(r.expires_in, 10) || 3600) * 1000
-        _sessionExp = Date.now() + SESSION_24H
         _persist()
         resolve(_token)
       }
@@ -147,12 +141,12 @@ export function silentReauth() {
       client_id: CLIENT_ID,
       scope:     SCOPES,
       prompt:    '',
+      // Pin to the known account — without a hint GIS shows the account chooser
+      hint:      localStorage.getItem('budgetiq_userEmail') || undefined,
       callback:  r => {
         if (r.error) { reject(r.error); return }
         _token = r.access_token
         _exp   = Date.now() + (parseInt(r.expires_in, 10) || 3600) * 1000
-        // Extend session only if still within the original 24h window
-        if (!getSessionValid()) _sessionExp = Date.now() + SESSION_24H
         _persist()
         resolve(_token)
       }
@@ -162,7 +156,7 @@ export function silentReauth() {
 
 export function signOut() {
   if (_token && window.google?.accounts?.oauth2) window.google.accounts.oauth2.revoke(_token)
-  _token = null; _exp = 0; _sessionExp = 0; _sheetId = null
+  _token = null; _exp = 0; _sheetId = null
   _cache.clear()
   localStorage.removeItem('budgetiq_token')
   localStorage.removeItem('budgetiq_exp')
@@ -170,6 +164,8 @@ export function signOut() {
   localStorage.removeItem('budgetiq_sheetId')
   localStorage.removeItem('budgetiq_userName')
   localStorage.removeItem('budgetiq_userPicture')
+  localStorage.removeItem('budgetiq_userEmail')
+  localStorage.removeItem('budgetiq_has_pin')
   sessionStorage.removeItem('budgetiq_pin_verified')
 }
 

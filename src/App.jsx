@@ -44,7 +44,7 @@ export default function App() {
   const { classes: globalClasses } = useGlobalStyles()
 
   // ── Auth first — authd needed by PIN gate effect below ────────
-  const { authd, userName, userFullName, userPicture, handleSignIn, handleSignOut } = useAuth()
+  const { authd, userName, userFullName, userPicture, handleSignIn, handleSignOut, authReady } = useAuth()
 
   // ── UI state ──────────────────────────────────────────────────
   const [view, setView] = useState('dashboard')
@@ -73,16 +73,19 @@ export default function App() {
 
   // ── PIN gate ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!authd || pinVerified) return
+    if (pinVerified) return
     const sid = getSheetId()
     if (!sid) return
+    if (localStorage.getItem('budgetiq_has_pin') === '1') { setPinMode('entry'); return }
+    if (!authd) return
     hasPinFS(sid).then(exists => {
+      if (exists) localStorage.setItem('budgetiq_has_pin', '1')
       setPinMode(exists ? 'entry' : 'setup')
     }).catch(() => {
       // Firebase error — skip PIN gate rather than block the app
       setPinVerified(true)
     })
-  }, [authd])
+  }, [authd, pinVerified])
 
   useEffect(() => { if (view !== 'expenses') setTxnTab('expenses') }, [view])
   useEffect(() => { setSelectedExpenseIds([]) }, [year, month, view])
@@ -92,7 +95,7 @@ export default function App() {
   // ── Push notifications ────────────────────────────────────────
   useEffect(() => {
     if (!authd) return
-    getPushStatus().then(setNotifStatus).catch(() => {})
+    getPushStatus().then(setNotifStatus).catch(() => { })
   }, [authd])
 
   const handleToggleNotifications = useCallback(async () => {
@@ -241,7 +244,7 @@ export default function App() {
   if (missingConfig) return <ConfigScreen />
 
   // ── PIN gate ──────────────────────────────────────────────────
-  if (authd && !pinVerified && pinMode) {
+  if (!pinVerified && pinMode) {
     const sid = getSheetId()
     const unlock = () => {
       sessionStorage.setItem('budgetiq_pin_verified', '1')
@@ -253,12 +256,14 @@ export default function App() {
         mode={pinMode}
         userName={userName}
         sheetId={sid}
-        onSetPin={async (pin) => { await setPinFS(sid, pin) }}
+        onSetPin={async (pin) => {
+          await setPinFS(sid, pin)
+          localStorage.setItem('budgetiq_has_pin', '1')
+        }}
         onVerify={async (enteredPin) => {
-          // Verify only — do NOT unlock here. PinScreen calls onUnlock when it's
-          // truly done, so it can offer biometric enrollment before unmounting.
           if (pinMode === 'setup') return true
           if (enteredPin === null) return true            // biometric bypass
+          await authReady()
           return verifyPinFS(sid, enteredPin)
         }}
         onUnlock={unlock}
