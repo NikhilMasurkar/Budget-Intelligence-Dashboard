@@ -26,11 +26,7 @@ export function useAuth() {
     const msUntilExpiry = getTokenExpiry() - Date.now()
     const delay = Math.max(0, msUntilExpiry - 5 * 60 * 1000)
     refreshTimerRef.current = setTimeout(async () => {
-      if (!getSessionValid()) {
-        // 24h session expired — sign out cleanly
-        handleSignOut()
-        return
-      }
+      // Always try silent reauth first; only sign out if Google itself rejects it
       try { await silentReauth(); scheduleRefresh() } catch { handleSignOut() }
     }, delay)
   }
@@ -47,7 +43,7 @@ export function useAuth() {
         return
       }
       const saved = getSavedUserName()
-      if (saved && getSessionValid()) {
+      if (saved) {
         try {
           await silentReauth()
           await bridgeFirebaseAuth(getToken())
