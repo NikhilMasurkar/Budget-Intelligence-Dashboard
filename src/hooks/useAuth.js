@@ -4,7 +4,7 @@ import {
   signInWithGoogle, signOut, isSignedIn,
   getUserProfile, findUserSpreadsheet, createUserSpreadsheet,
   setSheetId, setupSheet, silentReauth, getSavedUserName,
-  getTokenExpiry, getSessionValid, getToken, getSheetId
+  getTokenExpiry, getToken, getSheetId
 } from '../api/sheets'
 import { bridgeFirebaseAuth, firebaseSignOut } from '../firebase'
 import { ensureSheetOwnerFS } from '../api/firestoreSettings'
@@ -19,41 +19,44 @@ export function useAuth() {
     () => localStorage.getItem('budgetiq_userPicture') || ''
   )
   const refreshTimerRef = useRef(null)
-
-  // Schedule a silent token refresh ~5 min before expiry
-  function scheduleRefresh() {
+  const authReadyRef = useRef(null)
+  function scheduleRefresh(retryMs = 0) {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
-    const msUntilExpiry = getTokenExpiry() - Date.now()
-    const delay = Math.max(0, msUntilExpiry - 5 * 60 * 1000)
+    const delay = retryMs || Math.max(0, getTokenExpiry() - Date.now() - 5 * 60 * 1000)
     refreshTimerRef.current = setTimeout(async () => {
-      // Always try silent reauth first; only sign out if Google itself rejects it
-      try { await silentReauth(); scheduleRefresh() } catch { handleSignOut() }
+      try { await silentReauth(); scheduleRefresh() }
+      catch { scheduleRefresh(Math.min(retryMs ? retryMs * 2 : 30_000, 5 * 60 * 1000)) }
     }, delay)
   }
 
   useEffect(() => {
-    async function restore() {
+    async function restore(retryMs = 0) {
       if (isSignedIn()) {
-        // Re-establish the Firebase identity + ownership before exposing data,
-        // so Firestore reads aren't denied by the ownership rules.
+
         await bridgeFirebaseAuth(getToken())
         await ensureSheetOwnerFS(getSheetId())
         setAuthd(true)
         scheduleRefresh()
         return
       }
-      const saved = getSavedUserName()
-      if (saved) {
-        try {
-          await silentReauth()
-          await bridgeFirebaseAuth(getToken())
-          await ensureSheetOwnerFS(getSheetId())
-          setAuthd(true)
-          scheduleRefresh()
-        } catch {}
+      if (!getSavedUserName()) return
+      try {
+        await silentReauth()
+        await bridgeFirebaseAuth(getToken())
+        await ensureSheetOwnerFS(getSheetId())
+        setAuthd(true)
+        scheduleRefresh()
+      } catch {
+
+        const next = Math.min(retryMs ? retryMs * 2 : 30_000, 5 * 60 * 1000)
+        if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+        refreshTimerRef.current = setTimeout(() => {
+          authReadyRef.current = restore(next).catch(() => {})
+        }, next)
       }
     }
-    restore()
+    // .catch keeps authReady() non-rejecting — PinScreen's verify path has no catch
+    authReadyRef.current = restore().catch(() => {})
     return () => { if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current) }
   }, [])
 
@@ -69,6 +72,7 @@ export function useAuth() {
       localStorage.setItem('budgetiq_userName', name)
       localStorage.setItem('budgetiq_userFullName', fullName)
       localStorage.setItem('budgetiq_userPicture', pic)
+      if (profile.email) localStorage.setItem('budgetiq_userEmail', profile.email)
       let sid = await findUserSpreadsheet(token, name)
       if (!sid) {
         toast.loading(`Creating personal database for ${name}...`, { id: 'auth' })
@@ -105,5 +109,8 @@ export function useAuth() {
     toast('Signed out')
   }
 
-  return { authd, userName, userFullName, userPicture, handleSignIn, handleSignOut }
+  return {
+    authd, userName, userFullName, userPicture, handleSignIn, handleSignOut,
+    authReady: () => authReadyRef.current,
+  }
 }
