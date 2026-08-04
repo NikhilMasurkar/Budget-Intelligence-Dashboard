@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Box, Button, Card, Typography, CircularProgress } from '@mui/material'
+import { Box, Button, Card, Typography, CircularProgress, Checkbox, FormControlLabel } from '@mui/material'
 import { makeStyles } from 'tss-react/mui'
 import {
   isBiometricsAvailable,
@@ -192,6 +192,9 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
   const [hasCred, setHasCred]         = useState(false)
   const [bioStatus, setBioStatus]     = useState('idle') // 'idle' | 'scanning' | 'error'
   const [bioError, setBioError]       = useState('')
+  // Opt-in: the enrol screen only appears if the user ticks the box. Previously
+  // it was forced after every correct PIN, which nagged on every single unlock.
+  const [wantBio, setWantBio]         = useState(false)
   const pendingSuccessRef             = useRef(null)
 
   // ── Forgot PIN state ─────────────────────────────────────────
@@ -289,7 +292,7 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
       setLoading(true)
       try {
         await onSetPin(pin)
-        if (biometricAvail && sheetId) {
+        if (wantBio && biometricAvail && sheetId) {
           pendingSuccessRef.current = onUnlock
           setScreen('biometric-enable')
         } else {
@@ -303,7 +306,7 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
       try {
         const ok = await onVerify(value)
         if (!ok) { triggerError('Incorrect PIN'); setPin('') }
-        else if (biometricAvail && sheetId && !hasCred) {
+        else if (wantBio && biometricAvail && sheetId && !hasCred) {
           pendingSuccessRef.current = onUnlock
           setScreen('biometric-enable')
         } else {
@@ -606,6 +609,33 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
           />
         )}
 
+        {/* Opt in to fingerprint/Face ID. Only worth showing when the device
+            supports it and no credential is enrolled yet. */}
+        {!isReset && biometricAvail && sheetId && !hasCred && (
+          <FormControlLabel
+            className={classes.bioOptIn}
+            control={
+              <Checkbox
+                checked={wantBio}
+                onChange={e => setWantBio(e.target.checked)}
+                disableRipple
+                size="small"
+                sx={{
+                  color: 'rgba(255,255,255,0.25)',
+                  padding: '4px 6px 4px 0',
+                  '&.Mui-checked': { color: '#5b7fff' },
+                }}
+              />
+            }
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FingerprintIcon size={14} color={wantBio ? '#5b7fff' : '#6a7190'} />
+                <span>Enable fingerprint / Face ID</span>
+              </Box>
+            }
+          />
+        )}
+
         {/* Switch to biometric / Forgot PIN — only on normal entry screen */}
         {!isSetup && !isReset && (
           <Box className={classes.bottomLink}>
@@ -769,6 +799,17 @@ const useStyles = makeStyles()((theme) => ({
     transition: 'opacity 0.15s',
     '&:hover': {
       background: '#4a6eee',
+    },
+  },
+  bioOptIn: {
+    marginTop: 18,
+    marginLeft: 0,
+    marginRight: 0,
+    alignSelf: 'center',
+    '& .MuiFormControlLabel-label': {
+      fontSize: 12.5,
+      color: '#8891b8',
+      userSelect: 'none',
     },
   },
   ghostBtn: {
