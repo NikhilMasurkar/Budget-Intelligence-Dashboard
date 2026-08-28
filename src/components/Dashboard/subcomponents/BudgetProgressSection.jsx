@@ -1,10 +1,15 @@
 import React, { useMemo } from 'react'
 import { Box, Typography } from '@mui/material'
 
-export default function BudgetProgressSection({ categories, expenses, selMonths, catMap, selExpense, onCategoryClick, onEditCategory, fmt, MONTHS }) {
+export default function BudgetProgressSection({ categories, expenses, selMonths, catMap, selSpend, investCatIds, onCategoryClick, onEditCategory, fmt, MONTHS }) {
   const catData = useMemo(() => {
     const grouped = {}
-    expenses.filter(e => selMonths.includes(+e.month - 1)).forEach(e => {
+    // Investment categories are excluded: this table breaks down spending, and
+    // selSpend (its 100% baseline) is now spending-only. Including them would
+    // make the shares add up to more than 100%.
+    expenses
+      .filter(e => selMonths.includes(+e.month - 1) && !investCatIds?.has(e.categoryId))
+      .forEach(e => {
       const cat = catMap[e.categoryId]
       const id = e.categoryId || 'other'
       if (!grouped[id]) {
@@ -25,7 +30,7 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
       })
     })
     return Object.values(grouped).sort((a, b) => b.total - a.total)
-  }, [expenses, selMonths, catMap, MONTHS])
+  }, [expenses, selMonths, catMap, MONTHS, investCatIds])
 
   if (catData.length === 0) return null
 
@@ -76,7 +81,7 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
 
         {/* Data rows — every row is single-line, same height */}
         {catData.map((cat, i) => {
-          const sharePct   = selExpense > 0 ? (cat.total / selExpense) * 100 : 0
+          const sharePct   = selSpend > 0 ? (cat.total / selSpend) * 100 : 0
           const shareBarW  = Math.max(0, (cat.total / maxTotal) * 100)   // scaled to max category; clamp negatives (net withdrawals)
           const budgetLimit = cat.budget * selMonths.length
           const isOver     = budgetLimit > 0 && cat.total > budgetLimit
@@ -175,7 +180,7 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
             </Typography>
             <Box sx={{ display: { xs: 'none', md: 'block' } }} />
             <Typography sx={{ fontSize: 14, fontWeight: 800, color: '#a0b4ff', textAlign: 'right', fontVariantNumeric: 'tabular-nums', pr: '12px' }}>
-              {fmt(selExpense)}
+              {fmt(selSpend)}
             </Typography>
             <Box sx={{ display: { xs: 'none', md: 'block' } }} />
             <Box />

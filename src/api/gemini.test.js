@@ -35,7 +35,51 @@ describe('calcInstantScore', () => {
     })
     expect(r.employment).toBe('salaried')
     expect(r.score).toBe(8) // base 5 +2 (>=20% saved) +1 (has investments)
-    expect(r.summary).toContain('Saving 40%')
+    // Earned 1L, spent 40k on food, moved 20k into investments. Investing is a
+    // transfer between their own pockets, not spending — so they kept 60k, not
+    // 40k. This previously read "Saving 40%", counting the investment as spent
+    // and understating the savings rate by exactly the amount invested.
+    expect(r.summary).toContain('Saving 60%')
+  })
+
+  it('heavy investing is not penalised or reported as the biggest expense', () => {
+    // Earns 1L, spends 20k, invests 60k. Investing must not win "biggest
+    // category" (it is not an expense) and must not trip the ">50% of income
+    // in one category" penalty — that check is about overspending on one thing.
+    const r = calcInstantScore({
+      categories: CATS,
+      income: [{ month: '1', source: 'Salary', amount: '100000' }],
+      expenses: [
+        { month: '1', categoryId: 'c_food', amount: '20000' },
+        { month: '1', categoryId: 'c_inv', amount: '60000' },
+      ],
+      selMonths: [0],
+    })
+    expect(r.summary).not.toContain('Investments')
+    expect(r.summary).toContain('Food')
+    expect(r.score).toBe(8) // base 5 +2 (80% saved) +1 (has investments), no -1
+  })
+
+  it('investing is not counted as spending', () => {
+    const spendOnly = calcInstantScore({
+      categories: CATS,
+      income: [{ month: '1', source: 'Salary', amount: '100000' }],
+      expenses: [{ month: '1', categoryId: 'c_food', amount: '40000' }],
+      selMonths: [0],
+    })
+    const spendPlusInvest = calcInstantScore({
+      categories: CATS,
+      income: [{ month: '1', source: 'Salary', amount: '100000' }],
+      expenses: [
+        { month: '1', categoryId: 'c_food', amount: '40000' },
+        { month: '1', categoryId: 'c_inv', amount: '25000' },
+      ],
+      selMonths: [0],
+    })
+    // Adding an investment must not change the savings rate — the money is
+    // still theirs, it just moved from cash into an investment.
+    expect(spendPlusInvest.summary).toContain('Saving 60%')
+    expect(spendOnly.summary).toContain('Saving 60%')
   })
 
   it('deficit: scores low and says spending over income', () => {

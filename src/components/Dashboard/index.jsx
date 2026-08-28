@@ -2,8 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { Box, Typography } from '@mui/material'
 import { useStyles } from './styles/Dashboard.styles'
 import MonthFilterControl from './subcomponents/MonthFilterControl'
-import KPICardsSection from './subcomponents/KPICardsSection'
-import WealthCardsSection from './subcomponents/WealthCardsSection'
+import MoneyFlowSection from './subcomponents/MoneyFlowSection'
 import BudgetProgressSection from './subcomponents/BudgetProgressSection'
 import ChartsSection from './subcomponents/ChartsSection'
 import CategoryDetailsDialog from './subcomponents/CategoryDetailsDialog'
@@ -59,23 +58,27 @@ export default function Dashboard({ expenses, income, categories, year, month, s
     })
     return {
       inc, exp, inv, spend,
-      sav:       inc.map((v, i) => v - exp[i]),
-      trueSav:   inc.map((v, i) => v - spend[i]),
-      wealthBuilt: inc.map((v, i) => v - spend[i]),
+      // What you actually kept: income minus real spending. Investing is a
+      // transfer between your own pockets, so it must not count as spending.
+      kept: inc.map((v, i) => v - spend[i]),
     }
   }, [income, expenses, investCatIds])
 
   const catMap = useMemo(() => Object.fromEntries(categories.map(c => [c.id, c])), [categories])
 
-  // Category totals for selected months
+  // Category totals for the spending chart — investments excluded so the chart
+  // answers "where did my spending go" without an INVESTMENTS slice dominating
+  // it and contradicting the Spent figure above.
   const catTotals = useMemo(() => {
     const t = {}
-    expenses.filter(e => selMonths.includes(+e.month - 1)).forEach(e => {
-      const cat = catMap[e.categoryId]?.name || e.categoryId || 'Other'
-      t[cat] = (t[cat] || 0) + (+e.amount || 0)
-    })
+    expenses
+      .filter(e => selMonths.includes(+e.month - 1) && !investCatIds.has(e.categoryId))
+      .forEach(e => {
+        const cat = catMap[e.categoryId]?.name || e.categoryId || 'Other'
+        t[cat] = (t[cat] || 0) + (+e.amount || 0)
+      })
     return Object.entries(t).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1])
-  }, [expenses, catMap, selMonths])
+  }, [expenses, catMap, selMonths, investCatIds])
 
   // Investment breakdown by item for selected months. Keep negative (net
   // withdrawal) lines too — dropping them made the list stop reconciling to the
@@ -91,13 +94,15 @@ export default function Dashboard({ expenses, income, categories, year, month, s
     return Object.entries(breakdown).filter(([,v]) => v !== 0).sort((a,b) => b[1] - a[1])
   }, [expenses, selMonths, investCatIds])
 
-  // Selected period totals
-  const selIncome    = selMonths.reduce((s,i) => s + monthlyData.inc[i], 0)
-  const selExpense   = selMonths.reduce((s,i) => s + monthlyData.exp[i], 0)
-  const selInvest    = selMonths.reduce((s,i) => s + monthlyData.inv[i], 0)
-  const selNetSav    = selIncome - selExpense
-
-  const investRate   = selIncome > 0 ? (selInvest / selIncome * 100).toFixed(1) : 0
+  // Selected period totals.
+  //   Earned − Spent = Kept,  and  Kept = Invested + Cash left
+  // selSpend excludes investment categories — money moved into an investment is
+  // still yours, so calling it "spent" was the core confusion in this dashboard.
+  const selIncome  = selMonths.reduce((s,i) => s + monthlyData.inc[i], 0)
+  const selSpend   = selMonths.reduce((s,i) => s + monthlyData.spend[i], 0)
+  const selInvest  = selMonths.reduce((s,i) => s + monthlyData.inv[i], 0)
+  const selKept    = selIncome - selSpend
+  const selCash    = selKept - selInvest
 
   const filteredLabels = selMonths.map(i => MONTHS[i])
   const catColors = ['#5b7fff','#3de8a0','#ff5f5f','#b97fff','#ffb347','#ff6eb4','#60c0ff','#ffd700','#ff8c69','#7fffd4']
@@ -107,7 +112,9 @@ export default function Dashboard({ expenses, income, categories, year, month, s
   const displayMonthName = MONTHS[displayMonth - 1]
 
   const curMonthInc = income.filter(i => String(i.month) === String(displayMonth)).reduce((s, i) => s + (+i.amount || 0), 0)
-  const curMonthExp = expenses.filter(e => String(e.month) === String(displayMonth)).reduce((s, e) => s + (+e.amount || 0), 0)
+  const curMonthExp = expenses
+    .filter(e => String(e.month) === String(displayMonth) && !investCatIds.has(e.categoryId))
+    .reduce((s, e) => s + (+e.amount || 0), 0)
   const curMonthSav = curMonthInc - curMonthExp
 
   return (
@@ -135,8 +142,16 @@ export default function Dashboard({ expenses, income, categories, year, month, s
           </Typography>
           <Typography sx={{ fontSize: 12, color: '#3a4060' }}>·</Typography>
           <Typography sx={{ fontSize: 12, color: '#ff5f5f', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-            {fmt(selExpense)} spent
+            {fmt(selSpend)} spent
           </Typography>
+          {selInvest !== 0 && (
+            <>
+              <Typography sx={{ fontSize: 12, color: '#3a4060' }}>·</Typography>
+              <Typography sx={{ fontSize: 12, color: '#b97fff', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+                {fmt(selInvest)} invested
+              </Typography>
+            </>
+          )}
         </Box>
         {parseInt(year) >= curYear && selMonths.length > 1 && (
           <>
@@ -153,27 +168,16 @@ export default function Dashboard({ expenses, income, categories, year, month, s
         )}
       </Box>
 
-      {/* 2. 3 Insight Cards */}
-      <KPICardsSection
+      {/* 2. Money flow — the whole month/year in four numbers */}
+      <MoneyFlowSection
         selIncome={selIncome}
-        selExpense={selExpense}
-        selNetSav={selNetSav}
+        selSpend={selSpend}
         selInvest={selInvest}
+        selCash={selCash}
+        selKept={selKept}
         selMonths={selMonths}
-        categories={categories}
-        expenses={expenses}
-        fmt={fmt}
-      />
-
-      {/* 4. Wealth Cards — 2 cards side by side */}
-      <WealthCardsSection
-        selInvest={selInvest}
-        investRate={investRate}
         investBreakdown={investBreakdown}
-        selNetSav={selNetSav}
-        selIncome={selIncome}
         fmt={fmt}
-        selMonths={selMonths}
       />
 
       {/* 5. Budget Overview — full width */}
@@ -182,7 +186,8 @@ export default function Dashboard({ expenses, income, categories, year, month, s
         expenses={expenses}
         selMonths={selMonths}
         catMap={catMap}
-        selExpense={selExpense}
+        selSpend={selSpend}
+        investCatIds={investCatIds}
         onCategoryClick={setDetailModal}
         onEditCategory={onEditCategory}
         fmt={fmt}
@@ -197,8 +202,6 @@ export default function Dashboard({ expenses, income, categories, year, month, s
         catTotals={catTotals}
         catColors={catColors}
         isMobile={isMobile}
-        expenses={expenses}
-        catMap={catMap}
         fmt={fmt}
         fmtK={fmtK}
         CHART_OPTS={CHART_OPTS}
