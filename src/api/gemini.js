@@ -111,6 +111,23 @@ async function callModel(modelId, prompt) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || ''
 }
 
+// Investing is a transfer between the user's own pockets, not spending. Every
+// expense total below must exclude savings/investment categories, or the AI is
+// told the user spends far more than they do and reports their savings rate far
+// too low. Matches the Dashboard and the Excel export.
+function splitSpendInvest(expenses, categories) {
+  const investIds = new Set(
+    (categories || []).filter(c => c.type === 'savings').map(c => c.id)
+  )
+  let spend = 0, invest = 0
+  expenses.forEach(e => {
+    const amt = +e.amount || 0
+    if (investIds.has(e.categoryId)) invest += amt
+    else spend += amt
+  })
+  return { spend, invest, investIds }
+}
+
 function detectEmployment(income) {
   const sources = income.map(i => (i.source || '').toLowerCase())
   if (sources.some(s => s.includes('salary'))) return 'salaried'
@@ -145,7 +162,7 @@ export async function getAIInsights({ expenses, income, categories, selMonths, y
   const activeMonths  = Math.max(monthsWithExp, monthsWithInc, 1)
 
   const totalIncome  = filteredInc.reduce((s, i) => s + (+i.amount || 0), 0)
-  const totalExpense = filteredExp.reduce((s, e) => s + (+e.amount || 0), 0)
+  const { spend: totalExpense, invest: totalInvested, investIds } = splitSpendInvest(filteredExp, categories)
   const netSavings   = totalIncome - totalExpense
 
   // ── Monthly averages (based on months that actually have data) ─────────────
@@ -157,8 +174,12 @@ export async function getAIInsights({ expenses, income, categories, selMonths, y
   const employmentType = detectEmployment(income)
 
   // ── Per-category totals AND monthly averages ───────────────────────────────
+  // Investment categories are skipped: this table is labelled as spending and
+  // its shares are compared against the spending total above, which already
+  // excludes them. Leaving them in made the categories sum past that total.
   const catTotals = {}
   filteredExp.forEach(e => {
+    if (investIds.has(e.categoryId)) return
     const cat = catMap[e.categoryId] || 'Other'
     catTotals[cat] = (catTotals[cat] || 0) + (+e.amount || 0)
   })
@@ -197,18 +218,11 @@ export async function getAIInsights({ expenses, income, categories, selMonths, y
   const benchLoans    = monthlyIncome * 0.40
   const benchSavings  = monthlyIncome * 0.20
   const benchEmergFund = monthlyExpense * 6
-  // Sum only genuine savings/investment categories. Prefer the explicit
-  // type='savings' flag; fall back to a name match for un-typed categories.
-  // (Deliberately excludes "Return money" — money coming back isn't invested.)
-  const savingsCatNames = new Set(
-    categories.filter(c => c.type === 'savings').map(c => c.name)
-  )
-  const totalSavingsInvested = Object.entries(catTotals)
-    .filter(([k]) =>
-      savingsCatNames.has(k) ||
-      k.toLowerCase().includes('saving') ||
-      k.toLowerCase().includes('invest'))
-    .reduce((s, [, v]) => s + v, 0)
+  // Already summed by splitSpendInvest off the explicit type='savings' flag —
+  // the same definition the Dashboard and the Excel/PDF exports use. This used
+  // to re-derive it by name-matching catTotals, which now excludes investment
+  // categories entirely and would have made this silently zero.
+  const totalSavingsInvested = totalInvested
 
   const monthsLabel = `${activeMonths} month${activeMonths > 1 ? 's' : ''} with data`
   const periodMonths = [...new Set(filteredExp.map(e => +e.month - 1))]
@@ -240,8 +254,9 @@ All averages below are based on ${activeMonths} months of real data.
 
 ━━━ MONTHLY INCOME vs SPENDING (compare these to each other) ━━━
   Monthly income avg:   ${r(monthlyIncome)}/mo
-  Monthly spending avg: ${r(monthlyExpense)}/mo
-  Monthly net:          ${r(monthlySavings)}/mo  ${monthlySavings < 0 ? '← DEFICIT (spending more than earning)' : `(${savingsPct}% saved)`}
+  Monthly spending avg: ${r(monthlyExpense)}/mo   ← real spending; money moved into investments is NOT counted here
+  Monthly invested avg: ${r(totalInvested / activeMonths)}/mo   ← a transfer into their own investments, not spending
+  Monthly net:          ${r(monthlySavings)}/mo  ${monthlySavings < 0 ? '← DEFICIT (spending more than earning)' : `(${savingsPct}% saved, of which ${r(totalInvested / activeMonths)}/mo goes to investments)`}
 
 ━━━ INCOME SOURCES (monthly averages) ━━━
 ${incomeRows.join('\n')}
@@ -333,13 +348,17 @@ export function calcInstantScore({ expenses, income, categories, selMonths }) {
   )
 
   const totalInc  = filtInc.reduce((s, i) => s + (+i.amount || 0), 0)
-  const totalExp  = filtExp.reduce((s, e) => s + (+e.amount || 0), 0)
+  const { spend: totalExp, invest: totalInv, investIds } = splitSpendInvest(filtExp, categories)
   const netSav    = totalInc - totalExp
   const savRate   = totalInc > 0 ? (netSav / totalInc) * 100 : 0
   const monthlyInc = totalInc / activeMonths
 
+  // Investment categories excluded — topCat feeds "X takes N% of income" and
+  // "X is your biggest outflow", so an investment winning it would report
+  // investing as the user's biggest expense.
   const catTotals = {}
   filtExp.forEach(e => {
+    if (investIds.has(e.categoryId)) return
     const cat = catMap[e.categoryId] || 'Other'
     catTotals[cat] = (catTotals[cat] || 0) + (+e.amount || 0)
   })
@@ -348,9 +367,9 @@ export function calcInstantScore({ expenses, income, categories, selMonths }) {
   const topMonthly = topEntry ? topEntry[1] / activeMonths : 0
   const topPct     = monthlyInc > 0 ? (topMonthly / monthlyInc * 100).toFixed(0) : 0
 
-  const hasInvest = Object.keys(catTotals).some(k =>
-    k.toLowerCase().includes('invest') || k.toLowerCase().includes('saving')
-  )
+  // Off the explicit type flag, not a name match on catTotals (which no longer
+  // contains investment categories at all).
+  const hasInvest = totalInv !== 0
 
   let score = 5
   if (netSav < 0)            score -= 3
@@ -394,11 +413,15 @@ export function buildFinancialContext({ expenses, income, categories, selMonths,
   )
 
   const totalInc = filtInc.reduce((s, i) => s + (+i.amount || 0), 0)
-  const totalExp = filtExp.reduce((s, e) => s + (+e.amount || 0), 0)
+  const { spend: totalExp, invest: totalInv, investIds } = splitSpendInvest(filtExp, categories)
   const netSav   = totalInc - totalExp
 
+  // Investment categories excluded — these lines are printed under "Spending by
+  // category" next to a spending total that already excludes them, and the chat
+  // model is told to answer using only this data.
   const catTotals = {}
   filtExp.forEach(e => {
+    if (investIds.has(e.categoryId)) return
     const cat = catMap[e.categoryId] || 'Other'
     catTotals[cat] = (catTotals[cat] || 0) + (+e.amount || 0)
   })
@@ -427,7 +450,8 @@ Monthly income: ${r(totalInc / activeMonths)}/month
 Income sources:
 ${incLines}
 
-Monthly spending: ${r(totalExp / activeMonths)}/month
+Monthly spending: ${r(totalExp / activeMonths)}/month (real spending — investments excluded)
+Monthly invested: ${r(totalInv / activeMonths)}/month (transfer into their own investments, not spending)
 Net savings: ${r(netSav / activeMonths)}/month (${savPct}% of income)
 
 Spending by category (monthly averages):
