@@ -2,11 +2,13 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { Box, Typography } from '@mui/material'
 import { useStyles } from './styles/Dashboard.styles'
 import MonthFilterControl from './subcomponents/MonthFilterControl'
-import MoneyFlowSection from './subcomponents/MoneyFlowSection'
+import InvestmentsSection from './subcomponents/InvestmentsSection'
 import BudgetProgressSection from './subcomponents/BudgetProgressSection'
 import ChartsSection from './subcomponents/ChartsSection'
 import CategoryDetailsDialog from './subcomponents/CategoryDetailsDialog'
 import { MONTHS, fmt, fmtK, defaultMonths, CHART_OPTS } from '../../utils/constants'
+import { monthKey, computeHoldingsWithBalance } from '../../utils/periodStats'
+import { investmentCategoryIds } from '../../utils/money'
 
 function periodLabel(selMonths, year) {
   const s = [...selMonths].sort((a, b) => a - b)
@@ -21,7 +23,7 @@ function periodLabel(selMonths, year) {
   return `${s.map(m => MONTHS[m]).join(', ')} ${year}`
 }
 
-export default function Dashboard({ expenses, income, categories, year, month, selMonths, setSelMonths, onEditCategory }) {
+export default function Dashboard({ expenses, income, allExpenses = [], categories, year, month, selMonths, setSelMonths, onEditCategory }) {
   const { classes } = useStyles()
   const [detailModal, setDetailModal] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -33,9 +35,7 @@ export default function Dashboard({ expenses, income, categories, year, month, s
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  const investCatIds = useMemo(() =>
-    new Set(categories.filter(c => c.type === 'savings').map(c => c.id))
-  , [categories])
+  const investCatIds = useMemo(() => investmentCategoryIds(categories), [categories])
 
   // Build monthly aggregates — split expenses into investing vs spending
   const monthlyData = useMemo(() => {
@@ -43,7 +43,6 @@ export default function Dashboard({ expenses, income, categories, year, month, s
     const exp  = Array(12).fill(0)
     const inv  = Array(12).fill(0)
     const spend= Array(12).fill(0)
-
     income.forEach(i => {
       const m = +i.month - 1
       if (m >= 0 && m < 12) inc[m] += +i.amount || 0
@@ -80,29 +79,25 @@ export default function Dashboard({ expenses, income, categories, year, month, s
     return Object.entries(t).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1])
   }, [expenses, catMap, selMonths, investCatIds])
 
-  // Investment breakdown by item for selected months. Keep negative (net
-  // withdrawal) lines too — dropping them made the list stop reconciling to the
-  // headline (deposits − withdrawals = net invested). Only exact-zero nets hide.
-  const investBreakdown = useMemo(() => {
-    const breakdown = {}
-    expenses.filter(e => selMonths.includes(+e.month - 1)).forEach(e => {
-      if (investCatIds.has(e.categoryId)) {
-        const name = e.itemName || 'Unnamed'
-        breakdown[name] = (breakdown[name] || 0) + (+e.amount || 0)
-      }
-    })
-    return Object.entries(breakdown).filter(([,v]) => v !== 0).sort((a,b) => b[1] - a[1])
-  }, [expenses, selMonths, investCatIds])
-
   // Selected period totals.
   //   Earned − Spent = Kept,  and  Kept = Invested + Cash left
   // selSpend excludes investment categories — money moved into an investment is
   // still yours, so calling it "spent" was the core confusion in this dashboard.
-  const selIncome  = selMonths.reduce((s,i) => s + monthlyData.inc[i], 0)
-  const selSpend   = selMonths.reduce((s,i) => s + monthlyData.spend[i], 0)
-  const selInvest  = selMonths.reduce((s,i) => s + monthlyData.inv[i], 0)
-  const selKept    = selIncome - selSpend
-  const selCash    = selKept - selInvest
+  const selIncome    = selMonths.reduce((s,i) => s + monthlyData.inc[i], 0)
+  const selSpend     = selMonths.reduce((s,i) => s + monthlyData.spend[i], 0)
+  const selInvest    = selMonths.reduce((s,i) => s + monthlyData.inv[i], 0)
+
+  const selStartKey = selMonths.length ? monthKey(year, Math.min(...selMonths) + 1) : null
+  const selEndKey   = selMonths.length ? monthKey(year, Math.max(...selMonths) + 1) : null
+
+  // Both figures per pot: what moved this period, and the balance carrying
+  // forward from earlier years. Needs the full history, not just this year —
+  // a withdrawal can exceed this year's deposits, which reads as a negative
+  // pot until you can see the balance beside it.
+  const holdings = useMemo(
+    () => computeHoldingsWithBalance({ allExpenses, investCatIds, fromKey: selStartKey, toKey: selEndKey }),
+    [allExpenses, investCatIds, selStartKey, selEndKey]
+  )
 
   const filteredLabels = selMonths.map(i => MONTHS[i])
   const catColors = ['#5b7fff','#3de8a0','#ff5f5f','#b97fff','#ffb347','#ff6eb4','#60c0ff','#ffd700','#ff8c69','#7fffd4']
@@ -168,17 +163,14 @@ export default function Dashboard({ expenses, income, categories, year, month, s
         )}
       </Box>
 
-      {/* 2. Money flow — the whole month/year in four numbers */}
-      <MoneyFlowSection
-        selIncome={selIncome}
-        selSpend={selSpend}
-        selInvest={selInvest}
-        selCash={selCash}
-        selKept={selKept}
-        selMonths={selMonths}
-        investBreakdown={investBreakdown}
+      {/* 2. Investments moved this period */}
+      <InvestmentsSection
+        holdings={holdings}
+        periodTotal={selInvest}
+        periodLabel={periodLabel(selMonths, year)}
         fmt={fmt}
       />
+
 
       {/* 5. Budget Overview — full width */}
       <BudgetProgressSection

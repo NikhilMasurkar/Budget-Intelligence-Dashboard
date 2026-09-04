@@ -12,6 +12,7 @@ import {
 } from '@mui/material'
 import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined'
 import { useCategoryModalStyles } from './styles/Category.styles'
+import { SAVINGS_TYPE, EXPENSE_TYPE } from '../../utils/money'
 
 const BRIGHT_COLORS = [
   '#5b7fff', // Modern Blue
@@ -91,7 +92,7 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
         name: initial?.name || '',
         // Only 'savings' gets special handling everywhere else; collapse any
         // other/legacy value ('fixed', 'income', …) to 'expense'.
-        type: initial?.type === 'savings' ? 'savings' : 'expense',
+        type: initial?.type === SAVINGS_TYPE ? SAVINGS_TYPE : EXPENSE_TYPE,
         color: initial?.color || defaultColor,
         budget: initial?.budget || 0
       })
@@ -162,8 +163,8 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
               label="Type"
               notched
             >
-              <MenuItem value="expense" sx={{ fontSize: 13 }}>Expense</MenuItem>
-              <MenuItem value="savings" sx={{ fontSize: 13 }}>Savings / Investment</MenuItem>
+              <MenuItem value={EXPENSE_TYPE} sx={{ fontSize: 13 }}>Expense</MenuItem>
+              <MenuItem value={SAVINGS_TYPE} sx={{ fontSize: 13 }}>Savings / Investment</MenuItem>
             </Select>
           </FormControl>
 

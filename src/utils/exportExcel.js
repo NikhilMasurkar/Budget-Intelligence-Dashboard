@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs'
+import { investmentCategoryIds } from './money'
 
 
 import { EXCEL_COLORS as C, EXCEL_FONT as FONT, MONTHS_UPPER as MONTHS, toSentenceCase } from './constants'
@@ -159,7 +160,7 @@ export async function exportToExcel(categories, expenses, income, filterYears = 
   // are listed in the expense section but kept OUT of "Total Expenses" so the
   // bottom-line savings = Income − real expenses (a withdrawal must not inflate
   // it, nor make Total Expenses negative). Tracked separately as "Investments".
-  const savingsCatIds = new Set(categories.filter(c => c.type === 'savings').map(c => c.id))
+  const savingsCatIds = investmentCategoryIds(categories)
 
   let years = Array.from(new Set([
     ...expenses.map(e => String(e.year)),

@@ -10,6 +10,53 @@ import { MONTHS, toSentenceCase } from '../utils/constants'
 
 export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteConfirm, closeModal, clearSelection }) {
   const handleSaveExpense = useCallback(async (exp, applyMode = 'single') => {
+    // applyMode 'split' — one withdrawal spread across several investments, so
+    // each pot's balance drops by its own share instead of the whole amount
+    // landing on a single unattributed row. Written in one batch.
+    if (applyMode === 'split') {
+      const rows = Array.isArray(exp) ? exp : [exp]
+      if (!rows.length) return
+      const targetY = parseInt(rows[0].year || year)
+      if (targetY < new Date().getFullYear()) {
+        toast.error('Cannot modify historical data: Year is locked.')
+        return
+      }
+      const t = getToken()
+      if (!t) {
+        const err = new Error('Please sign in to save changes')
+        toast.error(err.message); throw err
+      }
+      try {
+        const sid = getSheetId()
+        const allRows = await readAllExpenseRows(t)
+
+        // When splitting an EXISTING withdrawal, the original row is replaced by
+        // the split — it must be removed first. Pushing without removing left the
+        // old amount in place and counted the whole withdrawal twice.
+        const editingId = rows[0]?.id
+        const kept = editingId ? allRows.filter(r => r[0] !== editingId) : allRows
+
+        rows.forEach(r => {
+          kept.push([
+            uid(), String(r.year), String(r.month), r.categoryId,
+            toSentenceCase(r.itemName), r.amount, 'FALSE', r.note || '', 'U' + Date.now(),
+          ])
+        })
+        await writeAllExpenseRows(kept, t)
+        await Promise.all(rows.map(r =>
+          setExpenseMetaFS(sid, { ...r, itemName: toSentenceCase(r.itemName) },
+            { isFixed: false, note: r.note })
+        ))
+        toast.success(`${editingId ? 'Split across' : 'Withdrawn from'} ${rows.length} investments`)
+        closeModal()
+        loadAll({ skipExcel: true })
+        autoSyncToDrive()
+      } catch (e) {
+        toast.error(e.message); throw e
+      }
+      return
+    }
+
     exp.itemName = toSentenceCase(exp.itemName)
     const targetYear = parseInt(exp.year || year)
     if (targetYear < new Date().getFullYear()) {

@@ -22,6 +22,7 @@ import { useCategories } from './hooks/useCategories'
 
 import Dashboard from './components/Dashboard'
 import ExpensesByCategory from './components/Expenses/ExpensesByCategory'
+import BalanceSheet from './components/BalanceSheet'
 import AIInsightsSection from './components/Dashboard/subcomponents/AIInsightsSection'
 import IncomeTable from './components/Income/IncomeTable'
 import AddExpenseModal from './components/Expenses/AddExpenseModal'
@@ -38,6 +39,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { MONTHS, YEAR_NOW, MONTH_NOW_1 as MONTH_NOW, toSentenceCase, defaultMonths } from './utils/constants'
 import { AI_ENABLED } from './api/gemini'
 import { getPushStatus, subscribeToPush, unsubscribeFromPush } from './api/pushSubscription'
+import { investmentCategoryIds } from './utils/money'
 
 export default function App() {
   const { classes, cx } = useStyles()
@@ -168,6 +170,20 @@ export default function App() {
     setEditRow(row)
     setModal('category')
   }, [])
+
+  const investmentHoldings = useMemo(() => {
+    const investIds = investmentCategoryIds(categories)
+    const byName = new Map()
+    expenses.forEach(e => {
+      if (!investIds.has(e.categoryId)) return
+      const name = e.itemName || 'Unnamed'
+      byName.set(name, (byName.get(name) || 0) + (+e.amount || 0))
+    })
+    return [...byName.entries()]
+      .map(([name, balance]) => ({ name, balance }))
+      .filter(h => h.balance > 0)
+      .sort((a, b) => b.balance - a.balance)
+  }, [expenses, categories])
 
   // Year-filtered slices — stable reference when data/year hasn't changed.
   const yearExpenses = useMemo(
@@ -360,14 +376,27 @@ export default function App() {
                   </Box>
                 </Box>
                 <Dashboard
-                  expenses={expenses.filter(e => String(e.year) === String(year))}
-                  income={income.filter(i => String(i.year) === String(year))}
+                  expenses={yearExpenses}
+                  income={yearIncome}
+                  // Full history: investment balances carry forward, so a pot's
+                  // true balance is not derivable from one year alone.
+                  allExpenses={expenses}
                   categories={categories}
                   year={year}
                   month={month}
                   selMonths={selMonths}
                   setSelMonths={setSelMonths}
                   onEditCategory={row => { setEditRow(row); setModal('category') }}
+                />
+              </ErrorBoundary>
+            )}
+
+            {didInitialLoad && !needsSetup && view === 'balance' && (
+              <ErrorBoundary>
+                <BalanceSheet
+                  allExpenses={expenses}
+                  allIncome={income}
+                  categories={categories}
                 />
               </ErrorBoundary>
             )}
@@ -489,6 +518,7 @@ export default function App() {
           year={year}
           month={month}
           availableYears={availableYears}
+          holdings={investmentHoldings}
           onSave={handleSaveExpense}
           onClose={closeModal}
         />
