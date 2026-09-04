@@ -63,6 +63,16 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
   const amt = parseFloat(form.amount) || 0
   const parts = splitAll ? splitWithdrawal(Math.round(amt), available) : []
 
+  // Guard: a pot cannot hold a negative amount, so taking out more than it holds
+  // is always either a typo or missing history. Not blocked outright — someone's
+  // records can genuinely be incomplete — but it states the shortfall and makes
+  // the button say so, which an accidental entry cannot slip past.
+  const availableFrom = splitAll
+    ? available.reduce((s, h) => s + h.balance, 0)
+    : (available.find(h => h.name === withdrawFrom)?.balance ?? 0)
+  const overdrawn = isWithdraw && !!withdrawFrom && amt > availableFrom
+  const shortfall = overdrawn ? amt - availableFrom : 0
+
   const valid = form.categoryId && parseFloat(form.amount) > 0 && (
     isWithdraw ? (splitAll ? parts.length > 0 : !!withdrawFrom) : form.itemName.trim()
   )
@@ -87,7 +97,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
           amount: isWithdraw ? -amt : amt,
           isFixed: isWithdraw ? false : form.isFixed,
         }
-        await onSave(payload, applyMode)
+        await onSave(payload, isWithdraw ? 'single' : applyMode)
       }
     } catch (err) {
       console.error(err)
@@ -185,7 +195,10 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
                     key={opt.value}
                     variant={txnDir === opt.value ? 'contained' : 'outlined'}
                     size="small"
-                    onClick={() => setTxnDir(opt.value)}
+                    onClick={() => {
+                      setTxnDir(opt.value)
+                      if (opt.value === 'withdraw') setApplyMode('single')
+                    }}
                     disabled={saving}
                     className={txnDir === opt.value ? classes.applyButtonActive : classes.applyButtonInactive}
                     sx={txnDir === opt.value && opt.value === 'withdraw' ? {
@@ -315,30 +328,31 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             </Box>
           )}
 
-          {/* Apply Mode Selector */}
-          <Box style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-            <Typography variant="caption" className={classes.applyLabel}>
-              Apply to
-            </Typography>
-            <Box className={classes.applyButtonContainer}>
-              {[
-                { value: 'single', label: 'This month only' },
-                { value: 'all_year', label: 'Whole year' },
-                { value: 'this_and_forward', label: `${MONTHS[(form.month || 1) - 1]} → Dec` },
-              ].map(opt => (
-                <Button
-                  key={opt.value}
-                  variant={applyMode === opt.value ? 'contained' : 'outlined'}
-                  size="small"
-                  onClick={() => setApplyMode(opt.value)}
-                  disabled={saving}
-                  className={applyMode === opt.value ? classes.applyButtonActive : classes.applyButtonInactive}
-                >
-                  {opt.label}
-                </Button>
-              ))}
+          {!isWithdraw && (
+            <Box style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+              <Typography variant="caption" className={classes.applyLabel}>
+                Apply to
+              </Typography>
+              <Box className={classes.applyButtonContainer}>
+                {[
+                  { value: 'single', label: 'This month only' },
+                  { value: 'all_year', label: 'Whole year' },
+                  { value: 'this_and_forward', label: `${MONTHS[(form.month || 1) - 1]} → Dec` },
+                ].map(opt => (
+                  <Button
+                    key={opt.value}
+                    variant={applyMode === opt.value ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => setApplyMode(opt.value)}
+                    disabled={saving}
+                    className={applyMode === opt.value ? classes.applyButtonActive : classes.applyButtonInactive}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </Box>
             </Box>
-          </Box>
+          )}
         </Box>
 
         {/* Actions */}
@@ -348,10 +362,16 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             onClick={handleSave}
             disabled={saving || !valid}
             className={classes.saveButton}
+            sx={overdrawn ? {
+              background: '#ff5f5f !important',
+              '&:hover': { background: '#e64a4a !important' },
+            } : undefined}
           >
             {saving
               ? (form.id ? 'Updating...' : (isWithdraw ? 'Withdrawing...' : 'Adding...'))
-              : isWithdraw
+              : overdrawn
+                ? 'Withdraw anyway'
+                : isWithdraw
                 ? (form.id ? 'Update Withdrawal' : 'Withdraw')
                 : (form.id ? 'Update Expense' : 'Add Expense')}
           </Button>

@@ -1,0 +1,31 @@
+name: CI
+
+# Nothing was forcing the test suite to pass before this existed, which is how a
+# test that asserted a known-wrong number ("Saving 40%") survived in the repo.
+on:
+  push:
+    branches: [main, 'WEB-**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm run test:run
+
+      # Catches what tests can't: bad imports, duplicate declarations, and any
+      # syntax error that only surfaces when the bundle is actually built.
+      - name: Build
+        run: npm run build

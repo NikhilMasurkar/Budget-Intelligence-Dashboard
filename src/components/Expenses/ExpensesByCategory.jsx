@@ -25,15 +25,15 @@ function fmtUpdated(raw) {
   if (!s.startsWith('U')) return null
   const ms = +s.slice(1)
   if (!ms || isNaN(ms)) return null
-  const diffMs   = Date.now() - ms
+  const diffMs = Date.now() - ms
   const diffMins = Math.floor(diffMs / 60000)
-  const diffHrs  = Math.floor(diffMs / 3600000)
+  const diffHrs = Math.floor(diffMs / 3600000)
   const diffDays = Math.floor(diffMs / 86400000)
-  if (diffMins < 1)  return 'just now'
+  if (diffMins < 1) return 'just now'
   if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHrs  < 24) return `${diffHrs}h ago`
+  if (diffHrs < 24) return `${diffHrs}h ago`
   if (diffDays === 1) return 'yesterday'
-  if (diffDays  < 7) return `${diffDays}d ago`
+  if (diffDays < 7) return `${diffDays}d ago`
   return new Date(ms).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 import { useGlobalStyles } from '../../styles/globalStyles'
@@ -55,18 +55,18 @@ function CategoryBudgetText({ actual, budget }) {
 // so we compare individual field values instead of the object reference.
 function areRowPropsEqual(prev, next) {
   return (
-    prev.exp.id        === next.exp.id        &&
-    prev.exp.amount    === next.exp.amount    &&
-    prev.exp.itemName  === next.exp.itemName  &&
-    prev.exp.isFixed   === next.exp.isFixed   &&
-    prev.exp.note      === next.exp.note      &&
+    prev.exp.id === next.exp.id &&
+    prev.exp.amount === next.exp.amount &&
+    prev.exp.itemName === next.exp.itemName &&
+    prev.exp.isFixed === next.exp.isFixed &&
+    prev.exp.note === next.exp.note &&
     prev.exp.updatedAt === next.exp.updatedAt &&
-    prev.isSelected    === next.isSelected    &&
-    prev.canEdit       === next.canEdit       &&
-    prev.onToggle      === next.onToggle      &&
-    prev.onComment     === next.onComment     &&
-    prev.onEdit        === next.onEdit        &&
-    prev.onDelete      === next.onDelete
+    prev.isSelected === next.isSelected &&
+    prev.canEdit === next.canEdit &&
+    prev.onToggle === next.onToggle &&
+    prev.onComment === next.onComment &&
+    prev.onEdit === next.onEdit &&
+    prev.onDelete === next.onDelete
   )
 }
 
@@ -174,11 +174,11 @@ export default memo(function ExpensesByCategory({
 
   const monthExps = useMemo(() =>
     expenses.filter(e => String(e.year) === String(year) && String(e.month) === String(month))
-  , [expenses, year, month])
+    , [expenses, year, month])
 
   const catMap = useMemo(() =>
     Object.fromEntries(categories.map(c => [c.id, c]))
-  , [categories])
+    , [categories])
 
   // Group this month's expenses by category once — avoids re-filtering per category each render.
   const monthByCat = useMemo(() => {
@@ -203,18 +203,30 @@ export default memo(function ExpensesByCategory({
     income
       .filter(i => String(i.year) === String(year) && String(i.month) === String(month))
       .reduce((s, i) => s + (+i.amount || 0), 0)
-  , [income, year, month])
-  // "Spent" and "Saved" exclude Investment/Savings categories — money moved
-  // into or out of investments is a wealth transfer, not consumption. (A
-  // deposit is still "saved", just not as cash; a withdrawal is previously
-  // saved money, not new income.) Counting them would drag Spent negative and
-  // inflate Saved past income whenever there's a withdrawal.
-  const realSpend = monthExps
-    .filter(e => !isInvestmentCategory(catMap[e.categoryId]))
-    .reduce((s, e) => s + (+e.amount || 0), 0)
+    , [income, year, month])
+
+  const { realSpend, invested, deposits, withdrawals } = useMemo(() => {
+    let realSpend = 0, invested = 0, deposits = 0, withdrawals = 0
+    monthExps.forEach(e => {
+      const amt = +e.amount || 0
+      if (isInvestmentCategory(catMap[e.categoryId])) {
+        invested += amt
+        if (amt >= 0) deposits += amt
+        else withdrawals += -amt
+      } else {
+        realSpend += amt
+      }
+    })
+    return { realSpend, invested, deposits, withdrawals }
+  }, [monthExps, catMap])
+
+  const spendCats = useMemo(() => categories.filter(c => !isInvestmentCategory(c)), [categories])
+  const investCats = useMemo(() => categories.filter(c => isInvestmentCategory(c)), [categories])
+
   const itemCount = monthExps.length
-  const saved = monthIncomeTotal - realSpend
-  const spentPct = monthIncomeTotal > 0 ? Math.min(100, Math.round((realSpend / monthIncomeTotal) * 100)) : 0
+  const remaining = monthIncomeTotal - realSpend - invested
+  const outflow = realSpend + invested
+  const spentPct = monthIncomeTotal > 0 ? Math.min(100, Math.round((outflow / monthIncomeTotal) * 100)) : 0
 
   // ── Multi-select for bulk actions ──────────────────────────────────────────
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
@@ -265,16 +277,16 @@ export default memo(function ExpensesByCategory({
   const closeMenu = () => { setMenuAnchor(null); setMenuCat(null) }
 
   // Stable per-row callbacks passed to memoized ExpenseRow instances.
-  const handleToggle  = toggleExpense
+  const handleToggle = toggleExpense
   const handleComment = useCallback((exp) => setCommentExp(exp), [])
-  const handleEdit    = useCallback((exp) => onEditExpense(exp), [onEditExpense])
-  const handleDelete  = useCallback((exp) => onDeleteExpense(exp), [onDeleteExpense])
+  const handleEdit = useCallback((exp) => onEditExpense(exp), [onEditExpense])
+  const handleDelete = useCallback((exp) => onDeleteExpense(exp), [onDeleteExpense])
 
   const handleMoveUp = () => {
     const idx = categories.findIndex(c => c.id === menuCat.id)
     if (idx <= 0) { closeMenu(); return }
     const reordered = [...categories]
-    ;[reordered[idx - 1], reordered[idx]] = [reordered[idx], reordered[idx - 1]]
+      ;[reordered[idx - 1], reordered[idx]] = [reordered[idx], reordered[idx - 1]]
     onReorderCategory(reordered)
     closeMenu()
   }
@@ -283,7 +295,7 @@ export default memo(function ExpensesByCategory({
     const idx = categories.findIndex(c => c.id === menuCat.id)
     if (idx >= categories.length - 1) { closeMenu(); return }
     const reordered = [...categories]
-    ;[reordered[idx], reordered[idx + 1]] = [reordered[idx + 1], reordered[idx]]
+      ;[reordered[idx], reordered[idx + 1]] = [reordered[idx + 1], reordered[idx]]
     onReorderCategory(reordered)
     closeMenu()
   }
@@ -342,10 +354,16 @@ export default memo(function ExpensesByCategory({
             <Typography className={classes.statLabel}>Spent</Typography>
             <Typography className={classes.statValue} sx={{ color: '#ff7a7a' }}>{fmt(realSpend)}</Typography>
           </Box>
+          {invested !== 0 && (
+            <Box className={classes.statBlock}>
+              <Typography className={classes.statLabel}>Invested</Typography>
+              <Typography className={classes.statValue} sx={{ color: '#b97fff' }}>{fmt(invested)}</Typography>
+            </Box>
+          )}
           <Box className={classes.statBlock}>
-            <Typography className={classes.statLabel}>{saved >= 0 ? 'Saved' : 'Over budget'}</Typography>
-            <Typography className={classes.statValue} sx={{ color: saved >= 0 ? '#a0b4ff' : '#ff7a7a' }}>
-              {fmt(Math.abs(saved))}
+            <Typography className={classes.statLabel}>{remaining >= 0 ? 'Remaining' : 'Short by'}</Typography>
+            <Typography className={classes.statValue} sx={{ color: remaining >= 0 ? '#a0b4ff' : '#ff7a7a' }}>
+              {fmt(Math.abs(remaining))}
             </Typography>
           </Box>
           <Box sx={{ flex: 1, minWidth: 120 }}>
@@ -356,7 +374,7 @@ export default memo(function ExpensesByCategory({
               }} />
             </Box>
             <Typography sx={{ fontSize: 10, color: '#8891b8', mt: '4px' }}>
-              {monthIncomeTotal > 0 ? `${spentPct}% of income spent · ${itemCount} item${itemCount !== 1 ? 's' : ''}` : `${itemCount} item${itemCount !== 1 ? 's' : ''}`}
+              {monthIncomeTotal > 0 ? `${spentPct}% of income used · ${itemCount} item${itemCount !== 1 ? 's' : ''}` : `${itemCount} item${itemCount !== 1 ? 's' : ''}`}
             </Typography>
           </Box>
         </Box>
@@ -475,103 +493,136 @@ export default memo(function ExpensesByCategory({
         </Box>
       )}
 
-      {categories.map((cat) => {
-        const catExpsFull = monthByCat.get(cat.id) || []
-        const catTotalFull = catExpsFull.reduce((s, e) => s + (+e.amount || 0), 0)
-        const visibleExps = filterActive ? catExpsFull.filter(matches) : catExpsFull
-        // When a filter is active, hide categories with no matching rows.
-        if (filterActive && visibleExps.length === 0) return null
-        const isOpen = filterActive ? true : expanded.has(cat.id)
-        const catAllSelected = catExpsFull.length > 0 && catExpsFull.every(e => selectedSet.has(e.id))
-        const catSomeSelected = catExpsFull.some(e => selectedSet.has(e.id))
-
-        return (
-          <Box key={cat.id} className={cx(classes.section, isOpen && classes.sectionExpanded)}>
-            {/* Section Header */}
-            <Box
-              className={cx(classes.sectionHeader, isOpen && classes.sectionHeaderExpanded)}
-              onClick={() => toggle(cat.id)}
-              role="button"
-              tabIndex={0}
-              aria-expanded={isOpen}
-              onKeyDown={e => {
-                if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
-                  e.preventDefault(); toggle(cat.id)
-                }
-              }}
-            >
-              <Box className={classes.sectionHeaderRow}>
-                {isOpen
-                  ? <ExpandLessIcon className={classes.expandIcon} />
-                  : <ExpandMoreIcon className={classes.expandIcon} />
-                }
-                {canEdit && catExpsFull.length > 0 && (
-                  <Tooltip title={catAllSelected ? 'Deselect all' : 'Select all in category'} arrow>
-                    <Checkbox
-                      size="small"
-                      checked={catAllSelected}
-                      indeterminate={catSomeSelected && !catAllSelected}
-                      onClick={e => e.stopPropagation()}
-                      onChange={e => toggleCategoryAll(catExpsFull, e.target.checked)}
-                      sx={{
-                        p: 0, color: '#4a5072',
-                        '&.Mui-checked': { color: '#5b7fff' },
-                        '&.MuiCheckbox-indeterminate': { color: '#5b7fff' }
-                      }}
-                    />
-                  </Tooltip>
-                )}
-                <Box className={classes.colorDot} style={{ background: cat.color || '#5b7fff' }} />
-                <Typography className={classes.catName}>{cat.name}</Typography>
-                {catExpsFull.length > 0 && (
-                  <Typography className={classes.catMeta}>{catExpsFull.length} item{catExpsFull.length !== 1 ? 's' : ''}</Typography>
-                )}
-                <Typography className={classes.catTotal} style={{ color: catTotalFull < 0 ? '#ff7a7a' : catTotalFull > 0 ? '#e4e8f5' : '#5a6080' }}>
-                  {catTotalFull !== 0 ? fmt(catTotalFull) : '—'}
-                </Typography>
-
-                {canEdit && (
-                  <Button
-                    size="small" variant="outlined"
-                    className={classes.addBtn}
-                    onClick={e => { e.stopPropagation(); onAddExpense(cat.id) }}
-                  >
-                    + Add
-                  </Button>
-                )}
-
-                <IconButton size="small" className={classes.menuBtn} onClick={e => openMenu(e, cat)}>
-                  <MoreVertIcon sx={{ fontSize: 16 }} />
-                </IconButton>
-              </Box>
-              {cat.budget > 0 && <CategoryBudgetText actual={catTotalFull} budget={cat.budget} />}
-            </Box>
-
-            {/* Expense rows */}
-            <Collapse in={isOpen} timeout={150}>
-              <Box className={classes.expenseList}>
-                {visibleExps.length === 0 ? (
-                  <Box className={classes.emptyRow}>No expenses this month</Box>
-                ) : (
-                  visibleExps.map(exp => (
-                    <ExpenseRow
-                      key={exp.id}
-                      exp={exp}
-                      classes={classes}
-                      canEdit={canEdit}
-                      isSelected={selectedSet.has(exp.id)}
-                      onToggle={handleToggle}
-                      onComment={handleComment}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                    />
-                  ))
-                )}
-              </Box>
-            </Collapse>
+      {[
+        { key: 'spend', label: 'Spending', cats: spendCats, total: realSpend },
+        { key: 'invest', label: 'Investments & Savings', cats: investCats, total: invested },
+      ].map(group => group.cats.length === 0 ? null : (
+        <Box key={group.key}>
+          <Box sx={{
+            display: 'flex', alignItems: 'baseline', gap: '10px',
+            mt: group.key === 'spend' ? 0 : '22px', mb: '8px', px: '4px',
+          }}>
+            <Typography sx={{
+              fontSize: 11, fontWeight: 800, letterSpacing: '0.8px',
+              textTransform: 'uppercase',
+              color: group.key === 'invest' ? '#b97fff' : '#6a7190',
+            }}>
+              {group.label}
+            </Typography>
+            {group.key === 'invest' && (deposits > 0 || withdrawals > 0) && (
+              <Typography sx={{ fontSize: 11, color: '#5a6080' }}>
+                put in {fmt(deposits)} · took out {fmt(withdrawals)}
+              </Typography>
+            )}
+            <Box sx={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+            <Typography sx={{
+              fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+              color: group.key === 'invest' ? '#b97fff' : '#8891b8',
+            }}>
+              {fmt(group.total)}
+            </Typography>
           </Box>
-        )
-      })}
+
+          {group.cats.map((cat) => {
+            const catExpsFull = monthByCat.get(cat.id) || []
+            const catTotalFull = catExpsFull.reduce((s, e) => s + (+e.amount || 0), 0)
+            const visibleExps = filterActive ? catExpsFull.filter(matches) : catExpsFull
+            // When a filter is active, hide categories with no matching rows.
+            if (filterActive && visibleExps.length === 0) return null
+            const isOpen = filterActive ? true : expanded.has(cat.id)
+            const catAllSelected = catExpsFull.length > 0 && catExpsFull.every(e => selectedSet.has(e.id))
+            const catSomeSelected = catExpsFull.some(e => selectedSet.has(e.id))
+
+            return (
+              <Box key={cat.id} className={cx(classes.section, isOpen && classes.sectionExpanded)}>
+                {/* Section Header */}
+                <Box
+                  className={cx(classes.sectionHeader, isOpen && classes.sectionHeaderExpanded)}
+                  onClick={() => toggle(cat.id)}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isOpen}
+                  onKeyDown={e => {
+                    if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault(); toggle(cat.id)
+                    }
+                  }}
+                >
+                  <Box className={classes.sectionHeaderRow}>
+                    {isOpen
+                      ? <ExpandLessIcon className={classes.expandIcon} />
+                      : <ExpandMoreIcon className={classes.expandIcon} />
+                    }
+                    {canEdit && catExpsFull.length > 0 && (
+                      <Tooltip title={catAllSelected ? 'Deselect all' : 'Select all in category'} arrow>
+                        <Checkbox
+                          size="small"
+                          checked={catAllSelected}
+                          indeterminate={catSomeSelected && !catAllSelected}
+                          onClick={e => e.stopPropagation()}
+                          onChange={e => toggleCategoryAll(catExpsFull, e.target.checked)}
+                          sx={{
+                            p: 0, color: '#4a5072',
+                            '&.Mui-checked': { color: '#5b7fff' },
+                            '&.MuiCheckbox-indeterminate': { color: '#5b7fff' }
+                          }}
+                        />
+                      </Tooltip>
+                    )}
+                    <Box className={classes.colorDot} style={{ background: cat.color || '#5b7fff' }} />
+                    <Typography className={classes.catName}>{cat.name}</Typography>
+                    {catExpsFull.length > 0 && (
+                      <Typography className={classes.catMeta}>{catExpsFull.length} item{catExpsFull.length !== 1 ? 's' : ''}</Typography>
+                    )}
+                    <Typography className={classes.catTotal} style={{ color: catTotalFull < 0 ? '#ff7a7a' : catTotalFull > 0 ? '#e4e8f5' : '#5a6080' }}>
+                      {catTotalFull !== 0 ? fmt(catTotalFull) : '—'}
+                    </Typography>
+
+                    {canEdit && (
+                      <Button
+                        size="small" variant="outlined"
+                        className={classes.addBtn}
+                        onClick={e => { e.stopPropagation(); onAddExpense(cat.id) }}
+                      >
+                        + Add
+                      </Button>
+                    )}
+
+                    <IconButton size="small" className={classes.menuBtn} onClick={e => openMenu(e, cat)}>
+                      <MoreVertIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Box>
+                  {cat.budget > 0 && <CategoryBudgetText actual={catTotalFull} budget={cat.budget} />}
+                </Box>
+
+                {/* Expense rows */}
+                <Collapse in={isOpen} timeout={150}>
+                  <Box className={classes.expenseList}>
+                    {visibleExps.length === 0 ? (
+                      <Box className={classes.emptyRow}>No expenses this month</Box>
+                    ) : (
+                      visibleExps.map(exp => (
+                        <ExpenseRow
+                          key={exp.id}
+                          exp={exp}
+                          classes={classes}
+                          canEdit={canEdit}
+                          isSelected={selectedSet.has(exp.id)}
+                          onToggle={handleToggle}
+                          onComment={handleComment}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                        />
+                      ))
+                    )}
+                  </Box>
+                </Collapse>
+              </Box>
+            )
+          })}
+
+        </Box>
+      ))}
 
       {/* Uncategorized section */}
       {(() => {
