@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { investmentCategoryIds } from './money'
 
 
 import {
@@ -74,7 +75,7 @@ export async function exportToPdf(categories, expenses, income, filterYears = nu
   // Investment/Savings categories are wealth transfers, not consumption — they
   // are excluded from "Total Expenses" and "Net Savings" so the PDF matches the
   // app and the Excel export (a withdrawal must not reduce Total Expenses).
-  const savingsCatIds = new Set(categories.filter(c => c.type === 'savings').map(c => c.id))
+  const savingsCatIds = investmentCategoryIds(categories)
 
   // ───────────────────────────────────────────────────────────────────────────
   // PAGE 1: COVER / OVERALL BUDGET OVERVIEW

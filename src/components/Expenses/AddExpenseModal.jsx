@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   Dialog,
   Button,
@@ -16,8 +16,13 @@ import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import { useAddExpenseModalStyles } from './styles/Expenses.styles'
 
 import { MONTHS } from '../../utils/constants'
+import { isInvestmentCategory, splitWithdrawal } from '../../utils/money'
 
-export default function AddExpenseModal({ initial, categories, year, month, availableYears = [new Date().getFullYear()], onSave, onClose }) {
+const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN')
+
+const WITHDRAW_ALL = '__all__'
+
+export default function AddExpenseModal({ initial, categories, year, month, availableYears = [new Date().getFullYear()], holdings = [], onSave, onClose }) {
   const { classes } = useAddExpenseModalStyles()
   const initialAmt = initial?.amount
   const [form, setForm] = useState({
@@ -41,10 +46,26 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
   // invested balance and returns the money to spendable cash.
   const [txnDir, setTxnDir] = useState(+initialAmt < 0 ? 'withdraw' : 'deposit')
 
+  const [withdrawFrom, setWithdrawFrom] = useState(initial?.itemName || '')
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const isSavings = categories.find(c => c.id === form.categoryId)?.type === 'savings'
+  const isSavings = isInvestmentCategory(categories.find(c => c.id === form.categoryId))
   const isWithdraw = isSavings && txnDir === 'withdraw'
-  const valid = form.itemName.trim() && parseFloat(form.amount) > 0 && form.categoryId
+  const available = useMemo(() => {
+    const list = holdings.filter(h => h.balance > 0)
+    const current = initial?.itemName
+    if (current && current !== WITHDRAW_ALL && !list.some(h => h.name === current)) {
+      return [...list, { name: current, balance: 0 }]
+    }
+    return list
+  }, [holdings, initial])
+  const splitAll = isWithdraw && withdrawFrom === WITHDRAW_ALL
+  const amt = parseFloat(form.amount) || 0
+  const parts = splitAll ? splitWithdrawal(Math.round(amt), available) : []
+
+  const valid = form.categoryId && parseFloat(form.amount) > 0 && (
+    isWithdraw ? (splitAll ? parts.length > 0 : !!withdrawFrom) : form.itemName.trim()
+  )
 
   const handleSave = async () => {
     if (!valid || saving) return
@@ -53,8 +74,21 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
       const amt = Math.abs(parseFloat(form.amount) || 0)
       // A withdrawal can't be "fixed/recurring" (the toggle is hidden for it),
       // so never persist a stale isFixed=true left over from before the switch.
-      const payload = { ...form, amount: isWithdraw ? -amt : amt, isFixed: isWithdraw ? false : form.isFixed }
-      await onSave(payload, applyMode)
+      if (splitAll) {
+        // One row per pot so each balance drops by its own share.
+        await onSave(
+          parts.map(p => ({ ...form, itemName: p.name, amount: -p.amount, isFixed: false })),
+          'split'
+        )
+      } else {
+        const payload = {
+          ...form,
+          itemName: isWithdraw ? withdrawFrom : form.itemName,
+          amount: isWithdraw ? -amt : amt,
+          isFixed: isWithdraw ? false : form.isFixed,
+        }
+        await onSave(payload, applyMode)
+      }
     } catch (err) {
       console.error(err)
       setSaving(false)
@@ -68,7 +102,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
       className={classes.dialog}
     >
       <Box className={classes.content}>
-        
+
         {/* Top Icon Badge */}
         <Box className={classes.iconBadge}>
           <ReceiptLongOutlinedIcon color="error" sx={{ fontSize: 28 }} />
@@ -172,18 +206,68 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             </Box>
           )}
 
-          {/* Item Name */}
-          <TextField
-            label="Item Name"
-            value={form.itemName}
-            onChange={e => set('itemName', e.target.value)}
-            placeholder="e.g. Electricity Bill"
-            fullWidth
-            variant="outlined"
-            size="small"
-            InputLabelProps={{ shrink: true }}
-            className={classes.fieldStyles}
-          />
+          {/* Where the money comes out of — replaces free-text naming, which is
+              what allowed an unattributed "Wintdraw" row to exist at all. */}
+          {isWithdraw && (
+            <FormControl size="small" fullWidth className={classes.fieldStyles}>
+              <InputLabel id="withdraw-from-label" shrink sx={{ color: 'text.secondary' }}>
+                Withdraw from
+              </InputLabel>
+              <Select
+                native
+                labelId="withdraw-from-label"
+                value={withdrawFrom}
+                onChange={e => setWithdrawFrom(e.target.value)}
+                label="Withdraw from"
+                notched
+              >
+                <option value="">-- Select investment --</option>
+                {available.map(h => (
+                  <option key={h.name} value={h.name}>
+                    {h.name} ({inr(h.balance)} available)
+                  </option>
+                ))}
+                {available.length > 1 && (
+                  <option value={WITHDRAW_ALL}>All investments (split by size)</option>
+                )}
+              </Select>
+            </FormControl>
+          )}
+
+          {/* Shows exactly what will be written before it is written. */}
+          {splitAll && parts.length > 0 && (
+            <Box sx={{
+              width: '100%', background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', p: '10px 12px',
+            }}>
+              <Typography sx={{ fontSize: 11, color: '#8891b8', mb: '6px' }}>
+                Will be taken out as:
+              </Typography>
+              {parts.map(p => (
+                <Box key={p.name} sx={{ display: 'flex', justifyContent: 'space-between', py: '2px' }}>
+                  <Typography sx={{ fontSize: 12, color: '#c8cfea' }}>{p.name}</Typography>
+                  <Typography sx={{ fontSize: 12, color: '#ff5f5f', fontVariantNumeric: 'tabular-nums' }}>
+                    −{inr(p.amount)}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+
+          {/* Item Name — a withdrawal takes its name from the dropdown above */}
+          {!isWithdraw && (
+            <TextField
+              label="Item Name"
+              value={form.itemName}
+              onChange={e => set('itemName', e.target.value)}
+              placeholder="e.g. Electricity Bill"
+              fullWidth
+              variant="outlined"
+              size="small"
+              InputLabelProps={{ shrink: true }}
+              className={classes.fieldStyles}
+            />
+          )}
 
           {/* Amount */}
           <TextField
@@ -204,31 +288,31 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
 
           {/* Fixed / Recurring toggle — not shown for one-off withdrawals */}
           {!isWithdraw && (
-          <Box sx={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '8px 12px', borderRadius: '8px',
-            background: form.isFixed ? 'rgba(91,127,255,0.08)' : 'rgba(255,255,255,0.03)',
-            border: `1px solid ${form.isFixed ? 'rgba(91,127,255,0.3)' : 'rgba(255,255,255,0.07)'}`,
-            transition: 'all 0.2s'
-          }}>
-            <Box>
-              <Typography sx={{ fontSize: 13, fontWeight: 600, color: form.isFixed ? '#a0b4ff' : '#8891b8' }}>
-                📌 Fixed / Recurring
-              </Typography>
-              <Typography sx={{ fontSize: 11, color: '#8891b8', mt: '2px' }}>
-                Auto-copied to next month at start
-              </Typography>
+            <Box sx={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '8px 12px', borderRadius: '8px',
+              background: form.isFixed ? 'rgba(91,127,255,0.08)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${form.isFixed ? 'rgba(91,127,255,0.3)' : 'rgba(255,255,255,0.07)'}`,
+              transition: 'all 0.2s'
+            }}>
+              <Box>
+                <Typography sx={{ fontSize: 13, fontWeight: 600, color: form.isFixed ? '#a0b4ff' : '#8891b8' }}>
+                  📌 Fixed / Recurring
+                </Typography>
+                <Typography sx={{ fontSize: 11, color: '#8891b8', mt: '2px' }}>
+                  Auto-copied to next month at start
+                </Typography>
+              </Box>
+              <Switch
+                checked={form.isFixed}
+                onChange={e => set('isFixed', e.target.checked)}
+                size="small"
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: '#5b7fff' },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#5b7fff' }
+                }}
+              />
             </Box>
-            <Switch
-              checked={form.isFixed}
-              onChange={e => set('isFixed', e.target.checked)}
-              size="small"
-              sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': { color: '#5b7fff' },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#5b7fff' }
-              }}
-            />
-          </Box>
           )}
 
           {/* Apply Mode Selector */}

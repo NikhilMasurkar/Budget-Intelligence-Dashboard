@@ -2,6 +2,7 @@
 // server-side (never bundled) and responses stream from the edge. Override with
 // VITE_GEMINI_PROXY if hosted elsewhere.
 import { auth } from '../firebase'
+import { splitSpendInvest } from '../utils/money'
 
 // Attach a Firebase ID token so the edge function can gate on it.
 // Falls back to an empty object if the user isn't signed in yet (shouldn't
@@ -109,23 +110,6 @@ async function callModel(modelId, prompt) {
     throw new Error(`${modelId} hit MAX_TOKENS — trying next model`)
   }
   return data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-}
-
-// Investing is a transfer between the user's own pockets, not spending. Every
-// expense total below must exclude savings/investment categories, or the AI is
-// told the user spends far more than they do and reports their savings rate far
-// too low. Matches the Dashboard and the Excel export.
-function splitSpendInvest(expenses, categories) {
-  const investIds = new Set(
-    (categories || []).filter(c => c.type === 'savings').map(c => c.id)
-  )
-  let spend = 0, invest = 0
-  expenses.forEach(e => {
-    const amt = +e.amount || 0
-    if (investIds.has(e.categoryId)) invest += amt
-    else spend += amt
-  })
-  return { spend, invest, investIds }
 }
 
 function detectEmployment(income) {

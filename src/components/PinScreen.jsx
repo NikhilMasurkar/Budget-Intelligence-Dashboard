@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Box, Button, Card, Typography, CircularProgress, Checkbox, FormControlLabel } from '@mui/material'
-import { makeStyles } from 'tss-react/mui'
 import {
   isBiometricsAvailable,
   hasBiometricCredential,
@@ -15,6 +14,7 @@ import {
   resetPinFS,
 } from '../api/firestoreSettings'
 import { auth } from '../firebase'
+import { usePinScreenStyles } from './styles/PinScreen.styles'
 
 // Turn a WebAuthn DOMException into something a user can act on.
 function bioErrorMessage(e) {
@@ -110,7 +110,7 @@ function FingerprintIcon({ size = 48, color = '#5b7fff', scanning = false }) {
 
 // ── Numpad ───────────────────────────────────────────────────
 function NumPad({ onDigit, onDelete, disabled }) {
-  const { classes, cx } = useStyles()
+  const { classes, cx } = usePinScreenStyles()
   const keys = ['1','2','3','4','5','6','7','8','9','','0','del']
   return (
     <Box className={classes.numpadContainer}>
@@ -141,7 +141,7 @@ function NumPad({ onDigit, onDelete, disabled }) {
 
 // ── PIN / OTP dots ───────────────────────────────────────────
 function PinDots({ count, shake, length = PIN_LENGTH }) {
-  const { classes, cx } = useStyles()
+  const { classes, cx } = usePinScreenStyles()
   return (
     <Box
       className={cx(classes.dotsContainer, shake && classes.shakingDots)}
@@ -167,7 +167,7 @@ function PinDots({ count, shake, length = PIN_LENGTH }) {
 
 // ── LogoBox ──────────────────────────────────────────────────
 function LogoBox() {
-  const { classes } = useStyles()
+  const { classes } = usePinScreenStyles()
   return (
     <Box className={classes.logoBox}>
       💰
@@ -177,7 +177,7 @@ function LogoBox() {
 
 // ── Main component ───────────────────────────────────────────
 export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock, onSetPin }) {
-  const { classes, cx } = useStyles()
+  const { classes, cx } = usePinScreenStyles()
   const isSetup = mode === 'setup'
 
   // screen: 'pin' | 'biometric' | 'biometric-enable' | 'forgot' | 'otp' | 'reset'
@@ -668,208 +668,3 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
 }
 
 // ── Styling System ───────────────────────────────────────────
-const useStyles = makeStyles()((theme) => ({
-  '@keyframes pinShake': {
-    '0%, 100%': { transform: 'translateX(0)' },
-    '15%': { transform: 'translateX(-9px)' },
-    '30%': { transform: 'translateX(9px)' },
-    '45%': { transform: 'translateX(-7px)' },
-    '60%': { transform: 'translateX(7px)' },
-    '75%': { transform: 'translateX(-4px)' },
-    '90%': { transform: 'translateX(4px)' },
-  },
-  '@keyframes bioPulse': {
-    '0%, 100%': { boxShadow: '0 0 0 0 rgba(91, 127, 255, 0.3)' },
-    '50%': { boxShadow: '0 0 0 12px rgba(91, 127, 255, 0)' },
-  },
-  wrapper: {
-    position: 'fixed',
-    inset: 0,
-    zIndex: 9999,
-    background: '#0b0e1a',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '0 16px',
-    fontFamily: theme.typography.fontFamily,
-  },
-  pinCard: {
-    width: '100%',
-    maxWidth: 340,
-    background: '#12172b',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    borderRadius: 24,
-    padding: '36px 28px 32px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    boxShadow: 'none',
-  },
-  logoBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    marginBottom: 20,
-    background: 'linear-gradient(135deg, #3a57e8 0%, #5b7fff 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 26,
-    boxShadow: '0 4px 20px rgba(91, 127, 255, 0.3)',
-  },
-  title: {
-    margin: '0 0 4px',
-    fontSize: 20,
-    fontWeight: 700,
-    color: '#e4e8f5',
-    letterSpacing: '-0.3px',
-    textAlign: 'center',
-  },
-  subtitle: {
-    margin: 0,
-    fontSize: 13,
-    color: '#6a7190',
-    textAlign: 'center',
-    lineHeight: 1.5,
-  },
-  dotsContainer: {
-    display: 'flex',
-    marginBottom: 8,
-  },
-  shakingDots: {
-    animation: 'pinShake 0.45s ease',
-  },
-  dot: {
-    width: 14,
-    height: 14,
-    borderRadius: '50%',
-    transition: 'all 0.15s ease',
-  },
-  numpadContainer: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 10,
-    width: '100%',
-  },
-  numpadKey: {
-    height: 58,
-    borderRadius: 14,
-    border: '1px solid rgba(255, 255, 255, 0.07)',
-    background: 'rgba(255, 255, 255, 0.04)',
-    color: '#e4e8f5',
-    fontSize: 22,
-    fontWeight: 600,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'background .12s, transform .08s',
-    WebkitTapHighlightColor: 'transparent',
-    userSelect: 'none',
-    minWidth: 0,
-    padding: 0,
-    fontFamily: theme.typography.fontFamily,
-    '&:active': {
-      background: 'rgba(91, 127, 255, 0.18)',
-      transform: 'scale(0.93)',
-    },
-  },
-  delKey: {
-    border: 'none',
-    background: 'transparent',
-    '&:active': {
-      background: 'rgba(255, 255, 255, 0.05)',
-      transform: 'scale(0.93)',
-    },
-  },
-  primaryBtn: {
-    width: '100%',
-    height: 48,
-    borderRadius: 14,
-    border: 'none',
-    background: '#5b7fff',
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: 600,
-    cursor: 'pointer',
-    marginBottom: 10,
-    fontFamily: theme.typography.fontFamily,
-    textTransform: 'none',
-    transition: 'opacity 0.15s',
-    '&:hover': {
-      background: '#4a6eee',
-    },
-  },
-  bioOptIn: {
-    marginTop: 18,
-    marginLeft: 0,
-    marginRight: 0,
-    alignSelf: 'center',
-    '& .MuiFormControlLabel-label': {
-      fontSize: 12.5,
-      color: '#8891b8',
-      userSelect: 'none',
-    },
-  },
-  ghostBtn: {
-    background: 'transparent',
-    border: 'none',
-    color: '#5b7fff',
-    fontSize: 13,
-    fontWeight: 500,
-    cursor: 'pointer',
-    padding: '6px 12px',
-    borderRadius: 8,
-    fontFamily: theme.typography.fontFamily,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textTransform: 'none',
-    '&:hover': {
-      background: 'rgba(255, 255, 255, 0.04)',
-    },
-  },
-  emailBox: {
-    background: 'rgba(91, 127, 255, 0.08)',
-    border: '1px solid rgba(91, 127, 255, 0.2)',
-    borderRadius: 10,
-    padding: '10px 16px',
-    marginBottom: 28,
-    fontSize: 14,
-    color: '#a0b0e8',
-    fontWeight: 500,
-    letterSpacing: 0.3,
-    textAlign: 'center',
-  },
-  fingerprintBtn: {
-    width: 88,
-    height: 88,
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.2s',
-    marginBottom: 24,
-    minWidth: 0,
-    padding: 0,
-  },
-  pulsingFingerprint: {
-    animation: 'bioPulse 1.2s ease-in-out infinite',
-  },
-  bottomLink: {
-    marginTop: 20,
-    display: 'flex',
-    gap: 8,
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  footerText: {
-    marginTop: 20,
-    fontSize: 11.5,
-    color: '#3a4575',
-    textAlign: 'center',
-    maxWidth: 300,
-    lineHeight: 1.6,
-  },
-}))
