@@ -79,3 +79,44 @@ export function splitWithdrawal(amount, holdings = []) {
 
   return parts.filter(p => p.amount !== 0)
 }
+
+/**
+ * Apply an arithmetic expression to an existing amount.
+ *
+ * Typing a bare number replaces the amount as before. Leading with an operator
+ * adjusts the CURRENT value instead, so a ₹5,000 expense can be corrected with
+ * "+200" rather than doing the sum yourself:
+ *
+ *   base 5000, "+200" -> 5200      base 5000, "*2"  -> 10000
+ *   base 5000, "-10"  -> 4990      base 5000, "/2"  -> 2500
+ *
+ * Returns null for anything unparseable so the caller can leave the field alone
+ * rather than silently writing a wrong number. Rounds to 2dp to match how
+ * amounts are stored (see money() in parseExcel).
+ */
+export function applyAmountExpression(base, input) {
+  const raw = String(input ?? '').trim().replace(/\s+/g, '')
+  if (!raw) return null
+
+  const m = /^([+\-*/])(.+)$/.exec(raw)
+  if (!m) {
+    const abs = Number(raw)
+    return Number.isFinite(abs) ? { value: round2(abs), op: null, operand: null } : null
+  }
+
+  const [, op, rest] = m
+  const operand = Number(rest)
+  if (!Number.isFinite(operand)) return null
+
+  const b = Number(base) || 0
+  let value
+  if (op === '+') value = b + operand
+  else if (op === '-') value = b - operand
+  else if (op === '*') value = b * operand
+  else if (op === '/') value = operand === 0 ? null : b / operand
+
+  if (value == null || !Number.isFinite(value)) return null
+  return { value: round2(value), op, operand }
+}
+
+const round2 = (n) => Math.round(n * 100) / 100

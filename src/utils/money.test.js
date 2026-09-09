@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   SAVINGS_TYPE, EXPENSE_TYPE,
   isInvestmentCategory, investmentCategoryIds, splitSpendInvest, splitWithdrawal,
+  applyAmountExpression,
 } from './money'
 
 const CATS = [
@@ -116,5 +117,42 @@ describe('splitWithdrawal', () => {
     expect(splitWithdrawal(1000, [])).toEqual([])
     expect(splitWithdrawal(1000, [{ name: 'A', balance: 0 }])).toEqual([])
     expect(splitWithdrawal(0, H)).toEqual([])
+  })
+})
+
+describe('applyAmountExpression', () => {
+  it('adjusts the existing amount when given an operator', () => {
+    expect(applyAmountExpression(5000, '+200').value).toBe(5200)
+    expect(applyAmountExpression(5000, '-10').value).toBe(4990)
+    expect(applyAmountExpression(5000, '*2').value).toBe(10000)
+    expect(applyAmountExpression(5000, '/2').value).toBe(2500)
+  })
+
+  it('replaces the amount when given a bare number', () => {
+    const r = applyAmountExpression(5000, '750')
+    expect(r.value).toBe(750)
+    expect(r.op).toBeNull()
+  })
+
+  it('reports the operator and operand so the change can be logged', () => {
+    expect(applyAmountExpression(5000, '+200')).toEqual({ value: 5200, op: '+', operand: 200 })
+  })
+
+  it('handles decimals and ignores surrounding spaces', () => {
+    expect(applyAmountExpression(100, ' + 20.5 ').value).toBe(120.5)
+    expect(applyAmountExpression(10, '/3').value).toBe(3.33)   // 2dp, matching storage
+  })
+
+  it('treats a missing base as zero, so expressions work on a new expense', () => {
+    expect(applyAmountExpression(0, '+200').value).toBe(200)
+    expect(applyAmountExpression(undefined, '+200').value).toBe(200)
+  })
+
+  it('returns null for anything unparseable rather than guessing', () => {
+    expect(applyAmountExpression(5000, '')).toBeNull()
+    expect(applyAmountExpression(5000, '+')).toBeNull()
+    expect(applyAmountExpression(5000, 'abc')).toBeNull()
+    expect(applyAmountExpression(5000, '+abc')).toBeNull()
+    expect(applyAmountExpression(5000, '/0')).toBeNull()
   })
 })

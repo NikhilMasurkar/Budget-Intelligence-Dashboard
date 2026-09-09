@@ -16,7 +16,8 @@ import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import { useAddExpenseModalStyles } from './styles/Expenses.styles'
 
 import { MONTHS } from '../../utils/constants'
-import { isInvestmentCategory, splitWithdrawal } from '../../utils/money'
+import { isInvestmentCategory, splitWithdrawal, applyAmountExpression } from '../../utils/money'
+import { appendComment } from '../../utils/comments'
 
 const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN')
 
@@ -47,6 +48,10 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
   const [txnDir, setTxnDir] = useState(+initialAmt < 0 ? 'withdraw' : 'deposit')
 
   const [withdrawFrom, setWithdrawFrom] = useState(initial?.itemName || '')
+  // The amount the expense had when the modal opened. Expressions like "+200"
+  // are applied against this, so re-typing does not compound.
+  const baseAmount = Math.abs(+initialAmt || 0)
+  const [comment, setComment] = useState('')
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const isSavings = isInvestmentCategory(categories.find(c => c.id === form.categoryId))
@@ -73,21 +78,42 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
   const overdrawn = isWithdraw && !!withdrawFrom && amt > availableFrom
   const shortfall = overdrawn ? amt - availableFrom : 0
 
-  const valid = form.categoryId && parseFloat(form.amount) > 0 && (
+  const valid = form.categoryId && amt > 0 && (
     isWithdraw ? (splitAll ? parts.length > 0 : !!withdrawFrom) : form.itemName.trim()
   )
+
+  // One comment entry combining the amount change and the typed note. Either
+  // part may be absent; if both are, nothing is logged.
+  //
+  // The money line is only meaningful when editing an existing row — on a new
+  // expense there is nothing to compare against — and is skipped for a split
+  // withdrawal, where each row gets its own share and the total would be wrong
+  // stamped on every one of them.
+  const changeLog = ({ withMoney = true } = {}) => {
+    const note = comment.trim()
+    const amountChanged = !!form.id && withMoney && amt !== baseAmount
+    if (!amountChanged) return note
+
+    const money = adjusted
+      ? `${expr.op === '-' ? '−' : expr.op}${expr.op === '+' || expr.op === '-' ? inr(expr.operand) : expr.operand}`
+        + ` · ${inr(baseAmount)} → ${inr(amt)}`
+      : `${inr(baseAmount)} → ${inr(amt)}`
+    return note ? `${money} — ${note}` : money
+  }
 
   const handleSave = async () => {
     if (!valid || saving) return
     setSaving(true)
     try {
-      const amt = Math.abs(parseFloat(form.amount) || 0)
       // A withdrawal can't be "fixed/recurring" (the toggle is hidden for it),
       // so never persist a stale isFixed=true left over from before the switch.
       if (splitAll) {
         // One row per pot so each balance drops by its own share.
         await onSave(
-          parts.map(p => ({ ...form, itemName: p.name, amount: -p.amount, isFixed: false })),
+          parts.map(p => ({
+            ...form, itemName: p.name, amount: -p.amount, isFixed: false,
+            note: appendComment(form.note, changeLog({ withMoney: false })),
+          })),
           'split'
         )
       } else {
@@ -96,6 +122,9 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
           itemName: isWithdraw ? withdrawFrom : form.itemName,
           amount: isWithdraw ? -amt : amt,
           isFixed: isWithdraw ? false : form.isFixed,
+          // Log the adjustment and the note into the same comment thread, so
+          // the row carries a history of what changed and why.
+          note: appendComment(form.note, changeLog()),
         }
         await onSave(payload, isWithdraw ? 'single' : applyMode)
       }
@@ -285,10 +314,12 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
           {/* Amount */}
           <TextField
             label={isWithdraw ? 'Withdrawal Amount' : 'Amount'}
-            type="number"
+            // Deliberately text, not number: type="number" rejects "+200".
+            type="text"
+            inputMode="decimal"
             value={form.amount}
             onChange={e => set('amount', e.target.value)}
-            placeholder="0"
+            placeholder={baseAmount ? 'e.g. +200, -50, *2 or a new amount' : '0'}
             fullWidth
             variant="outlined"
             size="small"
@@ -296,6 +327,41 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             InputProps={{
               startAdornment: <InputAdornment position="start" sx={{ '& .MuiTypography-root': { color: 'text.secondary', fontWeight: 600, fontSize: 13 } }}>₹</InputAdornment>,
             }}
+            className={classes.fieldStyles}
+          />
+
+          {/* Show the resolved sum before it is saved, so an expression is never
+              a guess. Also flags input the parser could not read at all. */}
+          {adjusted && (
+            <Box sx={{
+              width: '100%', mt: '-4px',
+              background: 'rgba(91,127,255,0.08)', border: '1px solid rgba(91,127,255,0.3)',
+              borderRadius: '8px', p: '8px 12px',
+            }}>
+              <Typography sx={{ fontSize: 12, color: '#a0b4ff', fontVariantNumeric: 'tabular-nums' }}>
+                {inr(baseAmount)} {expr.op === '-' ? '−' : expr.op} {expr.operand} = <b>{inr(amt)}</b>
+              </Typography>
+            </Box>
+          )}
+          {form.amount.trim() && !expr && (
+            <Typography sx={{ width: '100%', mt: '-4px', fontSize: 11.5, color: '#ff7a7a' }}>
+              Can't read that — type a number, or +200 / -50 / *2 to adjust the current amount.
+            </Typography>
+          )}
+
+          {/* Note goes into the same comment thread the row already uses, next
+              to the amount change that prompted it. */}
+          <TextField
+            label={adjusted ? 'Why the change? (optional)' : 'Comment (optional)'}
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            placeholder={adjusted ? 'e.g. bought extra milk' : 'Add a note for this expense'}
+            fullWidth
+            multiline
+            maxRows={3}
+            variant="outlined"
+            size="small"
+            InputLabelProps={{ shrink: true }}
             className={classes.fieldStyles}
           />
 

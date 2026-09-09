@@ -6,16 +6,10 @@ import {
 import CloseIcon from '@mui/icons-material/Close'
 import ChatBubbleOutlinedIcon from '@mui/icons-material/ChatBubbleOutlined'
 import DeleteIcon from '@mui/icons-material/Delete'
+import { parseComments } from '../../utils/comments'
 
-export function parseComments(note) {
-  if (!note) return []
-  const s = String(note).trim()
-  if (s.startsWith('[')) {
-    try { return JSON.parse(s) } catch { /* fall through */ }
-  }
-  if (s) return [{ text: s, ts: 0 }]
-  return []
-}
+// Re-exported for existing importers; the implementation lives in utils/comments.
+export { parseComments }
 
 function fmtTs(ts) {
   if (!ts) return 'Earlier note'
