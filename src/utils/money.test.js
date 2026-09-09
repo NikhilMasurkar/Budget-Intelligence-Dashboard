@@ -156,3 +156,23 @@ describe('applyAmountExpression', () => {
     expect(applyAmountExpression(5000, '/0')).toBeNull()
   })
 })
+
+describe('applyAmountExpression — plain infix from the keypad', () => {
+  it('evaluates two literals without touching the base amount', () => {
+    expect(applyAmountExpression(5000, '500+200').value).toBe(700)
+    expect(applyAmountExpression(5000, '900-150').value).toBe(750)
+    expect(applyAmountExpression(5000, '12*4').value).toBe(48)
+    expect(applyAmountExpression(5000, '90/4').value).toBe(22.5)
+  })
+
+  it('still prefers the leading-operator form, which adjusts the base', () => {
+    expect(applyAmountExpression(5000, '+200').value).toBe(5200)
+  })
+
+  it('rejects anything more complex rather than evaluating it', () => {
+    expect(applyAmountExpression(0, '1+2+3')).toBeNull()
+    expect(applyAmountExpression(0, '(1+2)*3')).toBeNull()
+    expect(applyAmountExpression(0, '2**3')).toBeNull()
+    expect(applyAmountExpression(0, '500/0')).toBeNull()
+  })
+})

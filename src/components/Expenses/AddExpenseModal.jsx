@@ -18,6 +18,7 @@ import { useAddExpenseModalStyles } from './styles/Expenses.styles'
 import { MONTHS } from '../../utils/constants'
 import { isInvestmentCategory, splitWithdrawal, applyAmountExpression } from '../../utils/money'
 import { appendComment } from '../../utils/comments'
+import AmountKeypad from './AmountKeypad'
 
 const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN')
 
@@ -52,6 +53,11 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
   // are applied against this, so re-typing does not compound.
   const baseAmount = Math.abs(+initialAmt || 0)
   const [comment, setComment] = useState('')
+  const [padOpen, setPadOpen] = useState(false)
+  // Pressing "=" rewrites the field with the result, which erases the fact that
+  // an adjustment was made. Remember it so the comment log still reads
+  // "+₹200 · ₹5,000 → ₹5,200" rather than just the new total.
+  const [resolvedExpr, setResolvedExpr] = useState(null)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const isSavings = isInvestmentCategory(categories.find(c => c.id === form.categoryId))
@@ -95,7 +101,8 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
     if (!amountChanged) return note
 
     const money = adjusted
-      ? `${expr.op === '-' ? '−' : expr.op}${expr.op === '+' || expr.op === '-' ? inr(expr.operand) : expr.operand}`
+      ? `${shownExpr.op === '-' ? '−' : shownExpr.op}`
+        + `${shownExpr.op === '+' || shownExpr.op === '-' ? inr(shownExpr.operand) : shownExpr.operand}`
         + ` · ${inr(baseAmount)} → ${inr(amt)}`
       : `${inr(baseAmount)} → ${inr(amt)}`
     return note ? `${money} — ${note}` : money
@@ -316,9 +323,16 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             label={isWithdraw ? 'Withdrawal Amount' : 'Amount'}
             // Deliberately text, not number: type="number" rejects "+200".
             type="text"
-            inputMode="decimal"
+            // "none" asks the browser not to raise the system keyboard while
+            // still allowing focus, a caret and a physical keyboard — the pad
+            // below drives this field. Set unconditionally: flipping it after
+            // focus does not reliably dismiss a keyboard that already opened.
+            // Text fields in this modal are untouched and behave normally.
+            inputMode="none"
             value={form.amount}
-            onChange={e => set('amount', e.target.value)}
+            onChange={e => { setResolvedExpr(null); set('amount', e.target.value) }}
+            onFocus={() => setPadOpen(true)}
+            onClick={() => setPadOpen(true)}
             placeholder={baseAmount ? 'e.g. +200, -50, *2 or a new amount' : '0'}
             fullWidth
             variant="outlined"
@@ -347,6 +361,22 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             <Typography sx={{ width: '100%', mt: '-4px', fontSize: 11.5, color: '#ff7a7a' }}>
               Can't read that — type a number, or +200 / -50 / *2 to adjust the current amount.
             </Typography>
+          )}
+
+          {padOpen && (
+            <AmountKeypad
+              value={form.amount}
+              onChange={(v) => { setResolvedExpr(null); set('amount', v) }}
+              onDone={() => setPadOpen(false)}
+              resultLabel={expr ? `= ${inr(amt)}` : null}
+              onEquals={() => {
+                if (!expr) return
+                // Fold the expression into a plain number, remembering what it
+                // was so the saved comment still explains the change.
+                if (expr.op !== null) setResolvedExpr(expr)
+                set('amount', String(expr.value))
+              }}
+            />
           )}
 
           {/* Note goes into the same comment thread the row already uses, next

@@ -98,17 +98,29 @@ export function applyAmountExpression(base, input) {
   const raw = String(input ?? '').trim().replace(/\s+/g, '')
   if (!raw) return null
 
-  const m = /^([+\-*/])(.+)$/.exec(raw)
-  if (!m) {
-    const abs = Number(raw)
-    return Number.isFinite(abs) ? { value: round2(abs), op: null, operand: null } : null
+  // Leading operator — adjust the current amount: "+200" on ₹5,000 -> ₹5,200.
+  let m = /^([+\-*/])(.+)$/.exec(raw)
+  let b, op, operand
+
+  if (m) {
+    op = m[1]
+    operand = Number(m[2])
+    b = Number(base) || 0
+  } else {
+    // Plain infix — the on-screen keypad invites "500+200", which should mean
+    // 700 rather than being rejected. Deliberately a single operation on two
+    // literals: no precedence, no parens, and no eval anywhere near user input.
+    const infix = /^(\d*\.?\d+)([+\-*/])(\d*\.?\d+)$/.exec(raw)
+    if (!infix) {
+      const abs = Number(raw)
+      return Number.isFinite(abs) ? { value: round2(abs), op: null, operand: null } : null
+    }
+    b = Number(infix[1])
+    op = infix[2]
+    operand = Number(infix[3])
   }
 
-  const [, op, rest] = m
-  const operand = Number(rest)
-  if (!Number.isFinite(operand)) return null
-
-  const b = Number(base) || 0
+  if (!Number.isFinite(operand) || !Number.isFinite(b)) return null
   let value
   if (op === '+') value = b + operand
   else if (op === '-') value = b - operand
