@@ -10,7 +10,6 @@ import {
   Typography,
   InputAdornment,
   Switch,
-  FormControlLabel
 } from '@mui/material'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import { useAddExpenseModalStyles } from './styles/Expenses.styles'
@@ -102,8 +101,8 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
 
     const money = adjusted
       ? `${shownExpr.op === '-' ? '−' : shownExpr.op}`
-        + `${shownExpr.op === '+' || shownExpr.op === '-' ? inr(shownExpr.operand) : shownExpr.operand}`
-        + ` · ${inr(baseAmount)} → ${inr(amt)}`
+      + `${shownExpr.op === '+' || shownExpr.op === '-' ? inr(shownExpr.operand) : shownExpr.operand}`
+      + ` · ${inr(baseAmount)} → ${inr(amt)}`
       : `${inr(baseAmount)} → ${inr(amt)}`
     return note ? `${money} — ${note}` : money
   }
@@ -468,8 +467,8 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
               : overdrawn
                 ? 'Withdraw anyway'
                 : isWithdraw
-                ? (form.id ? 'Update Withdrawal' : 'Withdraw')
-                : (form.id ? 'Update Expense' : 'Add Expense')}
+                  ? (form.id ? 'Update Withdrawal' : 'Withdraw')
+                  : (form.id ? 'Update Expense' : 'Add Expense')}
           </Button>
           <Button
             variant="outlined"
