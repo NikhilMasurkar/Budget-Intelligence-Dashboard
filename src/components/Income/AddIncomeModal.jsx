@@ -13,7 +13,9 @@ import {
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import { useAddIncomeModalStyles } from './styles/Income.styles'
 
-import { MONTHS, SOURCES } from '../../utils/constants'
+import { MONTHS, SOURCES, fmt } from '../../utils/constants'
+import { applyAmountExpression } from '../../utils/money'
+import AmountKeypad from '../Expenses/AmountKeypad'
 
 export default function AddIncomeModal({ initial, year, month, availableYears = [new Date().getFullYear()], onSave, onClose }) {
   const { classes } = useAddIncomeModalStyles()
@@ -25,6 +27,11 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
     amount: initial?.amount || '',
     date: initial?.date || new Date().toISOString().slice(0, 10),
   })
+
+  // The amount this row had when the modal opened. "+200" adjusts against it,
+  // so editing a ₹65,000 salary to ₹65,200 does not mean doing the sum yourself.
+  const baseAmount = Math.abs(+(initial?.amount) || 0)
+  const [padOpen, setPadOpen] = useState(false)
 
   // applyMode: 'single' | 'all_year' | 'this_and_forward'
   const [applyMode, setApplyMode] = useState('single')
@@ -50,7 +57,7 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
     if (!valid || saving) return
     setSaving(true)
     try {
-      await onSave(form, applyMode)
+      await onSave({ ...form, amount: amt }, applyMode)
     } catch (err) {
       console.error(err)
       setSaving(false)
@@ -58,7 +65,10 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
   }
 
   const isOther = !SOURCES.slice(0, -1).includes(form.source)
-  const valid = form.amount && form.source.toString().trim() !== ''
+  const expr     = applyAmountExpression(baseAmount, form.amount)
+  const amt      = expr ? Math.abs(expr.value) : 0
+  const adjusted = !!expr && expr.op !== null
+  const valid = amt > 0 && form.source.toString().trim() !== ''
 
   return (
     <Dialog
@@ -147,10 +157,16 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
 
           <TextField
             label="Amount"
-            type="number"
+            // Text, not number: type="number" rejects "+200" outright.
+            // inputMode="none" keeps the system keyboard down so the pad below
+            // drives this field; focus, caret and physical typing still work.
+            type="text"
+            inputMode="none"
             value={form.amount}
             onChange={e => set('amount', e.target.value)}
-            placeholder="0"
+            onFocus={() => setPadOpen(true)}
+            onClick={() => setPadOpen(true)}
+            placeholder={baseAmount ? 'e.g. +200, -50, *2 or a new amount' : '0'}
             fullWidth
             variant="outlined"
             size="small"
@@ -164,6 +180,33 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
             }}
             className={classes.fieldStyles}
           />
+
+          {adjusted && (
+            <Box sx={{
+              width: '100%', mt: '-4px',
+              background: 'rgba(82,183,136,0.10)', border: '1px solid rgba(82,183,136,0.35)',
+              borderRadius: '8px', p: '8px 12px',
+            }}>
+              <Typography sx={{ fontSize: 12, color: '#7fd6a8', fontVariantNumeric: 'tabular-nums' }}>
+                {fmt(baseAmount)} {expr.op === '-' ? '−' : expr.op} {expr.operand} = <b>{fmt(amt)}</b>
+              </Typography>
+            </Box>
+          )}
+          {form.amount.toString().trim() && !expr && (
+            <Typography sx={{ width: '100%', mt: '-4px', fontSize: 11.5, color: '#ff7a7a' }}>
+              Can't read that — type a number, or +200 / -50 / *2 to adjust the current amount.
+            </Typography>
+          )}
+
+          {padOpen && (
+            <AmountKeypad
+              value={form.amount}
+              onChange={(v) => set('amount', v)}
+              onDone={() => setPadOpen(false)}
+              resultLabel={expr ? `= ${fmt(amt)}` : null}
+              onEquals={() => { if (expr) set('amount', String(expr.value)) }}
+            />
+          )}
 
           {/* Date Received */}
           <TextField
