@@ -55,3 +55,65 @@ describe('Excel export → import round-trip', () => {
     expect(names).not.toContain('net savings')
   })
 })
+
+// ── Regression tests for mechanisms the round-trip depends on ────────────────
+// These cover the app's own metadata (stable ids, notes) and the parser's
+// structural filters, none of which the tests above touched.
+
+const ONE_CAT = [{ id: 'cat_rental', name: 'RENTAL HOME', type: 'expense', color: '#000' }]
+const ex = (id, m, name, amt) => ({
+  id, year: YEAR, month: String(m), categoryId: 'cat_rental',
+  itemName: name, amount: String(amt), isFixed: 'FALSE', note: '',
+})
+const roundTrip = async (exps, cats = ONE_CAT, years = [YEAR]) =>
+  importFromExcel(await exportToExcel(cats, exps, [], years), cats)
+const itemNames = (p) => p.expenses.map(e => String(e.itemName))
+
+describe('Excel round-trip — metadata', () => {
+  it('carries the stable row id, which rename-safe reconciliation depends on', async () => {
+    const p = await roundTrip([ex('ID_RENT_JAN', 1, 'Rent', 15000)])
+    expect(p.expenses.find(e => String(e.month) === '1')?.id).toBe('ID_RENT_JAN')
+  })
+
+  it('carries the note/comment JSON', async () => {
+    const note = '[{"text":"paid by card","ts":123}]'
+    const p = await roundTrip([{ ...ex('e1', 1, 'Rent', 15000), note }])
+    expect(p.expenses[0].note).toBe(note)
+  })
+
+  it('keeps decimal precision — rounding here silently rewrote the Sheet', async () => {
+    // reconcile lets the Excel amount win, so rounding on import permanently
+    // destroyed paise: ₹1234.56 came back as ₹1235 and was written to the Sheet.
+    const p = await roundTrip([ex('e1', 1, 'Rent', '1234.56')])
+    expect(Number(p.expenses[0].amount)).toBeCloseTo(1234.56, 2)
+  })
+
+  it('keeps punctuation in item names intact', async () => {
+    const name = "Kid's school, term-1 (₹)"
+    const p = await roundTrip([ex('e1', 1, name, 900)])
+    expect(itemNames(p)).toContain(name)
+  })
+})
+
+describe('Excel round-trip — item names that collide with structural labels', () => {
+  // The parser drops rows whose name looks like a generated total/summary. Real
+  // items can look like that too, so rows carrying an embedded id note (written
+  // only by exportExcel for genuine data rows) are now exempt.
+  it('an item named "Summary" does not swallow the rows after it', async () => {
+    const p = await roundTrip([
+      ex('a', 1, 'Rent', 100), ex('b', 1, 'Summary', 200), ex('c', 1, 'Groceries', 300),
+    ])
+    expect(itemNames(p)).toContain('Groceries')
+    expect(itemNames(p)).toContain('Summary')
+  })
+
+  it('an item starting with "Total " survives (Total is a fuel brand)', async () => {
+    const p = await roundTrip([ex('a', 1, 'Rent', 100), ex('b', 1, 'Total station fuel', 250)])
+    expect(itemNames(p)).toContain('Total station fuel')
+  })
+
+  it('an item named "Revenue" survives', async () => {
+    const p = await roundTrip([ex('a', 1, 'Rent', 100), ex('b', 1, 'Revenue', 500)])
+    expect(itemNames(p)).toContain('Revenue')
+  })
+})

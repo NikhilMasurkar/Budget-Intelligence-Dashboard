@@ -23,6 +23,16 @@ import {
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 
+// Keep paise, drop floating-point noise. Rounding to whole rupees here was
+// permanently destroying precision: reconcile lets the Excel amount win, so a
+// ₹1234.56 entry came back as ₹1235 and was written to the Sheet on the next
+// load. Trimming to 2dp also stops values like 1234.5600000000001 from looking
+// "changed" every load and triggering a needless rewrite.
+const money = (n) => {
+  const v = Math.round((Number(n) || 0) * 100) / 100
+  return String(v)
+}
+
 // ─── CELL HELPERS ────────────────────────────────────────────
 function getCellValue(cell) {
   if (cell.value === null || cell.value === undefined) return 0
@@ -141,11 +151,23 @@ function parseYearSheet(sheet, year, categories) {
 
     const upper = rawA.toUpperCase()
 
+    // A row carrying an embedded __biq: id map was written by exportExcel as a
+    // real data row — generated summary/total rows never get one. That proves
+    // it is a user's item however it happens to be named, so the structural
+    // filters below must not touch it.
+    //
+    // Without this, an expense legitimately called "Total station fuel" (Total
+    // is a fuel brand) hit startsWith('TOTAL ') and was dropped, and one called
+    // "Summary" stopped the whole category block. The filters stay broad for
+    // legacy hand-made sheets, where a stray "Total rent" subtotal leaking in
+    // as an expense would be far worse — a phantom row written to the Sheet.
+    const isOwnDataRow = Object.keys(extractMonthIds(row.getCell(1))).length > 0
+
     // ── STOP condition ─────────────────────────────────────────
-    if (shouldStop(upper)) { stopped = true; return }
+    if (!isOwnDataRow && shouldStop(upper)) { stopped = true; return }
 
     // ── Skip structural / decorative rows ─────────────────────
-    if (shouldSkip(upper)) return
+    if (!isOwnDataRow && shouldSkip(upper)) return
 
     // ── INCOME section banner ──────────────────────────────────
     if (upper === 'INCOME') {
@@ -198,7 +220,7 @@ function parseYearSheet(sheet, year, categories) {
         const m = String(idx + 1)
         income.push({
           id: monthIds[m] || uid(), year: String(year), month: m,
-          source: rawA, amount: String(Math.round(amt)),
+          source: rawA, amount: money(amt),
         })
       })
     }
@@ -211,7 +233,7 @@ function parseYearSheet(sheet, year, categories) {
         expenses.push({
           id: monthIds[m] || uid(), year: String(year), month: m,
           categoryId: currentCat.id, itemName: rawA,
-          amount: String(Math.round(amt)), isFixed: 'FALSE',
+          amount: money(amt), isFixed: 'FALSE',
           note: notes[idx] || '',
         })
       })

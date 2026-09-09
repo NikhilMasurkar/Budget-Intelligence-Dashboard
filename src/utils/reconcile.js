@@ -67,8 +67,14 @@ export function reconcileExpenses(xlsxExps, dbExpRows, makeId = defaultMakeId) {
   })
 
   // Preserve Sheets-only rows (added in app, not yet in the Drive Excel backup).
+  //
+  // Keeping a row does NOT count as a change: it is already in the Sheet, so
+  // writing it back is a no-op. `changed` gates a full writeAllExpenseRows, and
+  // flagging it here meant any row the Excel cannot represent — a ₹0 amount
+  // reads back as an empty cell — triggered a complete rewrite of the expense
+  // sheet on every single load, forever.
   dbExpRows.forEach(row => {
-    if (!matchedIds.has(row[0])) { changed = true; rows.push(row) }
+    if (!matchedIds.has(row[0])) rows.push(row)
   })
 
   return { rows, changed }
@@ -110,8 +116,9 @@ export function reconcileIncome(xlsxInc, dbIncRows, makeId = defaultMakeId) {
     }
   })
 
+  // Same as above: preserving an existing row is not a change to write back.
   dbIncRows.forEach(row => {
-    if (!matchedIds.has(row[0])) { changed = true; rows.push(row) }
+    if (!matchedIds.has(row[0])) rows.push(row)
   })
 
   return { rows, changed }

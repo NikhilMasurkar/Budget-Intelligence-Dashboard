@@ -120,3 +120,29 @@ describe('reconcileIncome — current behaviour', () => {
     expect(rows.map(r => r[0]).sort()).toEqual(['NEWID', 'i1'])
   })
 })
+
+describe('reconcile — changed flag gates a full sheet rewrite', () => {
+  it('preserving a Sheet-only row is not a change (it is already in the Sheet)', () => {
+    // A ₹0 expense reads back from Excel as an empty cell, so it is never
+    // matched. Flagging that as changed rewrote the whole sheet on every load.
+    const db = [dbExp({ id: 'db1' }), dbExp({ id: 'zero', month: '5', itemName: 'Gym', amount: '0' })]
+    const xls = [xlsExp({ id: 'db1' })]                // Excel only carries db1
+    const { rows, changed } = reconcileExpenses(xls, db, ID)
+    expect(rows.map(r => r[0]).sort()).toEqual(['db1', 'zero'])  // still preserved
+    expect(changed).toBe(false)                                   // but no rewrite
+  })
+
+  it('an Excel-only row still counts as a change — it must reach the Sheet', () => {
+    const { changed } = reconcileExpenses([xlsExp({ itemName: 'Brand new' })], [], ID)
+    expect(changed).toBe(true)
+  })
+
+  it('same for income', () => {
+    const dbInc = [['i1', '2030', '1', 'Salary', '1000'], ['i2', '2030', '5', 'Bonus', '0']]
+    const { rows, changed } = reconcileIncome(
+      [{ id: 'i1', year: '2030', month: '1', source: 'Salary', amount: '1000' }], dbInc, ID
+    )
+    expect(rows.map(r => r[0]).sort()).toEqual(['i1', 'i2'])
+    expect(changed).toBe(false)
+  })
+})
