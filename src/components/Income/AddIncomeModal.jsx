@@ -161,7 +161,6 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
             // inputMode="none" keeps the system keyboard down so the pad below
             // drives this field; focus, caret and physical typing still work.
             type="text"
-            inputMode="none"
             value={form.amount}
             onChange={e => set('amount', e.target.value)}
             onFocus={() => setPadOpen(true)}
@@ -171,6 +170,11 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
             variant="outlined"
             size="small"
             InputLabelProps={{ shrink: true }}
+            // inputMode has to go through slotProps.htmlInput to land on the
+            // actual <input>; TextField forwards unrecognised props to the root
+            // FormControl, so a bare inputMode="none" silently did nothing and
+            // the system keyboard still covered the on-screen pad.
+            slotProps={{ htmlInput: { inputMode: 'none' } }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start" sx={{ '& .MuiTypography-root': { color: 'text.secondary', fontWeight: 600, fontSize: 13 } }}>

@@ -70,7 +70,14 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
     return list
   }, [holdings, initial])
   const splitAll = isWithdraw && withdrawFrom === WITHDRAW_ALL
-  const amt = parseFloat(form.amount) || 0
+  // "+200" / "-10" / "*2" adjust the amount the row opened with; a bare number
+  // replaces it. Null when the field cannot be read at all.
+  const expr = applyAmountExpression(baseAmount, form.amount)
+  const amt = expr ? Math.abs(expr.value) : 0
+  // Covers the case where "=" already folded the expression into a plain
+  // number, so the saved comment can still say what the adjustment was.
+  const shownExpr = (expr && expr.op !== null) ? expr : resolvedExpr
+  const adjusted = !!shownExpr
   const parts = splitAll ? splitWithdrawal(Math.round(amt), available) : []
 
   // Guard: a pot cannot hold a negative amount, so taking out more than it holds
@@ -327,7 +334,6 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             // below drives this field. Set unconditionally: flipping it after
             // focus does not reliably dismiss a keyboard that already opened.
             // Text fields in this modal are untouched and behave normally.
-            inputMode="none"
             value={form.amount}
             onChange={e => { setResolvedExpr(null); set('amount', e.target.value) }}
             onFocus={() => setPadOpen(true)}
@@ -337,6 +343,11 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             variant="outlined"
             size="small"
             InputLabelProps={{ shrink: true }}
+            // inputMode has to go through slotProps.htmlInput to land on the
+            // actual <input>; TextField forwards unrecognised props to the root
+            // FormControl, so a bare inputMode="none" silently did nothing and
+            // the system keyboard still covered the on-screen pad.
+            slotProps={{ htmlInput: { inputMode: 'none' } }}
             InputProps={{
               startAdornment: <InputAdornment position="start" sx={{ '& .MuiTypography-root': { color: 'text.secondary', fontWeight: 600, fontSize: 13 } }}>₹</InputAdornment>,
             }}
