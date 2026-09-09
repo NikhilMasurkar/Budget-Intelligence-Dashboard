@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast'
 import {
   saveIncome, readAllIncomeRows, writeAllIncomeRows, getToken, uid
 } from '../api/sheets'
-import { toSentenceCase } from '../utils/constants'
+import { toSentenceCase, dateForMonth } from '../utils/constants'
 
 export function useIncome({ loadAll, autoSyncToDrive, setDeleteConfirm, closeModal }) {
   const handleSaveIncome = useCallback(async (inc, applyMode = 'single') => {
@@ -34,7 +34,9 @@ export function useIncome({ loadAll, autoSyncToDrive, setDeleteConfirm, closeMod
           )
           const row = [
             existIdx >= 0 ? allRows[existIdx][0] : uid(),
-            String(inc.year), String(m), inc.source, inc.amount, inc.date || ''
+            // Shift the date onto the month being written — copying it verbatim
+            // put a September date on the January row.
+            String(inc.year), String(m), inc.source, inc.amount, dateForMonth(inc.date, m)
           ]
           if (existIdx >= 0) allRows[existIdx] = row
           else allRows.push(row)

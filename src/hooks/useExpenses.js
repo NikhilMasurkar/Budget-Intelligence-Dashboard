@@ -111,58 +111,6 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
     }
   }, [year, loadAll, autoSyncToDrive, closeModal])
 
-  const handleFieldUpdate = useCallback(async (expense, field, value, scope) => {
-    if (field === 'itemName') value = toSentenceCase(value)
-    const targetYear = parseInt(expense.year || year)
-    if (targetYear < new Date().getFullYear()) {
-      toast.error('Cannot modify historical data: Year is locked.')
-      return
-    }
-    const t = getToken()
-    if (!t) { toast.error('Sign in required'); return }
-    const sid = getSheetId()
-    try {
-      // isFixed and note are app-only fields mirrored to Firestore
-      const metaFor = (v) => field === 'isFixed' ? { isFixed: v } : field === 'note' ? { note: v } : null
-      if (scope === 'month') {
-        const updated = { ...expense }
-        if (field === 'isFixed') updated.isFixed = value ? 'TRUE' : 'FALSE'
-        else updated[field] = value
-        await saveExpense(updated, t)
-        const meta = metaFor(value)
-        if (meta) await setExpenseMetaFS(sid, updated, meta)
-        toast.success('Updated!')
-      } else {
-        toast.loading('Updating across all months...', { id: 'field-update' })
-        const allRows = await readAllExpenseRows(t)
-        const fieldIdx = { itemName: 4, categoryId: 3, amount: 5, isFixed: 6, note: 7 }
-        const idx = fieldIdx[field]
-        let count = 0
-        const touchedMonths = []
-        for (let i = 0; i < allRows.length; i++) {
-          if (toSentenceCase(allRows[i][4]) === toSentenceCase(expense.itemName) &&
-            allRows[i][3] === expense.categoryId &&
-            String(allRows[i][1]) === String(expense.year)) {
-            allRows[i][idx] = field === 'isFixed' ? (value ? 'TRUE' : 'FALSE') : value
-            allRows[i][8] = 'U' + Date.now()
-            touchedMonths.push(allRows[i][2])
-            count++
-          }
-        }
-        await writeAllExpenseRows(allRows, t)
-        const meta = metaFor(value)
-        if (meta) {
-          await Promise.all(touchedMonths.map(m =>
-            setExpenseMetaFS(sid, { year: expense.year, month: m, categoryId: expense.categoryId, itemName: expense.itemName }, meta)
-          ))
-        }
-        toast.success(`Updated in ${count} months!`, { id: 'field-update' })
-      }
-      loadAll({ skipExcel: true })
-      autoSyncToDrive()
-    } catch (e) { toast.error(e.message) }
-  }, [year, loadAll, autoSyncToDrive])
-
   const handleDeleteExpense = useCallback((exp) => {
     setDeleteConfirm({ type: 'expense', item: exp })
   }, [setDeleteConfirm])
@@ -266,5 +214,5 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
     } catch (e) { toast.error(e.message) }
   }, [year, loadAll, autoSyncToDrive])
 
-  return { handleSaveExpense, handleFieldUpdate, handleDeleteExpense, handleCopySelected, handleBulkPin, handleBulkDelete, handleSaveComment }
+  return { handleSaveExpense, handleDeleteExpense, handleCopySelected, handleBulkPin, handleBulkDelete, handleSaveComment }
 }

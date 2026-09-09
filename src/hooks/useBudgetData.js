@@ -300,7 +300,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
 
   return {
     categories, expenses, income, loading, didInitialLoad, needsSetup, availableYears,
-    loadAll, autoSyncToDrive, syncToDriveNow: _syncToDriveNow,
+    loadAll, autoSyncToDrive,
     setCategories, setNeedsSetup, missingConfig
   }
 }

@@ -81,7 +81,7 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving 
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {comments.map((c, i) => (
-              <Box key={i} sx={{
+              <Box key={c.ts || `legacy-${i}`} sx={{
                 background: 'rgba(255,255,255,0.03)',
                 border: '1px solid rgba(255,255,255,0.06)',
                 borderRadius: '10px',

@@ -156,3 +156,31 @@ describe('computeHoldingsWithBalance', () => {
     })).toEqual([])
   })
 })
+
+describe('computeHoldingsMatrix — closed pots', () => {
+  it('year totals include a pot that was fully withdrawn, and agree with computeYearlySummary', () => {
+    const rows = [
+      iexp(2025, 1,  50000, 'SIP'),
+      iexp(2026, 1, -50000, 'SIP'),   // closed — balance nets to 0
+      iexp(2026, 2,  10000, 'Gold'),
+    ]
+    const m = computeHoldingsMatrix({ allExpenses: rows, investCatIds: INVEST })
+    const y = computeYearlySummary({ allIncome: [], allExpenses: rows, investCatIds: INVEST })
+
+    // The two cards sit on the same page; their year figures must match.
+    expect(m.totals.byYear['2025']).toBe(y.find(r => r.year === '2025').invested)
+    expect(m.totals.byYear['2026']).toBe(y.find(r => r.year === '2026').invested)
+    expect(m.totals.byYear['2025']).toBe(50000)
+    expect(m.totals.byYear['2026']).toBe(-40000)
+  })
+
+  it('keeps the closed pot as a visible row with a zero balance', () => {
+    const { rows } = computeHoldingsMatrix({
+      allExpenses: [iexp(2025, 1, 50000, 'SIP'), iexp(2026, 1, -50000, 'SIP')],
+      investCatIds: INVEST,
+    })
+    expect(rows).toEqual([
+      { name: 'SIP', byYear: { '2025': 50000, '2026': -50000 }, balance: 0 },
+    ])
+  })
+})

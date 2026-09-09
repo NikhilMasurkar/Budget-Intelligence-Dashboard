@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fmt, fmtK, toSentenceCase, defaultMonths, YEAR_NOW, MONTH_NOW } from './constants'
+import { fmt, fmtK, toSentenceCase, defaultMonths, dateForMonth, YEAR_NOW, MONTH_NOW } from './constants'
 
 describe('fmt', () => {
   it('formats positive rupees with grouping', () => {
@@ -51,5 +51,38 @@ describe('defaultMonths', () => {
   })
   it('past year → all 12 months', () => {
     expect(defaultMonths(2000)).toEqual([...Array(12).keys()])
+  })
+})
+
+describe('dateForMonth', () => {
+  it('moves the date onto the given month, keeping the day', () => {
+    expect(dateForMonth('2026-09-15', 1)).toBe('2026-01-15')
+    expect(dateForMonth('2026-09-15', 12)).toBe('2026-12-15')
+  })
+
+  it('clamps a day that does not exist in the target month', () => {
+    expect(dateForMonth('2026-01-31', 2)).toBe('2026-02-28')   // 2026 not a leap year
+    expect(dateForMonth('2024-01-31', 2)).toBe('2024-02-29')   // 2024 is
+    expect(dateForMonth('2026-03-31', 4)).toBe('2026-04-30')
+  })
+
+  it('returns empty for missing or unparseable input', () => {
+    expect(dateForMonth('', 3)).toBe('')
+    expect(dateForMonth(undefined, 3)).toBe('')
+    expect(dateForMonth('not-a-date', 3)).toBe('')
+  })
+})
+
+describe('defaultMonths', () => {
+  it('gives Jan..current month for the current year, and all 12 for a past one', () => {
+    const now = new Date()
+    expect(defaultMonths(now.getFullYear())).toHaveLength(now.getMonth() + 1)
+    expect(defaultMonths(now.getFullYear() - 1)).toHaveLength(12)
+  })
+
+  it('treats a future year like the current one, and accepts a string year', () => {
+    const now = new Date()
+    expect(defaultMonths(now.getFullYear() + 1)).toHaveLength(now.getMonth() + 1)
+    expect(defaultMonths(String(now.getFullYear()))).toHaveLength(now.getMonth() + 1)
   })
 })

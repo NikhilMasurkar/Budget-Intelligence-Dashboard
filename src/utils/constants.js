@@ -32,10 +32,15 @@ export const fmtK = (n) => {
     ? sign + '₹' + (a / 1000).toFixed(1) + 'K'
     : sign + '₹' + a
 }
+// Reads the clock at call time, not at module load. YEAR_NOW/MONTH_NOW are
+// frozen when the bundle first evaluates, so a PWA left open across a month or
+// year boundary would keep offering the old range — and this app is explicitly
+// meant to stay installed (there's a nightly reminder to reopen it).
 export function defaultMonths(year) {
-  return year >= YEAR_NOW
-    ? [...Array(MONTH_NOW + 1).keys()]   // 0..MONTH_NOW
-    : [...Array(12).keys()]              // 0..11
+  const now = new Date()
+  return Number(year) >= now.getFullYear()
+    ? [...Array(now.getMonth() + 1).keys()]   // Jan..this month
+    : [...Array(12).keys()]                   // whole year
 }
 
 export const CHART_OPTS = {
@@ -132,3 +137,19 @@ export const PARSE_FUZZY_CATEGORIES = [
   { keys: ['SERVICES','PLANNING','BUILDING'],                   id: 'cat_services'    },
   { keys: ['MISCELLANEOUS','MISC'],                             id: 'cat_misc'        },
 ]
+// Move a YYYY-MM-DD date onto a different month of the same year, keeping the
+// day where possible and clamping to the month's length (31 Jan → 28 Feb).
+//
+// Applying one income entry across months used to copy its date verbatim, so a
+// salary added in September and applied to the whole year showed "9 Sep" on the
+// January row. Returns '' for a missing or unparseable date.
+export function dateForMonth(isoDate, month) {
+  if (!isoDate) return ''
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate).trim())
+  if (!m) return ''
+  const [, y, , d] = m
+  const mm = Math.min(12, Math.max(1, parseInt(month, 10) || 1))
+  const lastDay = new Date(Number(y), mm, 0).getDate()
+  const day = Math.min(parseInt(d, 10), lastDay)
+  return `${y}-${String(mm).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}

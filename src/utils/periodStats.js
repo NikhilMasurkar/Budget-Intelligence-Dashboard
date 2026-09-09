@@ -61,9 +61,12 @@ export function computeHoldingsMatrix({ allExpenses = [], investCatIds }) {
   })
 
   const years = [...yearSet].sort()
-  const rows = [...byName.values()]
-    .filter(h => h.balance !== 0)
-    .sort((a, b) => b.balance - a.balance)
+  // Closed pots (fully withdrawn, balance 0) are KEPT. Filtering them out before
+  // totalling made the year columns omit their history entirely — a pot funded
+  // in 2025 and emptied in 2026 vanished from both years, so this card's totals
+  // disagreed with the Year-by-year card on the same page. A closed investment
+  // is real history and belongs in a balance sheet.
+  const rows = [...byName.values()].sort((a, b) => b.balance - a.balance)
 
   const totals = { byYear: {}, balance: 0 }
   rows.forEach(h => {

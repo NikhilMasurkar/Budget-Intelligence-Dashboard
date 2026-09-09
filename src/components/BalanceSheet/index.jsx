@@ -28,7 +28,10 @@ export default function BalanceSheet({ allExpenses = [], allIncome = [], categor
     [allIncome, allExpenses, investCatIds]
   )
 
-  const held      = rows.filter(r => r.balance > 0)
+  // >= 0 so a closed pot (funded then fully withdrawn) still shows, with a zero
+  // balance. It carries real year history, and dropping it would leave the
+  // displayed rows not adding up to the totals underneath them.
+  const held      = rows.filter(r => r.balance >= 0)
   const withdrawn = rows.filter(r => r.balance < 0)
   const heldTotal = held.reduce((s, r) => s + r.balance, 0)
 
