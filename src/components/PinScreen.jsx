@@ -9,7 +9,6 @@ import {
 } from '../api/biometric'
 import {
   hashPin,
-  savePinResetOtpFS,
   clearPinResetOtpFS,
   resetPinFS,
 } from '../api/firestoreSettings'
@@ -345,7 +344,11 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
       }
       if (!res.ok) throw new Error(data.error || 'Failed to send code')
 
-      await savePinResetOtpFS(sheetId, data.otpHash, data.expiresAt)
+      // Deliberately NOT persisted. Verification compares against this
+      // in-memory response, and no getter for the stored copy ever existed — so
+      // writing it only left a reset-code hash sitting in Firestore forever
+      // whenever someone opened Forgot PIN and backed out (the clear below runs
+      // on success only).
       setOtpMeta(data)
       setCountdown(Math.floor((data.expiresAt - Date.now()) / 1000))
       setOtp('')
@@ -369,6 +372,7 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
       triggerError('Incorrect code — try again')
       setOtp(''); return
     }
+    // Clears any hash left behind by an older build that did persist one.
     await clearPinResetOtpFS(sheetId)
     setOtp('')
     setStep('enter')

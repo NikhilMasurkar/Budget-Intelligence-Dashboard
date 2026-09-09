@@ -92,12 +92,10 @@ export async function setPinFS(sheetId, pin) {
 const pinResetRef = (sheetId) =>
   doc(db, 'sheets', sheetId, 'settings', 'pinReset')
 
-// Store the server-generated OTP hash + expiry during a "Forgot PIN" flow.
-// Covered by the existing sheets/{sheetId}/** Firestore rule (owner-only).
-export async function savePinResetOtpFS(sheetId, otpHash, expiresAt) {
-  await setDoc(pinResetRef(sheetId), { otpHash, expiresAt })
-}
-
+// The matching writer was removed: nothing ever read the stored hash back
+// (there was no getter), so persisting it only left a reset-code hash in the
+// database whenever a Forgot PIN flow was abandoned. This clear remains to tidy
+// up documents written by older builds.
 export async function clearPinResetOtpFS(sheetId) {
   try { await deleteDoc(pinResetRef(sheetId)) } catch { /* ignore */ }
 }

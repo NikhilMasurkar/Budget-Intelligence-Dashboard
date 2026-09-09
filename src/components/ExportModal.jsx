@@ -177,10 +177,13 @@ export default function ExportModal({ categories, onClose }) {
           fetchIncome(null, t)
         ])
         
+        // Ignore unparseable years — a bad row would otherwise put a literal
+        // "NaN" in the year list and export an empty section for it.
         const years = new Set([currentYear])
-        exps.forEach(e => years.add(parseInt(e.year)))
-        inc.forEach(i => years.add(parseInt(i.year)))
-        
+        const addYear = (v) => { const n = parseInt(v, 10); if (Number.isFinite(n)) years.add(n) }
+        exps.forEach(e => addYear(e.year))
+        inc.forEach(i => addYear(i.year))
+
         const sorted = Array.from(years).sort((a,b) => a - b).map(String)
         setAvailableYears(sorted)
         setAllData({ expenses: exps, income: inc })
@@ -353,7 +356,9 @@ export default function ExportModal({ categories, onClose }) {
               <Button
                 variant="contained"
                 onClick={handleExport}
-                disabled={busy}
+                // Also disabled while the data is still loading — allData starts
+                // empty, so exporting early produced a silent empty report.
+                disabled={busy || loading}
                 startIcon={<FileDownloadOutlinedIcon />}
                 className={cx(classes.exportBtn, classes.exportBtnLocal)}
               >

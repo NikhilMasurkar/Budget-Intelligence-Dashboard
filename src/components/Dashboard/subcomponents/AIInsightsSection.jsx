@@ -41,7 +41,7 @@ function hashRows(rows) {
   return (h >>> 0).toString(36)
 }
 
-function makeCacheKey(year, selMonths, expenses, income) {
+function makeCacheKey(year, selMonths, expenses, income, categories = []) {
   const sel = selMonths || []
   const mk  = [...sel].sort((a,b)=>a-b).join(',')
   const expRows = expenses
@@ -50,7 +50,10 @@ function makeCacheKey(year, selMonths, expenses, income) {
   const incRows = income
     .filter(i => sel.includes(+i.month-1))
     .map(i => `${i.month}|${i.source}|${Math.round(+i.amount||0)}`)
-  return `${CACHE_PREFIX}${year}_${mk}_${hashRows(expRows)}_${hashRows(incRows)}`
+  // Category NAMES go in the prompt, so renaming one must bust the cache even
+  // though every row's categoryId is unchanged.
+  const catRows = categories.map(c => `${c.id}|${c.name}`)
+  return `${CACHE_PREFIX}${year}_${mk}_${hashRows(expRows)}_${hashRows(incRows)}_${hashRows(catRows)}`
 }
 
 const TYPE = {
@@ -141,7 +144,7 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
 
   const hasKey        = AI_ENABLED
   const effectiveMonths = selMonths?.length ? selMonths : [0,1,2,3,4,5,6,7,8,9,10,11]
-  const cacheKey      = makeCacheKey(year, effectiveMonths, expenses, income)
+  const cacheKey      = makeCacheKey(year, effectiveMonths, expenses, income, categories)
   const periodKey     = `${year}_${[...effectiveMonths].sort((a,b)=>a-b).join(',')}`
   const periodLabel   = getPeriodLabel(effectiveMonths, year)
 
