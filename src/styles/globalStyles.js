@@ -10,13 +10,18 @@ export const useGlobalStyles = makeStyles()((theme) => ({
     paddingLeft: '12px',
     paddingRight: '12px',
     paddingTop: '16px',
-    paddingBottom: '16px',
+    // Room to scroll the last row clear of the floating add button
+    paddingBottom: '88px',
     maxWidth: '1800px',
     marginLeft: 'auto',
     marginRight: 'auto',
     [theme.breakpoints.up('sm')]: {
       paddingLeft: '3%',
       paddingRight: '3%'
+    },
+    // ...and of the phone bottom tab bar (56px) plus the home indicator
+    [theme.breakpoints.down('md')]: {
+      paddingBottom: 'calc(56px + 88px + env(safe-area-inset-bottom))'
     }
   },
   glassCard: {

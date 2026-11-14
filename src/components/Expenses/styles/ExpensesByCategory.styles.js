@@ -121,15 +121,17 @@ export const useExpensesByCategoryStyles = makeStyles()((theme) => ({
   },
   expenseAmount: {
     fontWeight: 700, fontSize: '13px', color: '#e4e8f5',
-    fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap'
+    fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', flexShrink: 0
   },
   rowAction: {
     color: '#8891b8', padding: '3px',
-    '&:hover': { color: '#5b7fff', background: 'rgba(91,127,255,0.1)' }
+    '&:hover': { color: '#5b7fff', background: 'rgba(91,127,255,0.1)' },
+    [theme.breakpoints.down('sm')]: { padding: '9px' }
   },
   rowDelete: {
     color: '#8891b8', padding: '3px',
-    '&:hover': { color: '#ff5f5f', background: 'rgba(255,95,95,0.1)' }
+    '&:hover': { color: '#ff5f5f', background: 'rgba(255,95,95,0.1)' },
+    [theme.breakpoints.down('sm')]: { padding: '9px' }
   },
   emptyRow: {
     padding: '16px 16px 16px 36px',

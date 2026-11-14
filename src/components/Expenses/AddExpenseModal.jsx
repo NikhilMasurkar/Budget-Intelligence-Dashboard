@@ -10,6 +10,7 @@ import {
   Typography,
   InputAdornment,
   Switch,
+  Collapse,
 } from '@mui/material'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import { useAddExpenseModalStyles } from './styles/Expenses.styles'
@@ -23,7 +24,7 @@ const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN')
 
 const WITHDRAW_ALL = '__all__'
 
-export default function AddExpenseModal({ initial, categories, year, month, availableYears = [new Date().getFullYear()], holdings = [], onSave, onClose }) {
+export default function AddExpenseModal({ initial, categories, year, month, availableYears = [new Date().getFullYear()], holdings = [], suggestions = [], onSave, onClose }) {
   const { classes } = useAddExpenseModalStyles()
   const initialAmt = initial?.amount
   const [form, setForm] = useState({
@@ -42,6 +43,10 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
   const [saving, setSaving] = useState(false)
   // applyMode: 'single' | 'all_year' | 'this_and_forward'
   const [applyMode, setApplyMode] = useState('single')
+  const [moreOpen, setMoreOpen] = useState(false)
+  // Set once the user picks a category themselves; item-name suggestions then
+  // stop overriding it.
+  const [catTouched, setCatTouched] = useState(false)
   // txnDir: 'deposit' | 'withdraw' — only meaningful for savings/investment
   // categories. A withdrawal is stored as a negative amount so it reduces the
   // invested balance and returns the money to spendable cash.
@@ -59,6 +64,21 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
   const [resolvedExpr, setResolvedExpr] = useState(null)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  // Typing a name used before files it under that name's last category — only
+  // for a fresh add from the generic button, and only until the user picks one.
+  const handleItemName = (v) => {
+    set('itemName', v)
+    if (form.id || initial?.categoryId || catTouched) return
+    const hit = suggestions.find(s => s.name.toLowerCase() === v.trim().toLowerCase())
+    if (hit && categories.some(c => c.id === hit.categoryId)) set('categoryId', hit.categoryId)
+  }
+
+  const applyOptions = [
+    { value: 'single', label: 'This month only' },
+    { value: 'all_year', label: 'Whole year' },
+    { value: 'this_and_forward', label: `${MONTHS[(form.month || 1) - 1]} → Dec` },
+  ]
   const isSavings = isInvestmentCategory(categories.find(c => c.id === form.categoryId))
   const isWithdraw = isSavings && txnDir === 'withdraw'
   const available = useMemo(() => {
@@ -213,7 +233,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
               native
               labelId="expense-category-label"
               value={form.categoryId}
-              onChange={e => set('categoryId', e.target.value)}
+              onChange={e => { setCatTouched(true); set('categoryId', e.target.value) }}
               label="Category"
               notched
             >
@@ -311,17 +331,23 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
 
           {/* Item Name — a withdrawal takes its name from the dropdown above */}
           {!isWithdraw && (
-            <TextField
-              label="Item Name"
-              value={form.itemName}
-              onChange={e => set('itemName', e.target.value)}
-              placeholder="e.g. Electricity Bill"
-              fullWidth
-              variant="outlined"
-              size="small"
-              InputLabelProps={{ shrink: true }}
-              className={classes.fieldStyles}
-            />
+            <>
+              <TextField
+                label="Item Name"
+                value={form.itemName}
+                onChange={e => handleItemName(e.target.value)}
+                placeholder="e.g. Electricity Bill"
+                fullWidth
+                variant="outlined"
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                slotProps={{ htmlInput: { list: 'expense-item-suggestions' } }}
+                className={classes.fieldStyles}
+              />
+              <datalist id="expense-item-suggestions">
+                {suggestions.map(s => <option key={s.name} value={s.name} />)}
+              </datalist>
+            </>
           )}
 
           {/* Amount */}
@@ -436,27 +462,37 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
 
           {!isWithdraw && (
             <Box style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-              <Typography variant="caption" className={classes.applyLabel}>
-                Apply to
-              </Typography>
-              <Box className={classes.applyButtonContainer}>
-                {[
-                  { value: 'single', label: 'This month only' },
-                  { value: 'all_year', label: 'Whole year' },
-                  { value: 'this_and_forward', label: `${MONTHS[(form.month || 1) - 1]} → Dec` },
-                ].map(opt => (
-                  <Button
-                    key={opt.value}
-                    variant={applyMode === opt.value ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={() => setApplyMode(opt.value)}
-                    disabled={saving}
-                    className={applyMode === opt.value ? classes.applyButtonActive : classes.applyButtonInactive}
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </Box>
+              {/* Rarely used, so tucked away — but a non-default choice stays
+                  named on the toggle so a save never fans out invisibly. */}
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => setMoreOpen(o => !o)}
+                aria-expanded={moreOpen}
+                sx={{ alignSelf: 'flex-start', textTransform: 'none', color: '#8891b8', fontSize: 12, px: '4px', minWidth: 0 }}
+              >
+                {moreOpen ? '▾' : '▸'} More options
+                {applyMode !== 'single' && ` · ${applyOptions.find(o => o.value === applyMode).label}`}
+              </Button>
+              <Collapse in={moreOpen}>
+                <Typography variant="caption" component="div" className={classes.applyLabel} sx={{ mt: '6px' }}>
+                  Apply to
+                </Typography>
+                <Box className={classes.applyButtonContainer}>
+                  {applyOptions.map(opt => (
+                    <Button
+                      key={opt.value}
+                      variant={applyMode === opt.value ? 'contained' : 'outlined'}
+                      size="small"
+                      onClick={() => setApplyMode(opt.value)}
+                      disabled={saving}
+                      className={applyMode === opt.value ? classes.applyButtonActive : classes.applyButtonInactive}
+                    >
+                      {opt.label}
+                    </Button>
+                  ))}
+                </Box>
+              </Collapse>
             </Box>
           )}
         </Box>

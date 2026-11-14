@@ -70,6 +70,17 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Vendor code changes rarely; separate chunks stay cached across app deploys.
+        manualChunks(id) {
+          if (/node_modules\/(@firebase|firebase)\//.test(id)) return 'firebase'
+          if (/node_modules\/(react|react-dom|scheduler|@mui|@emotion|@popperjs|tss-react|react-transition-group|stylis)\//.test(id)) return 'vendor'
+        }
+      }
+    }
+  },
   server: {
     proxy: {
       '/api': 'http://localhost:8888'

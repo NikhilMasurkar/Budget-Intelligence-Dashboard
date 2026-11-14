@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   AppBar,
   Toolbar,
@@ -12,17 +12,17 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Drawer,
-  List,
-  ListItem,
-  ListItemButton
+  BottomNavigation,
+  BottomNavigationAction,
+  Fab
 } from '@mui/material'
+import { toast } from 'react-hot-toast'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import DownloadIcon from '@mui/icons-material/Download'
 import GetAppIcon from '@mui/icons-material/GetApp'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import LogoutIcon from '@mui/icons-material/Logout'
-import MenuIcon from '@mui/icons-material/Menu'
+import AddIcon from '@mui/icons-material/Add'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined'
@@ -33,6 +33,24 @@ import NotificationsOffIcon from '@mui/icons-material/NotificationsOff'
 import { useTopBarStyles } from './styles/TopBar.styles'
 import { APP_VERSION } from '../utils/constants'
 
+const NAV = [
+  { id: 'dashboard', label: 'Dashboard', Icon: DashboardOutlinedIcon },
+  { id: 'expenses', label: 'Transactions', Icon: ReceiptLongOutlinedIcon },
+  { id: 'balance', label: 'Balance Sheet', Icon: AccountBalanceOutlinedIcon },
+]
+
+const IOS_HINT = 'Install: tap the Share icon in Safari, then "Add to Home Screen"'
+
+const driveIcon = (className) => (
+  <svg width="18" height="18" viewBox="0 0 87.3 78" className={className}>
+    <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA" />
+    <path d="M43.65 25L29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.2 48.7c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00AC47" />
+    <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.85L73.55 76.8z" fill="#EA4335" />
+    <path d="M43.65 25L57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z" fill="#00832D" />
+    <path d="M59.85 53H27.5l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.5c1.6 0 3.15-.45 4.5-1.2z" fill="#2684FC" />
+    <path d="M73.4 26.5l-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25l16.2 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#FFBA00" />
+  </svg>
+)
 
 export default function TopBar({
   view,
@@ -49,15 +67,14 @@ export default function TopBar({
   onAIInsights,
   hasAIKey,
   notifStatus,
-  onToggleNotifications
+  onToggleNotifications,
+  onAddExpense
 }) {
   const { classes, cx } = useTopBarStyles()
   const [anchorEl, setAnchorEl] = useState(null)
   const openMenu = Boolean(anchorEl)
-  const [mobileOpen, setMobileOpen] = useState(false)
   const [installPrompt, setInstallPrompt] = useState(null)
   const [isIOS, setIsIOS] = useState(false)
-  const [showIOSHint, setShowIOSHint] = useState(false)
 
   useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream
@@ -66,21 +83,6 @@ export default function TopBar({
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
-
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen)
-  }
-
-  const NAV_LABELS = { dashboard: 'Dashboard', expenses: 'Transactions', balance: 'Balance Sheet' }
-
-  const getNavIcon = (v) => {
-    switch (v) {
-      case 'dashboard': return <DashboardOutlinedIcon className={classes.navIcon} />
-      case 'expenses':  return <ReceiptLongOutlinedIcon className={classes.navIcon} />
-      case 'balance':   return <AccountBalanceOutlinedIcon className={classes.navIcon} />
-      default:          return null
-    }
-  }
 
   const handleProfileClick = (event) => {
     setAnchorEl(event.currentTarget)
@@ -95,22 +97,66 @@ export default function TopBar({
     onSignOut()
   }
 
+  // Each action is defined once: an icon button at md+, an avatar-menu item on phones.
+  const install = installPrompt ? {
+    key: 'install', label: 'Install app', tip: 'Install BudgetIQ as an app',
+    icon: <GetAppIcon sx={{ fontSize: 18 }} />,
+    sx: { color: '#3de8a0 !important', borderColor: 'rgba(61,232,160,0.4) !important' },
+    onClick: async () => {
+      installPrompt.prompt()
+      const { outcome } = await installPrompt.userChoice
+      if (outcome === 'accepted') setInstallPrompt(null)
+    }
+  } : isIOS ? {
+    // Safari doesn't fire beforeinstallprompt, so explain the manual route.
+    key: 'install', label: 'Install app', tip: IOS_HINT,
+    icon: <GetAppIcon sx={{ fontSize: 18 }} />,
+    onClick: () => toast(IOS_HINT, { id: 'ios-install', duration: 6000 })
+  } : null
+
+  const notif = authd && notifStatus !== 'unsupported' ? {
+    key: 'notif',
+    label: notifStatus === 'denied' ? 'Notifications blocked'
+      : `Daily 9 PM reminder: ${notifStatus === 'subscribed' ? 'On' : 'Off'}`,
+    tip: notifStatus === 'subscribed' ? '9 PM daily reminder ON — click to disable'
+      : notifStatus === 'denied' ? 'Notifications blocked — enable in browser settings'
+      : 'Enable daily 9 PM expense reminder',
+    icon: notifStatus === 'subscribed' ? <NotificationsActiveIcon sx={{ fontSize: 18 }} />
+      : notifStatus === 'denied' ? <NotificationsOffIcon sx={{ fontSize: 18 }} />
+      : <NotificationsNoneIcon sx={{ fontSize: 18 }} />,
+    onClick: notifStatus !== 'denied' ? onToggleNotifications : undefined,
+    disabled: notifStatus === 'loading',
+    sx: notifStatus === 'subscribed' ? { color: '#3de8a0 !important', borderColor: 'rgba(61,232,160,0.4) !important' }
+      : notifStatus === 'denied' ? { opacity: 0.45, cursor: 'default' } : undefined
+  } : null
+
+  const dataActions = authd ? [
+    {
+      key: 'refresh', label: 'Refresh data', tip: 'Refresh from Google Sheets',
+      icon: <RefreshIcon className={cx(classes.refreshIcon, loading && classes.refreshIconSpin)} />,
+      onClick: onRefresh, disabled: loading
+    },
+    { key: 'drive', label: 'Open in Google Drive', tip: 'Open in Google Drive', icon: driveIcon(classes.svgIcon), onClick: onOpenDrive },
+    { key: 'download', label: 'Download', tip: 'Download to device', icon: <DownloadIcon className={classes.downloadIcon} />, onClick: onExportLocal },
+  ] : []
+
+  // Signed out there is no avatar menu, so install stays in the bar at every width.
+  const renderIcon = (a) => a && (
+    <Tooltip key={a.key} title={a.tip}>
+      <span className={cx(classes.iconWrap, authd && classes.desktopOnly)}>
+        <IconButton aria-label={a.label} onClick={a.onClick} disabled={a.disabled} className={classes.actionButton} sx={a.sx}>
+          {a.icon}
+        </IconButton>
+      </span>
+    </Tooltip>
+  )
+
   return (
+    <>
     <AppBar position="sticky" elevation={0} className={classes.appBar}>
       <Toolbar className={classes.toolbar}>
         {/* LEFT BRANDING GROUP */}
         <Box className={classes.leftGroup}>
-          {/* HAMBURGER MENU FOR MOBILE */}
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            className={classes.menuButton}
-          >
-            <MenuIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-
           <Box className={classes.brandGroup}>
             <Typography variant="h5" className={classes.emoji}>
               💰
@@ -121,63 +167,26 @@ export default function TopBar({
           </Box>
         </Box>
 
-        {/* NAVIGATION */}
+        {/* NAVIGATION (md+; phones use the bottom bar) */}
         <Box className={classes.navGroup}>
-          {['dashboard', 'expenses', 'balance'].map((v) => {
-            const isActive = view === v
-            return (
-              <Button
-                key={v}
-                onClick={() => setView(v)}
-                className={cx(classes.navButton, isActive && classes.navButtonActive)}
-              >
-                {NAV_LABELS[v]}
-              </Button>
-            )
-          })}
+          {NAV.map(({ id, label }) => (
+            <Button
+              key={id}
+              onClick={() => setView(id)}
+              className={cx(classes.navButton, view === id && classes.navButtonActive)}
+            >
+              {label}
+            </Button>
+          ))}
         </Box>
 
         {/* ACTIONS */}
         <Box className={classes.actionGroup}>
-          {/* PWA install — shown when browser decides app is installable */}
-          {installPrompt && (
-            <Tooltip title="Install BudgetIQ as an app">
-              <IconButton
-                onClick={async () => {
-                  installPrompt.prompt()
-                  const { outcome } = await installPrompt.userChoice
-                  if (outcome === 'accepted') setInstallPrompt(null)
-                }}
-                className={classes.actionButton}
-                sx={{ color: '#3de8a0 !important', borderColor: 'rgba(61,232,160,0.4) !important' }}
-              >
-                <GetAppIcon sx={{ fontSize: 18 }} />
-              </IconButton>
-            </Tooltip>
-          )}
-
-          {/* iOS hint — Safari doesn't fire beforeinstallprompt */}
-          {isIOS && !installPrompt && (
-            <Tooltip
-              title='Install: tap the Share icon in Safari, then "Add to Home Screen"'
-              open={showIOSHint}
-              onClose={() => setShowIOSHint(false)}
-              disableFocusListener
-              disableHoverListener
-              disableTouchListener
-            >
-              <IconButton
-                onClick={() => setShowIOSHint(v => !v)}
-                className={classes.actionButton}
-              >
-                <GetAppIcon sx={{ fontSize: 18 }} />
-              </IconButton>
-            </Tooltip>
-          )}
+          {renderIcon(install)}
 
           {authd && hasAIKey && (
             <Tooltip title="AI Budget Insights — get simple tips on your spending" arrow>
-              <IconButton onClick={onAIInsights} className={classes.actionButton}
+              <IconButton onClick={onAIInsights} className={classes.actionButton} aria-label="AI Budget Insights"
                 sx={{ color: '#a0b4ff !important', borderColor: 'rgba(91,127,255,0.35) !important',
                   '&:hover': { borderColor: 'rgba(91,127,255,0.7) !important', background: 'rgba(91,127,255,0.08) !important' }
                 }}>
@@ -186,71 +195,8 @@ export default function TopBar({
             </Tooltip>
           )}
 
-          {authd && notifStatus !== 'unsupported' && (
-            <Tooltip title={
-              notifStatus === 'subscribed'   ? '9 PM daily reminder ON — click to disable' :
-              notifStatus === 'denied'       ? 'Notifications blocked — enable in browser settings' :
-                                              'Enable daily 9 PM expense reminder'
-            }>
-              <span>
-                <IconButton
-                  onClick={notifStatus !== 'denied' ? onToggleNotifications : undefined}
-                  disabled={notifStatus === 'loading'}
-                  className={classes.actionButton}
-                  sx={notifStatus === 'subscribed' ? {
-                    color: '#3de8a0 !important',
-                    borderColor: 'rgba(61,232,160,0.4) !important'
-                  } : notifStatus === 'denied' ? {
-                    opacity: 0.45, cursor: 'default'
-                  } : undefined}
-                >
-                  {notifStatus === 'subscribed'
-                    ? <NotificationsActiveIcon sx={{ fontSize: 18 }} />
-                    : notifStatus === 'denied'
-                      ? <NotificationsOffIcon sx={{ fontSize: 18 }} />
-                      : <NotificationsNoneIcon sx={{ fontSize: 18 }} />
-                  }
-                </IconButton>
-              </span>
-            </Tooltip>
-          )}
-
-          {authd && (
-            <Tooltip title="Refresh from Google Sheets">
-              <IconButton
-                onClick={onRefresh}
-                disabled={loading}
-                className={classes.actionButton}
-              >
-                <RefreshIcon
-                  className={cx(classes.refreshIcon, loading && classes.refreshIconSpin)}
-                />
-              </IconButton>
-            </Tooltip>
-          )}
-
-          {authd && (
-            <Tooltip title="Open in Google Drive">
-              <IconButton onClick={onOpenDrive} className={classes.actionButton}>
-                <svg width="18" height="18" viewBox="0 0 87.3 78" className={classes.svgIcon}>
-                  <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA" />
-                  <path d="M43.65 25L29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.2 48.7c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00AC47" />
-                  <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.85L73.55 76.8z" fill="#EA4335" />
-                  <path d="M43.65 25L57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z" fill="#00832D" />
-                  <path d="M59.85 53H27.5l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.5c1.6 0 3.15-.45 4.5-1.2z" fill="#2684FC" />
-                  <path d="M73.4 26.5l-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25l16.2 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#FFBA00" />
-                </svg>
-              </IconButton>
-            </Tooltip>
-          )}
-
-          {authd && (
-            <Tooltip title="Download to device">
-              <IconButton onClick={onExportLocal} className={classes.actionButton}>
-                <DownloadIcon className={classes.downloadIcon} />
-              </IconButton>
-            </Tooltip>
-          )}
+          {renderIcon(notif)}
+          {dataActions.map(renderIcon)}
 
           {authd ? (
             <Box>
@@ -300,6 +246,19 @@ export default function TopBar({
                   </Box>
                 </Box>
 
+                {/* Phone-only: the bar's actions, as labelled items */}
+                {[...dataActions, notif, install].filter(Boolean).map(a => (
+                  <MenuItem
+                    key={a.key}
+                    onClick={a.onClick}
+                    disabled={a.disabled || !a.onClick}
+                    className={cx(classes.menuItem, classes.phoneOnly)}
+                  >
+                    <ListItemIcon className={classes.menuItemIcon}>{a.icon}</ListItemIcon>
+                    <ListItemText primary={a.label} primaryTypographyProps={{ className: classes.signOutText }} />
+                  </MenuItem>
+                ))}
+
                 <MenuItem
                   onClick={handleSignOutClick}
                   className={classes.menuSignOutItem}
@@ -335,58 +294,31 @@ export default function TopBar({
           )}
         </Box>
       </Toolbar>
-
-      {/* MOBILE DRAWER */}
-      <Drawer
-        variant="temporary"
-        open={mobileOpen}
-        onClose={handleDrawerToggle}
-        ModalProps={{
-          keepMounted: true // Better open performance on mobile.
-        }}
-        PaperProps={{
-          className: classes.drawerPaper
-        }}
-      >
-        <Box className={classes.drawerHeader}>
-          <Typography variant="h5" className={classes.drawerEmoji}>
-            💰
-          </Typography>
-          <Typography variant="h6" className={classes.drawerBrandName}>
-            BudgetIQ
-          </Typography>
-        </Box>
-
-        <List className={classes.drawerList}>
-          {['dashboard', 'expenses', 'balance'].map((v) => {
-            const isActive = view === v
-            return (
-              <ListItem key={v} disablePadding className={classes.drawerListItem}>
-                <ListItemButton
-                  onClick={() => {
-                    setView(v)
-                    setMobileOpen(false)
-                  }}
-                  className={cx(classes.drawerListItemButton, isActive && classes.drawerListItemButtonActive)}
-                >
-                  <ListItemIcon
-                    className={cx(classes.drawerListItemIcon, isActive && classes.drawerListItemIconActive)}
-                  >
-                    {getNavIcon(v)}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={NAV_LABELS[v]}
-                    primaryTypographyProps={{
-                      fontSize: 13.5,
-                      fontWeight: isActive ? 700 : 600
-                    }}
-                  />
-                </ListItemButton>
-              </ListItem>
-            )
-          })}
-        </List>
-      </Drawer>
     </AppBar>
+
+    {/* PHONE BOTTOM NAV (hidden at md+ via CSS) */}
+    {authd && (
+      <Box component="nav" aria-label="Main" className={classes.bottomNav}>
+        <BottomNavigation showLabels value={view} onChange={(_, v) => setView(v)} className={classes.bottomNavInner}>
+          {NAV.map(({ id, label, Icon }) => (
+            <BottomNavigationAction
+              key={id}
+              value={id}
+              label={label}
+              icon={<Icon className={classes.navIcon} />}
+              aria-current={view === id ? 'page' : undefined}
+              className={classes.bottomNavAction}
+            />
+          ))}
+        </BottomNavigation>
+      </Box>
+    )}
+
+    {onAddExpense && (
+      <Fab color="primary" aria-label="Add expense" onClick={onAddExpense} className={classes.fab}>
+        <AddIcon />
+      </Fab>
+    )}
+    </>
   )
 }
