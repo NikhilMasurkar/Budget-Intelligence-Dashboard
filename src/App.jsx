@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { Toaster, toast } from 'react-hot-toast'
-import { Box, Typography, Button, FormControl, Select } from '@mui/material'
+import { Box, Typography, Button } from '@mui/material'
 import { useGlobalStyles } from './styles/globalStyles'
 import { useStyles } from './App.styles'
 import {
@@ -20,14 +20,11 @@ import { useExpenses } from './hooks/useExpenses'
 import { useIncome } from './hooks/useIncome'
 import { useCategories } from './hooks/useCategories'
 
-import Dashboard from './components/Dashboard'
 import ExpensesByCategory from './components/Expenses/ExpensesByCategory'
 import BalanceSheet from './components/BalanceSheet'
-import AIInsightsSection from './components/Dashboard/subcomponents/AIInsightsSection'
 import IncomeTable from './components/Income/IncomeTable'
 import AddExpenseModal from './components/Expenses/AddExpenseModal'
 import AddIncomeModal from './components/Income/AddIncomeModal'
-import ExportModal from './components/ExportModal'
 import ConfigScreen from './components/ConfigScreen'
 import SignInScreen from './components/SignInScreen'
 import TopBar from './components/TopBar'
@@ -35,11 +32,20 @@ import SetupBanner from './components/SetupBanner'
 import DeleteConfirmModal from './components/DeleteConfirmModal'
 import CategoryModal from './components/Category/CategoryModal'
 import ErrorBoundary from './components/ErrorBoundary'
+import MonthStepper from './components/MonthStepper'
 
-import { MONTHS, YEAR_NOW, MONTH_NOW_1 as MONTH_NOW, toSentenceCase, defaultMonths } from './utils/constants'
-import { AI_ENABLED } from './api/gemini'
+import { YEAR_NOW, MONTH_NOW_1 as MONTH_NOW, toSentenceCase, defaultMonths, AI_ENABLED, SOURCES } from './utils/constants'
 import { getPushStatus, subscribeToPush, unsubscribeFromPush } from './api/pushSubscription'
 import { investmentCategoryIds } from './utils/money'
+
+// Not needed for first paint: Dashboard pulls chart.js, AI pulls gemini, Export is a modal.
+const loadDashboard = () => import('./components/Dashboard')
+const Dashboard = lazy(loadDashboard)
+const AIInsightsSection = lazy(() => import('./components/Dashboard/subcomponents/AIInsightsSection'))
+const ExportModal = lazy(() => import('./components/ExportModal'))
+const loadingText = (
+  <Typography align="center" sx={{ p: 5, color: '#8891b8' }}>Loading…</Typography>
+)
 
 export default function App() {
   const { classes, cx } = useStyles()
@@ -75,6 +81,7 @@ export default function App() {
   const [editRow, setEditRow] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [aiOpen, setAiOpen] = useState(false)
+  const [aiMounted, setAiMounted] = useState(false) // stays true after first open so the close animation runs
   const [notifStatus, setNotifStatus] = useState('unsubscribed')
 
   const isLocked = parseInt(year) < new Date().getFullYear()
@@ -99,6 +106,8 @@ export default function App() {
   }, [authd, pinVerified])
 
   useEffect(() => { if (view !== 'expenses') setTxnTab('expenses') }, [view])
+  // Fetch the Dashboard chunk alongside the Sheets data instead of after it.
+  useEffect(() => { if (authd) loadDashboard() }, [authd])
   useEffect(() => { setSelectedExpenseIds([]) }, [year, month, view])
 
   const closeModal = useCallback(() => { setModal(null); setEditRow(null) }, [])
@@ -184,6 +193,34 @@ export default function App() {
       .filter(h => h.balance > 0)
       .sort((a, b) => b.balance - a.balance)
   }, [expenses, categories])
+
+  // Past item names for the Add Expense suggestions, newest use first, each
+  // remembering the category it was last filed under. Withdrawals (negative
+  // rows) are skipped — their names come from the holdings dropdown.
+  const itemSuggestions = useMemo(() => {
+    const byName = new Map()
+    // reverse() first so, within one month, the later sheet row wins (sort is stable).
+    const newestFirst = [...expenses].reverse().sort((a, b) => (b.year - a.year) || (b.month - a.month))
+    newestFirst.forEach(e => {
+      const name = String(e.itemName || '').trim()
+      const key = name.toLowerCase()
+      if (!name || +e.amount < 0 || byName.has(key)) return
+      byName.set(key, { name, categoryId: e.categoryId })
+    })
+    return [...byName.values()]
+  }, [expenses])
+
+  // Past custom income sources (not the built-in dropdown ones) for the Custom Source box.
+  const sourceSuggestions = useMemo(() => {
+    const builtIn = new Set(SOURCES.map(s => s.toLowerCase()))
+    const byKey = new Map()
+    income.forEach(i => {
+      const name = String(i.source || '').trim()
+      const key = name.toLowerCase()
+      if (name && !builtIn.has(key) && !byKey.has(key)) byKey.set(key, name)
+    })
+    return [...byKey.values()]
+  }, [income])
 
   // Year-filtered slices — stable reference when data/year hasn't changed.
   const yearExpenses = useMemo(
@@ -312,10 +349,11 @@ export default function App() {
         onExportLocal={() => setModal('export')}
         onSignIn={handleSignIn}
         onSignOut={handleSignOutFull}
-        onAIInsights={() => setAiOpen(true)}
+        onAIInsights={() => { setAiMounted(true); setAiOpen(true) }}
         hasAIKey={AI_ENABLED}
         notifStatus={notifStatus}
         onToggleNotifications={handleToggleNotifications}
+        onAddExpense={authd && didInitialLoad && !needsSetup && !isLocked ? () => handleAddExpense(null) : undefined}
       />
 
       <Box className={globalClasses.contentArea}>
@@ -375,19 +413,21 @@ export default function App() {
                     ))}
                   </Box>
                 </Box>
-                <Dashboard
-                  expenses={yearExpenses}
-                  income={yearIncome}
-                  // Full history: investment balances carry forward, so a pot's
-                  // true balance is not derivable from one year alone.
-                  allExpenses={expenses}
-                  categories={categories}
-                  year={year}
-                  month={month}
-                  selMonths={selMonths}
-                  setSelMonths={setSelMonths}
-                  onEditCategory={row => { setEditRow(row); setModal('category') }}
-                />
+                <Suspense fallback={loadingText}>
+                  <Dashboard
+                    expenses={yearExpenses}
+                    income={yearIncome}
+                    // Full history: investment balances carry forward, so a pot's
+                    // true balance is not derivable from one year alone.
+                    allExpenses={expenses}
+                    categories={categories}
+                    year={year}
+                    month={month}
+                    selMonths={selMonths}
+                    setSelMonths={setSelMonths}
+                    onEditCategory={row => { setEditRow(row); setModal('category') }}
+                  />
+                </Suspense>
               </ErrorBoundary>
             )}
 
@@ -468,20 +508,8 @@ export default function App() {
                   <>
                     <Box className={classes.headerRow}>
                       <Typography variant="h5" className={classes.titleText}>Income</Typography>
-                      <FormControl size="small" className={globalClasses.nativeSelectFormControl}>
-                        <Select value={year} onChange={e => setYear(+e.target.value)} native className={globalClasses.nativeSelect}>
-                          {availableYears.map(y => (
-                            <option key={y} value={y} style={{ background: '#181b28', color: '#e4e8f5' }}>{y}</option>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      <FormControl size="small" className={globalClasses.nativeSelectFormControl}>
-                        <Select value={month} onChange={e => setMonth(+e.target.value)} native className={globalClasses.nativeSelect}>
-                          {MONTHS.map((m, i) => (
-                            <option key={i} value={i + 1} style={{ background: '#181b28', color: '#e4e8f5' }}>{m}</option>
-                          ))}
-                        </Select>
-                      </FormControl>
+                      <MonthStepper year={year} month={month} availableYears={availableYears}
+                        onYearChange={setYear} onMonthChange={setMonth} />
                       <Box className={classes.flexFiller} />
                       {authd && !isLocked && (
                         <Button
@@ -519,6 +547,7 @@ export default function App() {
           month={month}
           availableYears={availableYears}
           holdings={investmentHoldings}
+          suggestions={itemSuggestions}
           onSave={handleSaveExpense}
           onClose={closeModal}
         />
@@ -529,6 +558,7 @@ export default function App() {
           year={year}
           month={month}
           availableYears={availableYears}
+          suggestions={sourceSuggestions}
           onSave={handleSaveIncome}
           onClose={closeModal}
         />
@@ -541,7 +571,11 @@ export default function App() {
         onClose={closeModal}
       />
       {modal === 'export' && (
-        <ExportModal categories={categories} onClose={() => setModal(null)} />
+        <ErrorBoundary>
+          <Suspense fallback={null}>
+            <ExportModal categories={categories} onClose={() => setModal(null)} />
+          </Suspense>
+        </ErrorBoundary>
       )}
 
       <DeleteConfirmModal
@@ -552,16 +586,22 @@ export default function App() {
         onClose={() => setDeleteConfirm(null)}
       />
 
-      <AIInsightsSection
-        open={aiOpen}
-        onClose={() => setAiOpen(false)}
-        expenses={expenses.filter(e => String(e.year) === String(year))}
-        income={income.filter(i => String(i.year) === String(year))}
-        categories={categories}
-        year={year}
-        selMonths={selMonths}
-        userName={userFullName || userName}
-      />
+      {aiMounted && (
+        <ErrorBoundary>
+        <Suspense fallback={null}>
+          <AIInsightsSection
+            open={aiOpen}
+            onClose={() => setAiOpen(false)}
+            expenses={expenses.filter(e => String(e.year) === String(year))}
+            income={income.filter(i => String(i.year) === String(year))}
+            categories={categories}
+            year={year}
+            selMonths={selMonths}
+            userName={userFullName || userName}
+          />
+        </Suspense>
+        </ErrorBoundary>
+      )}
     </Box>
   )
 }

@@ -11,6 +11,10 @@ export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSIO
 // embedded in cell-A notes (__biq:{month→id}__) for rename-safe reconciliation.
 export const SHEET_FORMAT_VERSION = 3
 
+// Whether to surface AI features in the UI. Defaults on; set VITE_AI_ENABLED=false
+// to hide them (e.g. plain `vite` dev without the function running).
+export const AI_ENABLED = import.meta.env.VITE_AI_ENABLED !== 'false'
+
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 export const SOURCES = ['Salary', 'Freelance', 'Dividend', 'ITR Return', 'Other']
 export const YEAR_NOW = new Date().getFullYear()

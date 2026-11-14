@@ -67,7 +67,7 @@ export default function IncomeTable({ income, onEdit, onDelete, canEdit }) {
               </Box>
               <Typography sx={{
                 fontWeight: 700, fontSize: '14px', color: '#3de8a0',
-                fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap'
+                fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', flexShrink: 0
               }}>
                 {fmt(i.amount)}
               </Typography>
@@ -75,14 +75,14 @@ export default function IncomeTable({ income, onEdit, onDelete, canEdit }) {
                 <>
                   <Tooltip title="Edit" arrow>
                     <IconButton size="small" onClick={() => onEdit(i)}
-                      sx={{ color: '#8891b8', p: '4px', '&:hover': { color: '#5b7fff', background: 'rgba(91,127,255,0.1)' } }}>
-                      <EditOutlinedIcon sx={{ fontSize: 15 }} />
+                      sx={{ color: '#8891b8', p: { xs: '9px', sm: '4px' }, '&:hover': { color: '#5b7fff', background: 'rgba(91,127,255,0.1)' } }}>
+                      <EditOutlinedIcon sx={{ fontSize: { xs: 18, sm: 15 } }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Delete" arrow>
                     <IconButton size="small" onClick={() => onDelete(i)}
-                      sx={{ color: '#8891b8', p: '4px', '&:hover': { color: '#ff5f5f', background: 'rgba(255,95,95,0.1)' } }}>
-                      <DeleteOutlinedIcon sx={{ fontSize: 15 }} />
+                      sx={{ color: '#8891b8', p: { xs: '9px', sm: '4px' }, '&:hover': { color: '#ff5f5f', background: 'rgba(255,95,95,0.1)' } }}>
+                      <DeleteOutlinedIcon sx={{ fontSize: { xs: 18, sm: 15 } }} />
                     </IconButton>
                   </Tooltip>
                 </>

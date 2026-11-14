@@ -23,9 +23,8 @@ const PROXY = (() => {
   return p
 })()
 
-// Whether to surface AI features in the UI. Defaults on; set VITE_AI_ENABLED=false
-// to hide them (e.g. plain `vite` dev without the function running).
-export const AI_ENABLED = import.meta.env.VITE_AI_ENABLED !== 'false'
+// Lives in constants so App can read it without pulling this module into the main chunk.
+export { AI_ENABLED } from '../utils/constants'
 
 function proxyUrl(path, { sse = false } = {}) {
   const qs = new URLSearchParams({ path })

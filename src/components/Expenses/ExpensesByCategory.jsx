@@ -2,8 +2,9 @@ import React, { useState, useMemo, useEffect, useCallback, useRef, memo } from '
 import {
   Box, Typography, Button, IconButton, Tooltip,
   Collapse, Menu, MenuItem, ListItemIcon, Divider,
-  FormControl, Select, Checkbox, TextField, InputAdornment
+  Checkbox, TextField, InputAdornment
 } from '@mui/material'
+import MonthStepper from '../MonthStepper'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
@@ -80,7 +81,7 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
           size="small"
           checked={isSelected}
           onChange={e => onToggle(exp.id, e.target.checked)}
-          sx={{ p: 0, mr: '2px', color: '#3d4466', '&.Mui-checked': { color: '#5b7fff' } }}
+          sx={{ p: { xs: '8px', sm: 0 }, mr: '2px', color: '#3d4466', '&.Mui-checked': { color: '#5b7fff' } }}
         />
       )}
       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -108,12 +109,12 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
           size="small"
           onClick={() => onComment(exp)}
           sx={{
-            p: '3px', position: 'relative',
+            p: { xs: '9px', sm: '3px' }, position: 'relative',
             color: commentCount > 0 ? '#5b7fff' : '#4a5072',
             '&:hover': { color: '#5b7fff', background: 'rgba(91,127,255,0.1)' }
           }}
         >
-          <ChatBubbleOutlinedIcon sx={{ fontSize: 14 }} />
+          <ChatBubbleOutlinedIcon sx={{ fontSize: { xs: 18, sm: 14 } }} />
           {commentCount > 0 && (
             <Box component="span" sx={{
               position: 'absolute', top: 0, right: 0,
@@ -131,12 +132,12 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
         <>
           <Tooltip title="Edit" arrow>
             <IconButton size="small" className={classes.rowAction} onClick={() => onEdit(exp)}>
-              <EditOutlinedIcon sx={{ fontSize: 14 }} />
+              <EditOutlinedIcon sx={{ fontSize: { xs: 18, sm: 14 } }} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Delete" arrow>
             <IconButton size="small" className={classes.rowDelete} onClick={() => onDelete(exp)}>
-              <DeleteOutlinedIcon sx={{ fontSize: 14 }} />
+              <DeleteOutlinedIcon sx={{ fontSize: { xs: 18, sm: 14 } }} />
             </IconButton>
           </Tooltip>
         </>
@@ -158,7 +159,6 @@ export default memo(function ExpensesByCategory({
   const { classes, cx } = useExpensesByCategoryStyles()
   const { classes: g } = useGlobalStyles()
 
-  const [expanded, setExpanded] = useState(new Set())
   const [menuAnchor, setMenuAnchor] = useState(null)
   const [menuCat, setMenuCat] = useState(null)
   const [commentExp, setCommentExp] = useState(null)
@@ -190,6 +190,18 @@ export default memo(function ExpensesByCategory({
     })
     return m
   }, [monthExps, catMap])
+
+  // Categories with something in them start open. Reset only when the viewed
+  // month changes — not on data reloads, so a hand-collapsed one stays shut.
+  const [expanded, setExpanded] = useState(() => new Set(monthByCat.keys()))
+  useEffect(() => { setExpanded(new Set(monthByCat.keys())) }, [year, month]) // eslint-disable-line react-hooks/exhaustive-deps
+  // A category that just got its first item opens, so the new row is visible.
+  const prevCatKeys = useRef(new Set(monthByCat.keys()))
+  useEffect(() => {
+    const added = [...monthByCat.keys()].filter(k => !prevCatKeys.current.has(k))
+    prevCatKeys.current = new Set(monthByCat.keys())
+    if (added.length) setExpanded(prev => new Set([...prev, ...added]))
+  }, [monthByCat])
 
   // ── Search + fixed-only filter ─────────────────────────────────────────────
   const q = search.trim().toLowerCase()
@@ -313,16 +325,8 @@ export default memo(function ExpensesByCategory({
       {/* ── Header ── */}
       <Box className={classes.headerRow}>
         <Typography variant="h5" className={classes.title}>Expenses</Typography>
-        <FormControl size="small" className={g.nativeSelectFormControl}>
-          <Select value={year} onChange={e => onYearChange(+e.target.value)} native className={g.nativeSelect}>
-            {availableYears.map(y => <option key={y} value={y} style={{ background: '#181b28', color: '#e4e8f5' }}>{y}</option>)}
-          </Select>
-        </FormControl>
-        <FormControl size="small" className={g.nativeSelectFormControl}>
-          <Select value={month} onChange={e => onMonthChange(+e.target.value)} native className={g.nativeSelect}>
-            {MONTHS.map((m, i) => <option key={i} value={i + 1} style={{ background: '#181b28', color: '#e4e8f5' }}>{m}</option>)}
-          </Select>
-        </FormControl>
+        <MonthStepper year={year} month={month} availableYears={availableYears}
+          onYearChange={onYearChange} onMonthChange={onMonthChange} />
         <Box className={classes.flexFiller} />
         <Box sx={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <Button size="small" variant="text"

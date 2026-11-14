@@ -17,7 +17,7 @@ import { MONTHS, SOURCES, fmt } from '../../utils/constants'
 import { applyAmountExpression } from '../../utils/money'
 import AmountKeypad from '../Expenses/AmountKeypad'
 
-export default function AddIncomeModal({ initial, year, month, availableYears = [new Date().getFullYear()], onSave, onClose }) {
+export default function AddIncomeModal({ initial, year, month, availableYears = [new Date().getFullYear()], suggestions = [], onSave, onClose }) {
   const { classes } = useAddIncomeModalStyles()
   const [form, setForm] = useState({
     id: initial?.id || '',
@@ -138,21 +138,27 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
           </FormControl>
 
           {isOther && (
-            <TextField
-              label="Custom Source"
-              value={form.source}
-              onChange={e => {
-                set('source', e.target.value)
-                setCustomSrc(e.target.value)
-              }}
-              placeholder="Enter your source"
-              fullWidth
-              variant="outlined"
-              size="small"
-              InputLabelProps={{ shrink: true }}
-              autoFocus
-              className={classes.fieldStyles}
-            />
+            <>
+              <TextField
+                label="Custom Source"
+                value={form.source}
+                onChange={e => {
+                  set('source', e.target.value)
+                  setCustomSrc(e.target.value)
+                }}
+                placeholder="Enter your source"
+                fullWidth
+                variant="outlined"
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                autoFocus
+                slotProps={{ htmlInput: { list: 'income-source-suggestions' } }}
+                className={classes.fieldStyles}
+              />
+              <datalist id="income-source-suggestions">
+                {suggestions.map(s => <option key={s} value={s} />)}
+              </datalist>
+            </>
           )}
 
           <TextField

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen, within, fireEvent, cleanup } from '@testing-library/react'
 import { CATEGORIES, EXPENSES, INCOME, noop, handlers } from '../test/fixtures'
 
 // Firebase is configured from VITE_* env vars that are absent in tests, and
@@ -24,6 +24,7 @@ import CategoryModal from './Category/CategoryModal'
 import IncomeTable from './Income/IncomeTable'
 
 describe('TopBar', () => {
+  afterEach(cleanup)
   const base = { ...handlers, view: 'dashboard', authd: true, loading: false,
     userName: 'Nikhil', hasAIKey: true, notifStatus: 'unsubscribed' }
 
@@ -43,6 +44,34 @@ describe('TopBar', () => {
 
   it('renders on the balance sheet tab, and while refreshing', () => {
     expect(() => render(<TopBar {...base} view="balance" loading={true} />)).not.toThrow()
+  })
+
+  it('bottom nav switches view and marks the active tab', () => {
+    const setView = vi.fn()
+    render(<TopBar {...base} setView={setView} />)
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    expect(within(nav).getByRole('button', { name: 'Dashboard' }).getAttribute('aria-current')).toBe('page')
+    fireEvent.click(within(nav).getByRole('button', { name: 'Transactions' }))
+    expect(setView).toHaveBeenCalledWith('expenses')
+  })
+
+  it('add button calls its handler, and is absent without one or when signed out', () => {
+    const onAddExpense = vi.fn()
+    const { unmount } = render(<TopBar {...base} onAddExpense={onAddExpense} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add expense' }))
+    expect(onAddExpense).toHaveBeenCalledTimes(1)
+    unmount()
+    render(<TopBar {...base} authd={false} />)
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull()
+    expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull()
+  })
+
+  it('avatar menu lists the moved actions with labels', () => {
+    render(<TopBar {...base} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+    for (const name of ['Refresh data', 'Open in Google Drive', 'Download', 'Daily 9 PM reminder: Off']) {
+      expect(screen.getByRole('menuitem', { name })).toBeTruthy()
+    }
   })
 })
 

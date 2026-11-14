@@ -30,21 +30,6 @@ export const useTopBarStyles = makeStyles()((theme) => ({
     display: 'flex',
     alignItems: 'center',
   },
-  menuButton: {
-    display: 'flex',
-    color: theme.palette.text.secondary,
-    border: '1px solid',
-    borderColor: theme.palette.divider,
-    borderRadius: theme.spacing(1),
-    padding: theme.spacing(0.75),
-    [theme.breakpoints.up('md')]: {
-      display: 'none',
-    },
-    '&:hover': {
-      color: theme.palette.primary.main,
-      borderColor: theme.palette.primary.main,
-    },
-  },
   brandGroup: {
     display: 'flex',
     alignItems: 'center',
@@ -215,56 +200,70 @@ export const useTopBarStyles = makeStyles()((theme) => ({
     fontSize: '12px',
     fontWeight: 700,
   },
-  drawerPaper: {
-    width: '260px',
-    backgroundColor: '#101218',
-    borderRight: '1px solid rgba(255, 255, 255, 0.08)',
-    backgroundImage: 'none',
-    padding: theme.spacing(2.5),
+  iconWrap: {
+    display: 'inline-flex',
   },
-  drawerHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(1),
-    marginBottom: theme.spacing(3),
+  // Bar icons that move into the avatar menu on phones
+  desktopOnly: {
+    [theme.breakpoints.down('md')]: {
+      display: 'none',
+    },
   },
-  drawerEmoji: {
-    fontSize: '22px',
+  phoneOnly: {
+    [theme.breakpoints.up('md')]: {
+      display: 'none',
+    },
   },
-  drawerBrandName: {
-    fontWeight: 800,
-    fontSize: '16px',
-    letterSpacing: '-0.5px',
+  menuItem: {
     color: theme.palette.text.primary,
+    borderRadius: theme.spacing(1.5),
+    paddingTop: theme.spacing(1),
+    paddingBottom: theme.spacing(1),
   },
-  drawerList: {
-    padding: theme.spacing(1.2),
-  },
-  drawerListItem: {
-    marginBottom: theme.spacing(3),
-  },
-  drawerListItemButton: {
-    borderRadius: theme.spacing(1),
-    padding: theme.spacing(0.8),
+  menuItemIcon: {
     color: theme.palette.text.secondary,
+    minWidth: '32px',
+  },
+  bottomNav: {
+    position: 'fixed',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: theme.zIndex.appBar,
+    backgroundColor: '#101218',
+    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+    paddingBottom: 'env(safe-area-inset-bottom)',
+    [theme.breakpoints.up('md')]: {
+      display: 'none',
+    },
+  },
+  bottomNavInner: {
     backgroundColor: 'transparent',
-    '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  bottomNavAction: {
+    color: '#8891b8',
+    minWidth: 0,
+    '& .MuiBottomNavigationAction-label': {
+      fontSize: '11px',
+      fontWeight: 600,
+    },
+    '&.Mui-selected': {
+      color: '#5b7fff',
+    },
+    '&.Mui-selected .MuiBottomNavigationAction-label': {
+      fontSize: '11px',
     },
   },
-  drawerListItemButtonActive: {
-    color: theme.palette.primary.main,
-    backgroundColor: 'rgba(91, 127, 255, 0.08)',
-    '&:hover': {
-      backgroundColor: 'rgba(91, 127, 255, 0.12)',
+  fab: {
+    position: 'fixed',
+    right: '24px',
+    bottom: '24px',
+    zIndex: theme.zIndex.appBar,
+    [theme.breakpoints.down('md')]: {
+      right: '16px',
+      // Above the 56px bottom bar and the home indicator
+      bottom: 'calc(56px + 16px + env(safe-area-inset-bottom))',
     },
-  },
-  drawerListItemIcon: {
-    minWidth: '36px',
-    color: theme.palette.text.secondary,
-  },
-  drawerListItemIconActive: {
-    color: theme.palette.primary.main,
   },
   navIcon: {
     fontSize: '20px',
