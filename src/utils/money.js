@@ -165,3 +165,12 @@ export function mergeSameItem(rows, exp) {
     note: appendComment(hit[7], line), added: add, was,
   }
 }
+
+// How much a UPI payment adds. New item: the amount typed. Existing item
+// (weekly Petrol): "+500" or a bare "500" both mean ₹500 more; the field
+// left at its opening total adds nothing, so an untouched edit can't pay twice.
+export function upiTopUp({ editing, amount, base, relative, raw }) {
+  if (!editing) return amount
+  if (relative) return Math.round((amount - base) * 100) / 100
+  return String(raw ?? '').trim() === String(base) ? 0 : amount
+}

@@ -16,7 +16,7 @@ import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import { useAddExpenseModalStyles } from './styles/Expenses.styles'
 
 import { MONTHS } from '../../utils/constants'
-import { isInvestmentCategory, splitWithdrawal, applyAmountExpression } from '../../utils/money'
+import { isInvestmentCategory, splitWithdrawal, applyAmountExpression, upiTopUp } from '../../utils/money'
 import { appendComment } from '../../utils/comments'
 import AmountKeypad from './AmountKeypad'
 
@@ -41,14 +41,18 @@ const lastUpi = () => { try { return localStorage.getItem(UPI_KEY) } catch { ret
 export const upiIntent = (pkg) =>
   `intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${pkg};end`
 
-export default function AddExpenseModal({ initial, categories, year, month, availableYears = [new Date().getFullYear()], holdings = [], suggestions = [], onSave, onClose }) {
+export default function AddExpenseModal({ initial, categories, year, month, availableYears = [new Date().getFullYear()], holdings = [], suggestions = [], expenses = [], onSave, onClose }) {
   const { classes } = useAddExpenseModalStyles()
-  const initialAmt = initial?.amount
+  // An existing item picked from the chips (weekly Petrol): the form then adds
+  // to it instead of creating a new row. Stands in for `initial` while set.
+  const [picked, setPicked] = useState(null)
+  const initialAmt = picked ? picked.amount : initial?.amount
   const [form, setForm] = useState({
     id: initial?.id || '',
     year: initial?.year || year,
     month: initial?.month || month,
-    categoryId: initial?.categoryId || categories[0]?.id || '',
+    // Category first: a fresh add starts with none chosen.
+    categoryId: initial?.categoryId || '',
     itemName: initial?.itemName || '',
     // The amount field always shows a positive number; direction (deposit vs
     // withdraw) is tracked separately and re-applied as a sign on save.
@@ -81,6 +85,25 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
   const [resolvedExpr, setResolvedExpr] = useState(null)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  // Items already in this month + category, for the chips (fresh add only).
+  const existingItems = useMemo(() => (initial?.id || !form.categoryId) ? [] : expenses.filter(e =>
+    String(e.year) === String(form.year) && String(e.month) === String(form.month)
+    && e.categoryId === form.categoryId && +e.amount > 0), [expenses, initial, form.year, form.month, form.categoryId])
+
+  // "+" pre-filled, so typing 500 means "+500": added to the item's total.
+  const pick = (e) => {
+    setPicked(e)
+    setResolvedExpr(null)
+    setForm(f => ({ ...f, id: e.id, itemName: e.itemName, amount: '+', isFixed: e.isFixed === 'TRUE' || e.isFixed === true, note: e.note || '' }))
+  }
+  const unpick = () => {
+    if (!picked) return
+    setPicked(null)
+    setForm(f => ({ ...f, id: '', itemName: '', amount: '', isFixed: false, note: '' }))
+  }
+  // A different month or category means a different list — drop the pick.
+  const setWhere = (k, v) => { unpick(); set(k, v) }
 
   // Typing a name used before files it under that name's last category — only
   // for a fresh add from the generic button, and only until the user picks one.
@@ -153,12 +176,22 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
     return note ? `${money} — ${note}` : money
   }
 
+  // What a UPI payment adds to an existing item: "+500" (or "+500" folded by
+  // "=") is already relative; a bare "500" means "paid 500 more".
+  // The field opens holding the current total — untouched, it adds nothing.
+  const upiAdd = upiTopUp({ editing: !!form.id, amount: amt, base: baseAmount, relative: !!shownExpr?.relative, raw: form.amount })
+
   const handleSave = async (payWith) => {
     if (!valid || saving) return
     setSaving(true)
     try {
       if (payWith) {
-        const payload = { ...form, amount: amt, note: appendComment(form.note, changeLog()) }
+        // On an existing item (weekly Petrol) a payment is a top-up: "500" adds
+        // ₹500, same as "+500". Logged as "₹2,000 + ₹500 = ₹2,500 · via BHIM".
+        const total = form.id ? baseAmount + upiAdd : amt
+        const typed = comment.trim()
+        const line = (form.id ? `${inr(baseAmount)} + ${inr(upiAdd)} = ${inr(total)} · ` : '') + `via ${payWith.label}`
+        const payload = { ...form, amount: total, note: appendComment(form.note, typed ? `${line} — ${typed}` : line) }
         await onSave(payload, 'single')
         try { localStorage.setItem(UPI_KEY, payWith.id) } catch { /* fine */ }
         window.location.href = upiIntent(payWith.pkg)
@@ -210,7 +243,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
         <Typography variant="h6" className={classes.title}>
           {isWithdraw
             ? (form.id ? 'Edit Withdrawal' : 'Withdraw from Savings')
-            : (form.id ? 'Edit Expense' : 'Add Expense')}
+            : picked ? `Add to ${picked.itemName}` : (form.id ? 'Edit Expense' : 'Add Expense')}
         </Typography>
 
         {/* Form Controls */}
@@ -225,7 +258,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
                 native
                 labelId="expense-year-label"
                 value={form.year}
-                onChange={e => set('year', e.target.value)}
+                onChange={e => setWhere('year', e.target.value)}
                 label="Year"
                 notched
               >
@@ -241,7 +274,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
                 native
                 labelId="expense-month-label"
                 value={form.month}
-                onChange={e => set('month', +e.target.value)}
+                onChange={e => setWhere('month', +e.target.value)}
                 label="Month"
                 notched
               >
@@ -259,7 +292,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
               native
               labelId="expense-category-label"
               value={form.categoryId}
-              onChange={e => { setCatTouched(true); set('categoryId', e.target.value) }}
+              onChange={e => { setCatTouched(true); setWhere('categoryId', e.target.value) }}
               label="Category"
               notched
             >
@@ -267,6 +300,31 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
           </FormControl>
+
+          {/* Already this month in the chosen category: tap one to add to it. */}
+          {!isWithdraw && existingItems.length > 0 && (
+            <Box sx={{ width: '100%' }}>
+              <Typography variant="caption" className={classes.applyLabel}>
+                Add to an item already this month, or a new one
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
+                {existingItems.map(e => (
+                  <Button key={e.id} size="small" disabled={saving}
+                    variant={picked?.id === e.id ? 'contained' : 'outlined'}
+                    onClick={() => pick(e)}
+                    sx={{ minHeight: 36, textTransform: 'none', borderRadius: 2 }}>
+                    {e.itemName} · {inr(+e.amount)}
+                  </Button>
+                ))}
+                <Button size="small" disabled={saving}
+                  variant={picked ? 'outlined' : 'contained'}
+                  onClick={unpick}
+                  sx={{ minHeight: 36, textTransform: 'none', borderRadius: 2 }}>
+                  + New item
+                </Button>
+              </Box>
+            </Box>
+          )}
 
           {/* Deposit / Withdraw toggle — only for savings / investment categories */}
           {isSavings && (
@@ -362,6 +420,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
                 label="Item Name"
                 value={form.itemName}
                 onChange={e => handleItemName(e.target.value)}
+                disabled={!!picked}
                 placeholder="e.g. Electricity Bill"
                 fullWidth
                 variant="outlined"
@@ -541,7 +600,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
                 ? 'Withdraw anyway'
                 : isWithdraw
                   ? (form.id ? 'Update Withdrawal' : 'Withdraw')
-                  : (form.id ? 'Update Expense' : 'Add Expense')}
+                  : picked ? `Add to ${picked.itemName}` : (form.id ? 'Update Expense' : 'Add Expense')}
           </Button>
           <Button
             variant="outlined"
@@ -553,10 +612,12 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
           </Button>
         </Box>
 
-        {isAndroid && !form.id && !isWithdraw && (
+        {isAndroid && !isWithdraw && (
           <Box sx={{ mt: 1.5, textAlign: 'center' }}>
             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.75 }}>
-              Save &amp; pay with
+              {!form.id ? 'Save & pay with'
+                : upiAdd > 0 ? `Add ${inr(upiAdd)} (total ${inr(baseAmount + upiAdd)}) & pay with`
+                  : `Type this payment's amount, then pay with`}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
               {[...UPI_APPS].sort((a, b) => (b.id === lastUpi()) - (a.id === lastUpi())).map(app => (
@@ -565,7 +626,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
                   size="small"
                   variant={app.id === lastUpi() ? 'contained' : 'outlined'}
                   onClick={() => handleSave(app)}
-                  disabled={saving || !valid}
+                  disabled={saving || !valid || upiAdd <= 0}
                   sx={{ minHeight: 36, textTransform: 'none', borderRadius: 2 }}
                 >
                   {app.label}

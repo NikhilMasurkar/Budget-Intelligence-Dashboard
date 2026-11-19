@@ -2,8 +2,19 @@ import { describe, it, expect } from 'vitest'
 import {
   SAVINGS_TYPE, EXPENSE_TYPE,
   isInvestmentCategory, investmentCategoryIds, splitSpendInvest, splitWithdrawal,
-  applyAmountExpression, mergeSameItem,
+  applyAmountExpression, mergeSameItem, upiTopUp,
 } from './money'
+
+describe('upiTopUp', () => {
+  it('new item pays the amount typed', () => {
+    expect(upiTopUp({ editing: false, amount: 500, base: 0, relative: false, raw: '500' })).toBe(500)
+  })
+  it('existing item: "+500" and "500" both add 500; untouched adds nothing', () => {
+    expect(upiTopUp({ editing: true, amount: 2500, base: 2000, relative: true, raw: '+500' })).toBe(500)
+    expect(upiTopUp({ editing: true, amount: 500, base: 2000, relative: false, raw: '500' })).toBe(500)
+    expect(upiTopUp({ editing: true, amount: 2000, base: 2000, relative: false, raw: '2000' })).toBe(0)
+  })
+})
 
 const CATS = [
   { id: 'c_food', name: 'Food',        type: EXPENSE_TYPE },
