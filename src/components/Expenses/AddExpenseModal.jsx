@@ -24,6 +24,23 @@ const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN')
 
 const WITHDRAW_ALL = '__all__'
 
+// "Save & pay": the expense is saved first, then the UPI app opens and you pay
+// there as usual (scan the QR). UPI apps don't report back to a website, so
+// saving first is the only order that never loses an entry.
+// ponytail: Android intent links only (opens the app, Play Store if missing);
+// add iOS URL schemes if it's ever used on an iPhone.
+export const UPI_APPS = [
+  { id: 'phonepe', label: 'PhonePe', pkg: 'com.phonepe.app' },
+  { id: 'gpay', label: 'GPay', pkg: 'com.google.android.apps.nbu.paisa.user' },
+  { id: 'bhim', label: 'BHIM', pkg: 'in.org.npci.upiapp' },
+  { id: 'paytm', label: 'Paytm', pkg: 'net.one97.paytm' },
+]
+const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent)
+const UPI_KEY = 'budgetiq_upi_app'
+const lastUpi = () => { try { return localStorage.getItem(UPI_KEY) } catch { return null } }
+export const upiIntent = (pkg) =>
+  `intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${pkg};end`
+
 export default function AddExpenseModal({ initial, categories, year, month, availableYears = [new Date().getFullYear()], holdings = [], suggestions = [], onSave, onClose }) {
   const { classes } = useAddExpenseModalStyles()
   const initialAmt = initial?.amount
@@ -136,10 +153,17 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
     return note ? `${money} — ${note}` : money
   }
 
-  const handleSave = async () => {
+  const handleSave = async (payWith) => {
     if (!valid || saving) return
     setSaving(true)
     try {
+      if (payWith) {
+        const payload = { ...form, amount: amt, note: appendComment(form.note, changeLog()) }
+        await onSave(payload, 'single')
+        try { localStorage.setItem(UPI_KEY, payWith.id) } catch { /* fine */ }
+        window.location.href = upiIntent(payWith.pkg)
+        return
+      }
       // A withdrawal can't be "fixed/recurring" (the toggle is hidden for it),
       // so never persist a stale isFixed=true left over from before the switch.
       if (splitAll) {
@@ -503,7 +527,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
         <Box className={classes.actionsContainer}>
           <Button
             variant="contained"
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={saving || !valid}
             className={classes.saveButton}
             sx={overdrawn ? {
@@ -528,6 +552,28 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             Cancel
           </Button>
         </Box>
+
+        {isAndroid && !form.id && !isWithdraw && (
+          <Box sx={{ mt: 1.5, textAlign: 'center' }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.75 }}>
+              Save &amp; pay with
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+              {[...UPI_APPS].sort((a, b) => (b.id === lastUpi()) - (a.id === lastUpi())).map(app => (
+                <Button
+                  key={app.id}
+                  size="small"
+                  variant={app.id === lastUpi() ? 'contained' : 'outlined'}
+                  onClick={() => handleSave(app)}
+                  disabled={saving || !valid}
+                  sx={{ minHeight: 36, textTransform: 'none', borderRadius: 2 }}
+                >
+                  {app.label}
+                </Button>
+              ))}
+            </Box>
+          </Box>
+        )}
 
       </Box>
     </Dialog>
