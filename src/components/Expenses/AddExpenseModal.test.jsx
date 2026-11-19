@@ -109,7 +109,7 @@ describe('AddExpenseModal item-name suggestions', () => {
   it('switches to the category the name was last used in (case-insensitive)', () => {
     render(<AddExpenseModal categories={CATS} year={2026} month={9} suggestions={SUGG}
       onSave={noop} onClose={noop} />)
-    expect(categoryValue()).toBe('c_food')
+    expect(categoryValue()).toBe('')     // category first: nothing chosen yet
     typeItem('sip')
     expect(categoryValue()).toBe('c_inv')
   })
@@ -118,7 +118,7 @@ describe('AddExpenseModal item-name suggestions', () => {
     render(<AddExpenseModal categories={CATS} year={2026} month={9} suggestions={SUGG}
       onSave={noop} onClose={noop} />)
     typeItem('Old thing')
-    expect(categoryValue()).toBe('c_food')
+    expect(categoryValue()).toBe('')
   })
 
   it('does not switch when opened for a specific category', () => {
@@ -150,7 +150,7 @@ describe('AddExpenseModal More options', () => {
 
   it('starts collapsed and names a non-default apply mode on the toggle', async () => {
     const onSave = vi.fn()
-    render(<AddExpenseModal categories={CATS} year={2026} month={9} onSave={onSave} onClose={noop} />)
+    render(<AddExpenseModal initial={{ categoryId: 'c_food' }} categories={CATS} year={2026} month={9} onSave={onSave} onClose={noop} />)
     expect(toggle().getAttribute('aria-expanded')).toBe('false')
     expect(toggle().textContent).toBe('▸ More options')
 
@@ -170,12 +170,46 @@ describe('AddExpenseModal More options', () => {
 
   it('saves to this month only by default', async () => {
     const onSave = vi.fn()
-    render(<AddExpenseModal categories={CATS} year={2026} month={9} onSave={onSave} onClose={noop} />)
+    render(<AddExpenseModal initial={{ categoryId: 'c_food' }} categories={CATS} year={2026} month={9} onSave={onSave} onClose={noop} />)
     fireEvent.change(screen.getByPlaceholderText('e.g. Electricity Bill'), { target: { value: 'Rent' } })
     fireEvent.change(amountInput(), { target: { value: '500' } })
     fireEvent.click(screen.getByRole('button', { name: 'Add Expense' }))
     await waitFor(() => expect(onSave).toHaveBeenCalled())
     expect(onSave.mock.calls[0][1]).toBe('single')
+  })
+
+  it('needs a category before it can save', () => {
+    render(<AddExpenseModal categories={CATS} year={2026} month={9} onSave={noop} onClose={noop} />)
+    fireEvent.change(screen.getByPlaceholderText('e.g. Electricity Bill'), { target: { value: 'Rent' } })
+    fireEvent.change(amountInput(), { target: { value: '500' } })
+    expect(screen.getByRole('button', { name: 'Add Expense' }).disabled).toBe(true)
+  })
+})
+
+describe('AddExpenseModal pick an existing item', () => {
+  const PETROL = { id: 'p1', year: 2026, month: 9, categoryId: 'c_food', itemName: 'Petrol', amount: '2000', isFixed: 'FALSE', note: '' }
+
+  it('lists this month\'s items in the category and adds the amount to the one picked', async () => {
+    const onSave = vi.fn()
+    render(<AddExpenseModal initial={{ categoryId: 'c_food' }} categories={CATS} year={2026} month={9}
+      expenses={[PETROL, { ...PETROL, id: 'x', month: 8, itemName: 'Last month' }]} onSave={onSave} onClose={noop} />)
+    expect(screen.queryByRole('button', { name: /Last month/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Petrol · ₹2,000' }))
+    expect(amountInput().value).toBe('+')
+    fireEvent.change(amountInput(), { target: { value: '+500' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add to Petrol' }))
+    await waitFor(() => expect(onSave).toHaveBeenCalled())
+    expect(onSave.mock.calls[0][0]).toMatchObject({ id: 'p1', itemName: 'Petrol', amount: 2500 })
+    expect(onSave.mock.calls[0][0].note).toMatch(/2,000.*500.*2,500/)
+  })
+
+  it('"+ New item" goes back to adding a separate item', () => {
+    render(<AddExpenseModal initial={{ categoryId: 'c_food' }} categories={CATS} year={2026} month={9}
+      expenses={[PETROL]} onSave={noop} onClose={noop} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Petrol · ₹2,000' }))
+    fireEvent.click(screen.getByRole('button', { name: '+ New item' }))
+    expect(screen.getByPlaceholderText('e.g. Electricity Bill').value).toBe('')
+    expect(screen.getByRole('button', { name: 'Add Expense' })).toBeTruthy()
   })
 })
 

@@ -632,6 +632,7 @@ export default function App() {
           availableYears={availableYears}
           holdings={investmentHoldings}
           suggestions={itemSuggestions}
+          expenses={expenses}
           onSave={handleSaveExpense}
           onClose={closeModal}
         />

@@ -53,12 +53,18 @@ service cloud.firestore {
       // Closed years are read-only, same as the app (utils/constants
       // isYearLocked): this year and later are open, and last year stays open
       // through January. request.time is UTC, so the grace edges are ±5.5h in IST.
-      // DEPLOY ONLY AFTER the one-time migration has finished — the migration
-      // writes every year, including closed ones.
+      // Until the one-time migration has switched this sheet to Firestore
+      // (settings/db.source), every year is writable — the migration copies
+      // closed years too. Safe to deploy before or after it.
       match /months/{monthId} {
         function yearOf(id) { return int(id.split('-')[0]); }
+        function migrated() {
+          let p = /databases/$(database)/documents/sheets/$(sheetId)/settings/db;
+          return exists(p) && get(p).data.source == 'firestore';
+        }
         function open(id) {
-          return yearOf(id) >= request.time.year()
+          return !migrated()
+            || yearOf(id) >= request.time.year()
             || (yearOf(id) == request.time.year() - 1 && request.time.month() == 1);
         }
         allow create, update: if ownerOf(sheetId) && open(monthId)

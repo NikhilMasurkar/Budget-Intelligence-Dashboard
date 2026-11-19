@@ -2,8 +2,19 @@ import { describe, it, expect } from 'vitest'
 import {
   SAVINGS_TYPE, EXPENSE_TYPE,
   isInvestmentCategory, investmentCategoryIds, splitSpendInvest, splitWithdrawal,
-  applyAmountExpression,
+  applyAmountExpression, mergeSameItem, upiTopUp,
 } from './money'
+
+describe('upiTopUp', () => {
+  it('new item pays the amount typed', () => {
+    expect(upiTopUp({ editing: false, amount: 500, base: 0, relative: false, raw: '500' })).toBe(500)
+  })
+  it('existing item: "+500" and "500" both add 500; untouched adds nothing', () => {
+    expect(upiTopUp({ editing: true, amount: 2500, base: 2000, relative: true, raw: '+500' })).toBe(500)
+    expect(upiTopUp({ editing: true, amount: 500, base: 2000, relative: false, raw: '500' })).toBe(500)
+    expect(upiTopUp({ editing: true, amount: 2000, base: 2000, relative: false, raw: '2000' })).toBe(0)
+  })
+})
 
 const CATS = [
   { id: 'c_food', name: 'Food',        type: EXPENSE_TYPE },
@@ -203,5 +214,30 @@ describe('applyAmountExpression — plain infix from the keypad', () => {
     expect(applyAmountExpression(0, '(1+2)*3')).toBeNull()
     expect(applyAmountExpression(0, '2**3')).toBeNull()
     expect(applyAmountExpression(0, '500/0')).toBeNull()
+  })
+})
+
+describe('mergeSameItem', () => {
+  const rows = [
+    ['t1', '2026', '11', 'food', 'Tea', '40', 'FALSE', ''],
+    ['m1', '2026', '11', 'inv', 'Mutual fund', '5000', 'TRUE', '[{"text":"sip","ts":1}]'],
+  ]
+  const exp = (o) => ({ year: 2026, month: 11, categoryId: 'food', itemName: 'tea ', amount: 20, isFixed: false, note: '', ...o })
+
+  it('tops up the same item in the same month and category, logging it', () => {
+    const m = mergeSameItem(rows, exp({ note: '[{"text":"evening","ts":2}]' }))
+    expect(m).toMatchObject({ id: 't1', itemName: 'Tea', amount: 60, added: 20, was: 40 })
+    expect(JSON.parse(m.note)[0].text).toBe('₹40 + ₹20 = ₹60 — evening')
+  })
+  it('keeps the pin and earlier comments', () => {
+    const m = mergeSameItem(rows, exp({ categoryId: 'inv', itemName: 'Mutual Fund', amount: 1000 }))
+    expect(m).toMatchObject({ amount: 6000, isFixed: true })
+    expect(JSON.parse(m.note).map(c => c.text)).toEqual(['sip', '₹5,000 + ₹1,000 = ₹6,000'])
+  })
+  it('does not merge across months, categories, or a withdrawal into a deposit', () => {
+    expect(mergeSameItem(rows, exp({ month: 10 }))).toBeNull()
+    expect(mergeSameItem(rows, exp({ categoryId: 'travel' }))).toBeNull()
+    expect(mergeSameItem(rows, exp({ categoryId: 'inv', itemName: 'Mutual fund', amount: -2000 }))).toBeNull()
+    expect(mergeSameItem(rows, exp({ itemName: 'Coffee' }))).toBeNull()
   })
 })

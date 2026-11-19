@@ -1,3 +1,4 @@
+import { parseComments, appendComment } from './comments'
 // SINGLE SOURCE OF TRUTH for the one distinction this whole app rests on:
 //
 //   SPENDING  — money that leaves for good (rent, food, fuel)
@@ -140,3 +141,36 @@ export function applyAmountExpression(base, input) {
 }
 
 const round2 = (n) => Math.round(n * 100) / 100
+
+// Adding an item that this month already has in the same category ("Tea" again)
+// tops up the existing row instead of creating a second "Tea". The top-up is
+// logged in its comments: "₹40 + ₹20 = ₹60 — evening". Deposits and
+// withdrawals are kept apart (same sign only), so a withdrawal never silently
+// nets against a deposit. Returns the merged expense, or null when no match.
+// `rows` are sheet-shaped: [id, year, month, categoryId, itemName, amount, isFixed, note].
+export function mergeSameItem(rows, exp) {
+  const num = (v) => Number(String(v ?? '').replace(/,/g, '')) || 0
+  const key = (s) => String(s ?? '').trim().toLowerCase()
+  const add = num(exp.amount)
+  const hit = rows.find(r => r[0] && String(r[1]) === String(exp.year) && String(r[2]) === String(exp.month)
+    && r[3] === exp.categoryId && key(r[4]) === key(exp.itemName) && (num(r[5]) < 0) === (add < 0))
+  if (!hit) return null
+  const was = num(hit[5]), total = Math.round((was + add) * 100) / 100
+  const inr = (n) => (n < 0 ? '-₹' : '₹') + Math.abs(n).toLocaleString('en-IN')
+  const typed = parseComments(exp.note).map(c => c.text).join(' · ')
+  const line = `${inr(was)} + ${inr(Math.abs(add))} = ${inr(total)}` + (typed ? ` — ${typed}` : '')
+  return {
+    ...exp, id: hit[0], itemName: hit[4], amount: total,
+    isFixed: hit[6] === 'TRUE' || hit[6] === true || !!exp.isFixed,
+    note: appendComment(hit[7], line), added: add, was,
+  }
+}
+
+// How much a UPI payment adds. New item: the amount typed. Existing item
+// (weekly Petrol): "+500" or a bare "500" both mean ₹500 more; the field
+// left at its opening total adds nothing, so an untouched edit can't pay twice.
+export function upiTopUp({ editing, amount, base, relative, raw }) {
+  if (!editing) return amount
+  if (relative) return Math.round((amount - base) * 100) / 100
+  return String(raw ?? '').trim() === String(base) ? 0 : amount
+}
