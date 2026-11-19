@@ -95,9 +95,9 @@ export const EXCEL_COLORS = {
 export const EXCEL_FONT = 'Verdana'
 
 // ─── PDF EXPORT CONSTANTS ────────────────────────────────────────────────────
-export const PDF_USE_RUPEE_SYMBOL = false
-export const PDF_FONT_NAME = PDF_USE_RUPEE_SYMBOL ? 'NotoSans' : 'helvetica'
-export const PDF_CURRENCY = PDF_USE_RUPEE_SYMBOL ? '\u20B9' : 'Rs '
+// jsPDF's built-in fonts have no ₹ glyph, so amounts print as "Rs".
+export const PDF_FONT_NAME = 'helvetica'
+export const PDF_CURRENCY = 'Rs '
 
 export const PDF_COLORS = {
   navy:         [31, 56, 100],   // brand / grand-total

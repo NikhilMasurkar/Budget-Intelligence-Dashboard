@@ -1,8 +1,7 @@
-import React from 'react'
 import { Box, Typography, Button } from '@mui/material'
 import { useStyles } from '../styles/MonthFilterControl.styles'
 
-export default function MonthFilterControl({ selMonths, setSelMonths, MONTHS, defaultMonths, year }) {
+export default function MonthFilterControl({ selMonths, setSelMonths, MONTHS }) {
   const { classes, cx } = useStyles()
 
   const toggleMonth = (i) => {

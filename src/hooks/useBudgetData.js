@@ -251,6 +251,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
       setLoading(false)
       setDidInitialLoad(true)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- onUnauthorized is a new function every App render; listing it would reload endlessly
   }, [missingConfig, userName, authd])
 
   useEffect(() => { loadAll() }, [loadAll])
@@ -263,6 +264,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
     const onOnline = () => { if (getToken()) { loadAll(); if (usingFirestore()) autoSyncToDrive() } }
     window.addEventListener('online', onOnline)
     return () => window.removeEventListener('online', onOnline)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- autoSyncToDrive is declared below and debounced; the latest is fine
   }, [loadAll])
 
   // Save a NEW expense on the phone (offline, or the request never got through)

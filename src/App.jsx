@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { Toaster, toast } from 'react-hot-toast'
 import { Box, Typography, Button } from '@mui/material'
 import { useGlobalStyles } from './styles/globalStyles'
@@ -20,6 +20,8 @@ import { useBudgetData } from './hooks/useBudgetData'
 import { useExpenses } from './hooks/useExpenses'
 import { useIncome } from './hooks/useIncome'
 import { useCategories } from './hooks/useCategories'
+import { usePushNotifications } from './hooks/usePushNotifications'
+import { useSuggestions } from './hooks/useSuggestions'
 
 import ExpensesByCategory from './components/Expenses/ExpensesByCategory'
 import BalanceSheet from './components/BalanceSheet'
@@ -35,9 +37,7 @@ import CategoryModal from './components/Category/CategoryModal'
 import ErrorBoundary from './components/ErrorBoundary'
 import MonthStepper from './components/MonthStepper'
 
-import { YEAR_NOW, MONTH_NOW_1 as MONTH_NOW, toSentenceCase, defaultMonths, AI_ENABLED, SOURCES, isYearLocked, inLockGrace } from './utils/constants'
-import { getPushStatus, subscribeToPush, unsubscribeFromPush } from './api/pushSubscription'
-import { investmentCategoryIds } from './utils/money'
+import { YEAR_NOW, MONTH_NOW_1 as MONTH_NOW, toSentenceCase, defaultMonths, AI_ENABLED, isYearLocked, inLockGrace } from './utils/constants'
 
 // Not needed for first paint: Dashboard pulls chart.js, AI pulls gemini, Export is a modal.
 const loadDashboard = () => import('./components/Dashboard')
@@ -96,7 +96,6 @@ export default function App() {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [aiOpen, setAiOpen] = useState(false)
   const [aiMounted, setAiMounted] = useState(false) // stays true after first open so the close animation runs
-  const [notifStatus, setNotifStatus] = useState('unsubscribed')
 
   const isLocked = isYearLocked(year)
 
@@ -126,37 +125,7 @@ export default function App() {
 
   const closeModal = useCallback(() => { setModal(null); setEditRow(null) }, [])
 
-  // ── Push notifications ────────────────────────────────────────
-  useEffect(() => {
-    if (!authd) return
-    getPushStatus().then(setNotifStatus).catch(() => { })
-  }, [authd])
-
-  const handleToggleNotifications = useCallback(async () => {
-    if (notifStatus === 'subscribed') {
-      setNotifStatus('loading')
-      try {
-        await unsubscribeFromPush()
-        setNotifStatus('unsubscribed')
-        toast.success('Daily reminders disabled')
-      } catch {
-        // Re-fetch actual state — browser sub may have been revoked even if we threw
-        const status = await getPushStatus().catch(() => 'unsubscribed')
-        setNotifStatus(status)
-      }
-    } else {
-      setNotifStatus('loading')
-      try {
-        await subscribeToPush()
-        setNotifStatus('subscribed')
-        toast.success('Daily 9 PM reminders enabled! 🔔')
-      } catch (e) {
-        const status = await getPushStatus().catch(() => 'unsubscribed')
-        setNotifStatus(status)
-        if (!e?.message?.includes('denied')) toast.error(e?.message || String(e))
-      }
-    }
-  }, [notifStatus])
+  const { notifStatus, handleToggleNotifications } = usePushNotifications(authd)
 
   // ── Data ──────────────────────────────────────────────────────
   const {
@@ -208,47 +177,7 @@ export default function App() {
     setModal('category')
   }, [])
 
-  const investmentHoldings = useMemo(() => {
-    const investIds = investmentCategoryIds(categories)
-    const byName = new Map()
-    expenses.forEach(e => {
-      if (!investIds.has(e.categoryId)) return
-      const name = e.itemName || 'Unnamed'
-      byName.set(name, (byName.get(name) || 0) + (+e.amount || 0))
-    })
-    return [...byName.entries()]
-      .map(([name, balance]) => ({ name, balance }))
-      .filter(h => h.balance > 0)
-      .sort((a, b) => b.balance - a.balance)
-  }, [expenses, categories])
-
-  // Past item names for the Add Expense suggestions, newest use first, each
-  // remembering the category it was last filed under. Withdrawals (negative
-  // rows) are skipped — their names come from the holdings dropdown.
-  const itemSuggestions = useMemo(() => {
-    const byName = new Map()
-    // reverse() first so, within one month, the later sheet row wins (sort is stable).
-    const newestFirst = [...expenses].reverse().sort((a, b) => (b.year - a.year) || (b.month - a.month))
-    newestFirst.forEach(e => {
-      const name = String(e.itemName || '').trim()
-      const key = name.toLowerCase()
-      if (!name || +e.amount < 0 || byName.has(key)) return
-      byName.set(key, { name, categoryId: e.categoryId })
-    })
-    return [...byName.values()]
-  }, [expenses])
-
-  // Past custom income sources (not the built-in dropdown ones) for the Custom Source box.
-  const sourceSuggestions = useMemo(() => {
-    const builtIn = new Set(SOURCES.map(s => s.toLowerCase()))
-    const byKey = new Map()
-    income.forEach(i => {
-      const name = String(i.source || '').trim()
-      const key = name.toLowerCase()
-      if (name && !builtIn.has(key) && !byKey.has(key)) byKey.set(key, name)
-    })
-    return [...byKey.values()]
-  }, [income])
+  const { investmentHoldings, itemSuggestions, sourceSuggestions } = useSuggestions({ expenses, income, categories })
 
   // Year-filtered slices — stable reference when data/year hasn't changed.
   const yearExpenses = useMemo(

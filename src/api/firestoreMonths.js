@@ -19,10 +19,10 @@ import {
 //   income row:  [id, year, month, source, amount, date]
 
 const monthsCol = (sid) => collection(db, 'sheets', sid, 'months')
-export const monthId = (y, m) => `${String(+y || 0).padStart(4, '0')}-${String(+m || 0).padStart(2, '0')}`
+const monthId = (y, m) => `${String(+y || 0).padStart(4, '0')}-${String(+m || 0).padStart(2, '0')}`
 const monthRef = (sid, y, m) => doc(db, 'sheets', sid, 'months', monthId(y, m))
 
-export const toAmount = (v) => {
+const toAmount = (v) => {
   const n = Number(String(v ?? '').replace(/,/g, ''))
   return Number.isFinite(n) ? n : 0
 }

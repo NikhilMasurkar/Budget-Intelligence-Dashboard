@@ -1,4 +1,3 @@
-import React from 'react'
 import { Box, Container, Card, CardContent, Typography } from '@mui/material'
 import SettingsIcon from '@mui/icons-material/Settings'
 import { makeStyles } from 'tss-react/mui'

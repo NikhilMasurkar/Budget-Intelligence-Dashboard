@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Box, Typography } from '@mui/material'
 import { useStyles } from './styles/Dashboard.styles'
 import MonthFilterControl from './subcomponents/MonthFilterControl'

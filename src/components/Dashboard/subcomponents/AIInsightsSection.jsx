@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Box, Typography, CircularProgress,
   Dialog, DialogContent, IconButton, TextField
@@ -143,7 +143,8 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
   const fetchingRef = useRef(false)  // prevents concurrent analysis fetches
 
   const hasKey        = AI_ENABLED
-  const effectiveMonths = selMonths?.length ? selMonths : [0,1,2,3,4,5,6,7,8,9,10,11]
+  // Memoised: a fresh array each render would recompute every memo below on every render.
+  const effectiveMonths = useMemo(() => (selMonths?.length ? selMonths : [0,1,2,3,4,5,6,7,8,9,10,11]), [selMonths])
   const cacheKey      = makeCacheKey(year, effectiveMonths, expenses, income, categories)
   const periodKey     = `${year}_${[...effectiveMonths].sort((a,b)=>a-b).join(',')}`
   const periodLabel   = getPeriodLabel(effectiveMonths, year)
@@ -178,6 +179,7 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
         setErrorMsg(err.message || 'Analysis failed')
         setState(prev => prev === 'loading' ? 'error' : prev)
       })
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- cacheKey already encodes the data; refetch only when it changes
   }, [cacheKey, hasKey])
 
   // ── Modal open — reset UI, read cache (likely already populated) ──────────
@@ -194,6 +196,7 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
     } catch {}
     // Not cached yet — show loading state; background prefetch will resolve it
     setState('loading')
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when opened or the period changes
   }, [open, periodKey])
 
   // Chat auto-scroll

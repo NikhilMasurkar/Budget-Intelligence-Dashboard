@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Dialog, DialogTitle, DialogContent, Box, Typography,
   TextField, Button, IconButton, Divider

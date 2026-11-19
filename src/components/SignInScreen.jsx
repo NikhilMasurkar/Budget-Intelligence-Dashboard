@@ -1,4 +1,3 @@
-import React from 'react'
 import { Box, Button, Container, Paper, Typography } from '@mui/material'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import GoogleIcon from '@mui/icons-material/Google'

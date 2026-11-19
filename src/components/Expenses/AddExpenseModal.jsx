@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Dialog,
   Button,
@@ -19,25 +19,11 @@ import { MONTHS } from '../../utils/constants'
 import { isInvestmentCategory, splitWithdrawal, applyAmountExpression, upiTopUp } from '../../utils/money'
 import { appendComment } from '../../utils/comments'
 import AmountKeypad from './AmountKeypad'
+import UpiPayButtons, { canPayByUpi, openUpiApp } from './UpiPayButtons'
 
 const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN')
 
 const WITHDRAW_ALL = '__all__'
-
-// "Save & pay": the expense is saved first, then the UPI app opens and you pay
-// there as usual (scan the QR). UPI apps don't report back to a website, so
-// saving first is the only order that never loses an entry.
-export const UPI_APPS = [
-  { id: 'phonepe', label: 'PhonePe', pkg: 'com.phonepe.app', scheme: 'phonepe', path: '' },
-  { id: 'gpay', label: 'GPay', pkg: 'com.google.android.apps.nbu.paisa.user', scheme: 'tez', path: 'upi/' },
-  { id: 'bhim', label: 'BHIM', pkg: 'in.org.npci.upiapp', scheme: 'bhim', path: '' },
-  { id: 'paytm', label: 'Paytm', pkg: 'net.one97.paytm', scheme: 'paytmmp', path: '' },
-]
-const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent)
-const UPI_KEY = 'budgetiq_upi_app'
-const lastUpi = () => { try { return localStorage.getItem(UPI_KEY) } catch { return null } }
-export const upiIntent = (app) =>
-  `intent://${app.path}#Intent;scheme=${app.scheme};package=${app.pkg};end`
 
 export default function AddExpenseModal({ initial, categories, year, month, availableYears = [new Date().getFullYear()], holdings = [], suggestions = [], expenses = [], onSave, onClose }) {
   const { classes } = useAddExpenseModalStyles()
@@ -146,7 +132,6 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
     ? available.reduce((s, h) => s + h.balance, 0)
     : (available.find(h => h.name === withdrawFrom)?.balance ?? 0)
   const overdrawn = isWithdraw && !!withdrawFrom && amt > availableFrom
-  const shortfall = overdrawn ? amt - availableFrom : 0
 
   const valid = form.categoryId && amt > 0 && (
     isWithdraw ? (splitAll ? parts.length > 0 : !!withdrawFrom) : form.itemName.trim()
@@ -191,8 +176,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
         const line = (form.id ? `${inr(baseAmount)} + ${inr(upiAdd)} = ${inr(total)} · ` : '') + `via ${payWith.label}`
         const payload = { ...form, amount: total, note: appendComment(form.note, typed ? `${line} — ${typed}` : line) }
         await onSave(payload, 'single')
-        try { localStorage.setItem(UPI_KEY, payWith.id) } catch { /* fine */ }
-        window.location.href = upiIntent(payWith)
+        openUpiApp(payWith)
         return
       }
       // A withdrawal can't be "fixed/recurring" (the toggle is hidden for it),
@@ -608,28 +592,14 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
           </Button>
         </Box>
 
-        {isAndroid && !isWithdraw && (
-          <Box sx={{ mt: 1.5, textAlign: 'center' }}>
-            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.75 }}>
-              {!form.id ? 'Save & pay with'
-                : upiAdd > 0 ? `Add ${inr(upiAdd)} (total ${inr(baseAmount + upiAdd)}) & pay with`
-                  : `Type this payment's amount, then pay with`}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {[...UPI_APPS].sort((a, b) => (b.id === lastUpi()) - (a.id === lastUpi())).map(app => (
-                <Button
-                  key={app.id}
-                  size="small"
-                  variant={app.id === lastUpi() ? 'contained' : 'outlined'}
-                  onClick={() => handleSave(app)}
-                  disabled={saving || !valid || upiAdd <= 0}
-                  sx={{ minHeight: 36, textTransform: 'none', borderRadius: 2 }}
-                >
-                  {app.label}
-                </Button>
-              ))}
-            </Box>
-          </Box>
+        {canPayByUpi && !isWithdraw && (
+          <UpiPayButtons
+            caption={!form.id ? 'Save & pay with'
+              : upiAdd > 0 ? `Add ${inr(upiAdd)} (total ${inr(baseAmount + upiAdd)}) & pay with`
+                : `Type this payment's amount, then pay with`}
+            disabled={saving || !valid || upiAdd <= 0}
+            onPay={handleSave}
+          />
         )}
 
       </Box>

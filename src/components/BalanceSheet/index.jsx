@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { Box, Typography } from '@mui/material'
 import { fmt } from '../../utils/constants'
 import { investmentCategoryIds } from '../../utils/money'

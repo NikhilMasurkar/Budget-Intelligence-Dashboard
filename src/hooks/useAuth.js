@@ -97,6 +97,7 @@ export function useAuth() {
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
       if (restoreTimerRef.current) clearTimeout(restoreTimerRef.current)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- listeners set up once; they read live values through refs
   }, [])
 
   const handleSignIn = async () => {

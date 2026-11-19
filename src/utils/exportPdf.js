@@ -5,7 +5,6 @@ import { investmentCategoryIds } from './money'
 
 import {
   MONTHS_UPPER as MONTHS,
-  PDF_USE_RUPEE_SYMBOL as USE_RUPEE_SYMBOL,
   PDF_FONT_NAME as FONT_NAME,
   PDF_CURRENCY as CURRENCY,
   PDF_COLORS as C,
@@ -57,8 +56,6 @@ export async function exportToPdf(categories, expenses, income, filterYears = nu
     format: 'a4'
   })
 
-  // If embedding a Unicode font for ₹, register it once here.
-  if (USE_RUPEE_SYMBOL) registerUnicodeFont(doc)
   doc.setFont(FONT_NAME, 'normal')
 
   let years = Array.from(new Set([

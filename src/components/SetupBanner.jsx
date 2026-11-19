@@ -1,4 +1,3 @@
-import React from 'react'
 import { Paper, Box, Typography, Button } from '@mui/material'
 import BuildIcon from '@mui/icons-material/Build'
 import { makeStyles } from 'tss-react/mui'

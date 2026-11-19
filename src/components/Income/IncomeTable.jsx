@@ -1,4 +1,3 @@
-import React from 'react'
 import { Box, Typography, IconButton, Tooltip } from '@mui/material'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'

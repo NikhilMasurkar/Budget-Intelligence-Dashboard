@@ -28,11 +28,6 @@ export function investmentCategoryIds(categories = []) {
   return new Set(categories.filter(isInvestmentCategory).map(c => c.id))
 }
 
-/** True when an expense row is an investment transfer rather than spending. */
-export function isInvestmentRow(row, investIds) {
-  return investIds.has(row?.categoryId)
-}
-
 /**
  * Split expense rows into real spending vs net investing.
  * `invest` nets deposits against withdrawals, so it can legitimately be negative.

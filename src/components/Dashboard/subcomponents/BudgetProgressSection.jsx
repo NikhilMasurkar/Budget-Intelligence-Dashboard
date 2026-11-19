@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { Box, Typography } from '@mui/material'
 
 export default function BudgetProgressSection({ categories, expenses, selMonths, catMap, selSpend, investCatIds, onCategoryClick, onEditCategory, fmt, MONTHS }) {

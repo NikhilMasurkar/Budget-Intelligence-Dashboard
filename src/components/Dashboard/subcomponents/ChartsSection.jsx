@@ -1,4 +1,3 @@
-import React from 'react'
 import { Box, Typography } from '@mui/material'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, LineController, BarController, PointElement, ArcElement, Tooltip, Legend, Filler } from 'chart.js'

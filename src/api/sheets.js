@@ -118,9 +118,9 @@ function _loadGsi() {
   })
 }
 
-export function signInWithGoogle() {
-  return new Promise(async (resolve, reject) => {
-    try { await _loadGsi() } catch (e) { reject(e); return }
+export async function signInWithGoogle() {
+  await _loadGsi()
+  return new Promise((resolve, reject) => {
     window.google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope:     SCOPES,
@@ -136,9 +136,9 @@ export function signInWithGoogle() {
 }
 
 // Silent re-auth — no popup if user already granted consent
-export function silentReauth() {
-  return new Promise(async (resolve, reject) => {
-    try { await _loadGsi() } catch (e) { reject(e); return }
+export async function silentReauth() {
+  await _loadGsi()
+  return new Promise((resolve, reject) => {
     window.google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope:     SCOPES,

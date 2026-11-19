@@ -1,4 +1,3 @@
-import React from 'react'
 import { FormControl, Select, IconButton } from '@mui/material'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'

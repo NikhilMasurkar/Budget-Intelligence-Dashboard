@@ -1,6 +1,6 @@
 import { makeStyles } from 'tss-react/mui'
 
-export const useStyles = makeStyles()((theme) => ({
+export const useStyles = makeStyles()(() => ({
   headerRow: {
     display: 'flex',
     gap: '10px',

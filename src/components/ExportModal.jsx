@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { getWriteToken as getToken, fetchExpenses, fetchIncome } from '../api/store'
 import toast from 'react-hot-toast'
 import {
@@ -193,6 +193,7 @@ export default function ExportModal({ categories, onClose }) {
       }
     }
     loadYears()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- load once when the dialog opens
   }, [])
 
   const toggleYear = (y) => {
