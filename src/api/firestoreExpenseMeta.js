@@ -1,5 +1,6 @@
 import { db } from '../firebase'
 import { collection, doc, getDocs, setDoc } from 'firebase/firestore'
+import { usingFirestore } from './store'
 
 // App-only expense metadata (pin / isFixed and note) lives in Firestore so it
 // survives the Google Sheet ↔ Drive-Excel reconciliation, which cannot carry
@@ -43,7 +44,8 @@ export async function fetchExpenseMetaFS(sheetId) {
 // e.g. { isFixed } when toggling the pin, { note } when editing the comment,
 // or both when saving the expense form. Merges, so other fields are untouched.
 export async function setExpenseMetaFS(sheetId, exp, fields = {}) {
-  if (!sheetId) return
+  // Firestore mode stores pin and comments on the expense entry itself.
+  if (!sheetId || usingFirestore()) return
   const data = {}
   if ('isFixed' in fields) data.isFixed = fields.isFixed === true || fields.isFixed === 'TRUE'
   if ('note' in fields) data.note = fields.note || ''

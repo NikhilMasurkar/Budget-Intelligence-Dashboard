@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { toast } from 'react-hot-toast'
 
 // ── Offline support ──────────────────────────────────────────────────────────
 // Two things live on the phone, per spreadsheet:
@@ -32,15 +31,6 @@ export function isNetworkError(e) {
   // Firefox "NetworkError…"; Firestore says "…the client is offline".
   // Matched by message, not TypeError, so a plain code bug isn't mistaken for it.
   return /offline|networkerror|failed to fetch|load failed/i.test(e?.message || '')
-}
-
-// Guard for changes that can't be queued. Says why instead of a raw
-// "Failed to fetch", and throws so callers stop (modals stay open).
-export function requireConnection() {
-  if (!isOffline()) return
-  const msg = 'Needs a connection — you can still add new expenses offline'
-  toast.error(msg, { id: 'needs-connection' })
-  throw new Error(msg)
 }
 
 export function saveSnapshot(sid, data) {

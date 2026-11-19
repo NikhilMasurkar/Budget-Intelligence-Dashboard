@@ -41,10 +41,30 @@ service cloud.firestore {
       );
       allow delete: if false;
 
-      // All nested data (categories, expenseMeta, settings/security, settings/sync)
-      // is readable/writable only by the sheet's owner.
+      // All nested data (categories, expenseMeta, settings/*) is readable and
+      // writable only by the sheet's owner. Month documents are written under
+      // the stricter rule below (rules OR together, so they're excluded here).
       match /{document=**} {
-        allow read, write: if ownerOf(sheetId);
+        allow read: if ownerOf(sheetId);
+        allow write: if ownerOf(sheetId) && document[0] != 'months';
+      }
+
+      // Expenses and income, one doc per month: months/{YYYY-MM}.
+      // Closed years are read-only, same as the app (utils/constants
+      // isYearLocked): this year and later are open, and last year stays open
+      // through January. request.time is UTC, so the grace edges are ±5.5h in IST.
+      // DEPLOY ONLY AFTER the one-time migration has finished — the migration
+      // writes every year, including closed ones.
+      match /months/{monthId} {
+        function yearOf(id) { return int(id.split('-')[0]); }
+        function open(id) {
+          return yearOf(id) >= request.time.year()
+            || (yearOf(id) == request.time.year() - 1 && request.time.month() == 1);
+        }
+        allow create, update: if ownerOf(sheetId) && open(monthId)
+          && monthId.matches('^[0-9]{4}-[0-9]{2}$')
+          && request.resource.data.year == yearOf(monthId);
+        allow delete: if ownerOf(sheetId) && open(monthId);
       }
     }
   }

@@ -45,7 +45,6 @@ import * as sheets from '../api/sheets'
 import * as categoriesFS from '../api/firestoreCategories'
 import {
   isNetworkError, getQueue, queueRow, saveSnapshot, loadSnapshot, clearOfflineData,
-  requireConnection,
 } from './offline'
 import { useExpenses } from '../hooks/useExpenses'
 import { useBudgetData } from '../hooks/useBudgetData'
@@ -93,11 +92,6 @@ describe('offline storage helpers', () => {
     expect(loadSnapshot('sid1')).toBeNull()
   })
 
-  it('requireConnection only blocks when offline', () => {
-    expect(() => requireConnection()).not.toThrow()
-    setOnline(false)
-    expect(() => requireConnection()).toThrow(/Needs a connection/)
-  })
 })
 
 describe('saving an expense with no connection', () => {
