@@ -10,7 +10,8 @@ import {
   getToken, getSheetId, setupSheet, getDriveExcelUrl
 } from './api/sheets'
 import { deleteCategoryFS } from './api/firestoreCategories'
-import { hasPinFS, setPinFS, verifyPinFS } from './api/firestoreSettings'
+import { hasPinFS, setPinFS, verifyPinFS, hashPin } from './api/firestoreSettings'
+import { useOnline, isOffline, getQueue, clearOfflineData, cachePinHash, getCachedPinHash } from './utils/offline'
 import PinScreen from './components/PinScreen'
 
 
@@ -69,7 +70,14 @@ export default function App() {
   // signOut() clears the storage flags, but pinVerified/pinMode are React state
   // and would survive — letting a second account sign in with the PIN gate
   // already "passed". Always reset them alongside the sign-out.
-  const handleSignOutFull = async () => {
+  const handleSignOutFull = async ({ ask = true } = {}) => {
+    const sid = getSheetId()
+    const unsent = getQueue(sid).length
+    if (ask && unsent && !window.confirm(
+      `${unsent} expense${unsent > 1 ? 's' : ''} added offline ${unsent > 1 ? "haven't" : "hasn't"} synced yet and will be lost. Sign out anyway?`
+    )) return
+    // The saved copy and the queue are this account's data — don't leave them on the phone.
+    clearOfflineData(sid)
     await handleSignOut()
     setPinVerified(false)
     setPinMode(null)
@@ -147,13 +155,23 @@ export default function App() {
   // ── Data ──────────────────────────────────────────────────────
   const {
     categories, expenses, income, loading, didInitialLoad, needsSetup, availableYears,
-    loadAll, autoSyncToDrive, setCategories, setNeedsSetup, missingConfig
-  } = useBudgetData({ authd, userName, onUnauthorized: handleSignOutFull })
+    loadAll, autoSyncToDrive, setCategories, setNeedsSetup, missingConfig,
+    offlineSince, pendingCount, queueOffline
+  } = useBudgetData({ authd, userName, onUnauthorized: () => handleSignOutFull({ ask: false }) })
+
+  // ── Offline ───────────────────────────────────────────────────
+  // offlineSince is set while the phone's saved copy is on screen — also when
+  // the browser claims to be online but requests are failing.
+  const online = useOnline()
+  const offline = !online || !!offlineSince
+  // Signing in to Google needs the network, so offline the saved copy stands in.
+  const showData = authd || !!offlineSince
 
   // ── CRUD hooks ────────────────────────────────────────────────
   const { handleSaveExpense, handleDeleteExpense, handleCopySelected, handleBulkPin, handleBulkDelete, handleSaveComment } = useExpenses({
     loadAll, autoSyncToDrive, year, month, setDeleteConfirm, closeModal,
-    clearSelection: () => setSelectedExpenseIds([])
+    clearSelection: () => setSelectedExpenseIds([]),
+    queueOffline,
   })
   const { handleSaveIncome, handleDeleteIncome } = useIncome({
     loadAll, autoSyncToDrive, setDeleteConfirm, closeModal
@@ -321,12 +339,25 @@ export default function App() {
         onSetPin={async (pin) => {
           await setPinFS(sid, pin)
           localStorage.setItem('budgetiq_has_pin', '1')
+          cachePinHash(sid, await hashPin(pin))
         }}
         onVerify={async (enteredPin) => {
           if (pinMode === 'setup') return true
           if (enteredPin === null) return true            // biometric bypass
+          // Firestore is out of reach offline — check against the copy kept
+          // from the last time this PIN was confirmed online.
+          if (isOffline()) {
+            const cached = getCachedPinHash(sid)
+            if (!cached) {
+              toast.error("You're offline. Use fingerprint / Face ID, or connect once so your PIN works offline.", { id: 'pin-offline' })
+              return false
+            }
+            return (await hashPin(enteredPin)) === cached
+          }
           await authReady()
-          return verifyPinFS(sid, enteredPin)
+          const ok = await verifyPinFS(sid, enteredPin)
+          if (ok) cachePinHash(sid, await hashPin(enteredPin))
+          return ok
         }}
         onUnlock={unlock}
       />
@@ -340,7 +371,7 @@ export default function App() {
       <TopBar
         view={view}
         setView={setView}
-        authd={authd}
+        authd={showData}
         loading={loading}
         userName={userName}
         userPicture={userPicture}
@@ -353,14 +384,33 @@ export default function App() {
         hasAIKey={AI_ENABLED}
         notifStatus={notifStatus}
         onToggleNotifications={handleToggleNotifications}
-        onAddExpense={authd && didInitialLoad && !needsSetup && !isLocked ? () => handleAddExpense(null) : undefined}
+        onAddExpense={showData && didInitialLoad && !needsSetup && !isLocked ? () => handleAddExpense(null) : undefined}
       />
 
       <Box className={globalClasses.contentArea}>
-        {!authd ? (
+        {!showData ? (
           <SignInScreen onSignIn={handleSignIn} />
         ) : (
           <>
+            {(offline || pendingCount > 0) && (
+              <Box className={classes.lockedBanner} role="status">
+                <span style={{ marginRight: '8px', fontSize: '16px' }}>{offline ? '📴' : '⏳'}</span>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {offline && (
+                    <>
+                      <strong>Offline</strong>
+                      {offlineSince && <> — showing your data from {new Date(offlineSince).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</>}
+                      . You can add expenses; other changes need a connection.
+                    </>
+                  )}
+                  {pendingCount > 0 && (
+                    <> {offline ? ' ' : ''}<strong>{pendingCount} expense{pendingCount > 1 ? 's' : ''} waiting to sync</strong>
+                      {offline ? ' when you\'re back online.' : authd ? ' — sending now…' : ' — sign in to send.'}</>
+                  )}
+                </Typography>
+              </Box>
+            )}
+
             {/* Full-screen loading only on the very first load — after that, keep
                 content mounted so the UI doesn't blank out on every save/refresh. */}
             {loading && !didInitialLoad && (
@@ -518,7 +568,9 @@ export default function App() {
                     onBulkPin={handleBulkPin}
                     onBulkDelete={handleBulkDelete}
                     onSaveComment={handleSaveComment}
-                    canEdit={authd && !isLocked}
+                    // Adding works offline (it queues); row changes need a connection.
+                    canEdit={showData && !isLocked}
+                    online={!offline}
                   />
                 ) : (
                   <>
@@ -527,7 +579,7 @@ export default function App() {
                       <MonthStepper year={year} month={month} availableYears={availableYears}
                         onYearChange={setYear} onMonthChange={setMonth} />
                       <Box className={classes.flexFiller} />
-                      {authd && !isLocked && (
+                      {authd && !isLocked && !offline && (
                         <Button
                           variant="contained"
                           onClick={() => { setEditRow(null); setModal('add-income') }}
@@ -542,7 +594,7 @@ export default function App() {
                       income={income.filter(i => String(i.year) === String(year) && String(i.month) === String(month))}
                       onEdit={row => { setEditRow(row); setModal('add-income') }}
                       onDelete={handleDeleteIncome}
-                      canEdit={authd && !isLocked}
+                      canEdit={authd && !isLocked && !offline}
                     />
                   </>
                 )}

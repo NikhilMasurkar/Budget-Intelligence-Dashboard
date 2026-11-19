@@ -84,9 +84,16 @@ export function useAuth() {
       else authReadyRef.current = restore().catch(() => {})
     }
     document.addEventListener('visibilitychange', onResume)
+    // Opened offline, sign-in couldn't run. Retry the moment the connection is
+    // back rather than waiting out the retry back-off (up to 5 minutes).
+    const onOnline = () => {
+      if (!authdRef.current && getSavedUserName()) authReadyRef.current = restore().catch(() => {})
+    }
+    window.addEventListener('online', onOnline)
 
     return () => {
       document.removeEventListener('visibilitychange', onResume)
+      window.removeEventListener('online', onOnline)
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
       if (restoreTimerRef.current) clearTimeout(restoreTimerRef.current)
     }

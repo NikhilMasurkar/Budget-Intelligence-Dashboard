@@ -18,9 +18,10 @@ describe('nextAmountInput', () => {
     expect(nextAmountInput('+', '-')).toBe('-')
   })
 
-  it('refuses a second operator — it would strand the field unparseable', () => {
-    expect(nextAmountInput('+200', '+')).toBeNull()
-    expect(nextAmountInput('500+200', '*')).toBeNull()
+  it('allows more steps after the first, so several values add in one go', () => {
+    expect(nextAmountInput('+200', '+')).toBe('+200+')
+    expect(nextAmountInput('500+200', '*')).toBe('500+200*')
+    expect(nextAmountInput('500+200+', '-')).toBe('500+200-')   // still swaps, never stacks
   })
 
   it('allows one decimal point per number', () => {

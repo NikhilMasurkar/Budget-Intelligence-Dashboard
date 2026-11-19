@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   Dialog, DialogTitle, DialogContent, Box, Typography,
   TextField, Button, IconButton, Divider
@@ -19,21 +19,34 @@ function fmtTs(ts) {
   })
 }
 
-export default function ExpenseCommentsModal({ expense, onClose, onSave, saving }) {
+export default function ExpenseCommentsModal({ expense, onClose, onSave, saving, canEdit = true, readOnlyNote = '🔒 This year is locked — comments are read-only' }) {
   const [text, setText] = useState('')
+  const [confirmIdx, setConfirmIdx] = useState(null)   // comment awaiting a second tap to delete
   const comments = parseComments(expense?.note)
+  const listRef = useRef(null)
 
-  const handleAdd = () => {
+  // Keep the newest comment in view, including right after adding one.
+  useEffect(() => {
+    if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
+  }, [comments.length])
+
+  const handleAdd = async () => {
     if (!text.trim() || saving) return
     const updated = [...comments, { text: text.trim(), ts: Date.now() }]
-    onSave(expense, JSON.stringify(updated))
-    setText('')
+    try {
+      await onSave(expense, JSON.stringify(updated))
+      setText('')                 // only once it is saved — a failed save keeps the typing
+    } catch { /* the save already showed an error toast */ }
   }
 
-  const handleDelete = (idx) => {
+  // Two taps: the first arms the button, the second deletes. There is no undo.
+  const handleDelete = async (idx) => {
     if (saving) return
-    const updated = comments.filter((_, i) => i !== idx)
-    onSave(expense, JSON.stringify(updated))
+    if (confirmIdx !== idx) { setConfirmIdx(idx); return }
+    setConfirmIdx(null)
+    try {
+      await onSave(expense, JSON.stringify(comments.filter((_, i) => i !== idx)))
+    } catch { /* toast already shown */ }
   }
 
   return (
@@ -67,10 +80,10 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving 
 
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
 
-      <DialogContent sx={{ px: 2, py: 1.5, overflowY: 'auto', minHeight: 100, maxHeight: 320 }}>
+      <DialogContent ref={listRef} sx={{ px: 2, py: 1.5, overflowY: 'auto', minHeight: 100, maxHeight: 320 }}>
         {comments.length === 0 ? (
           <Typography sx={{ fontSize: 13, color: '#5a6080', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
-            No comments yet
+            {canEdit ? 'No comments yet — add a note below' : 'No comments'}
           </Typography>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -83,27 +96,48 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving 
                 position: 'relative',
                 '&:hover .comment-delete': { opacity: 1 }
               }}>
-                <Typography sx={{ fontSize: 13, color: '#e4e8f5', lineHeight: 1.5, wordBreak: 'break-word', pr: '28px' }}>
+                <Typography sx={{ fontSize: 13, color: '#e4e8f5', lineHeight: 1.5, wordBreak: 'break-word', whiteSpace: 'pre-wrap', pr: canEdit ? '36px' : 0 }}>
                   {c.text}
                 </Typography>
                 <Typography sx={{ fontSize: 10, color: '#5a6080', mt: '4px' }}>
                   {fmtTs(c.ts)}
                 </Typography>
-                <IconButton
-                  className="comment-delete"
-                  size="small"
-                  onClick={() => handleDelete(i)}
-                  disabled={saving}
-                  sx={{
-                    position: 'absolute', top: 6, right: 6,
-                    opacity: 0, transition: 'opacity 0.15s',
-                    color: '#5a6080',
-                    '&:hover': { color: '#e05555', background: 'rgba(224,85,85,0.1)' },
-                    p: '3px'
-                  }}
-                >
-                  <DeleteIcon sx={{ fontSize: 15 }} />
-                </IconButton>
+                {canEdit && (confirmIdx === i ? (
+                  <Button
+                    size="small"
+                    onClick={() => handleDelete(i)}
+                    onBlur={() => setConfirmIdx(null)}
+                    autoFocus
+                    disabled={saving}
+                    sx={{
+                      position: 'absolute', top: 6, right: 6, minWidth: 0, px: '8px', py: '2px',
+                      fontSize: 11, fontWeight: 700, textTransform: 'none', borderRadius: '6px',
+                      color: '#fff', background: '#e05555', '&:hover': { background: '#c94444' }
+                    }}
+                  >
+                    Delete?
+                  </Button>
+                ) : (
+                  <IconButton
+                    className="comment-delete"
+                    size="small"
+                    aria-label="Delete comment"
+                    onClick={() => handleDelete(i)}
+                    disabled={saving}
+                    sx={{
+                      position: 'absolute', top: 4, right: 4,
+                      // Hover-reveal on desktop; always shown on touch screens,
+                      // which have no hover and could never find it otherwise.
+                      opacity: 0, '@media (hover: none)': { opacity: 1 },
+                      transition: 'opacity 0.15s',
+                      color: '#5a6080',
+                      '&:hover': { color: '#e05555', background: 'rgba(224,85,85,0.1)' },
+                      p: '6px'
+                    }}
+                  >
+                    <DeleteIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                ))}
               </Box>
             ))}
           </Box>
@@ -112,8 +146,16 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving 
 
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
 
+      {!canEdit ? (
+        <Typography sx={{ px: 2, py: 1.5, fontSize: 12, color: '#5a6080', textAlign: 'center' }}>
+          {readOnlyNote}
+        </Typography>
+      ) : (
       <Box sx={{ px: 2, py: 1.5, display: 'flex', gap: 1, alignItems: 'flex-end' }}>
         <TextField
+          // Straight to typing when there is nothing to read yet; otherwise
+          // don't throw a phone keyboard over the thread.
+          autoFocus={comments.length === 0}
           placeholder="Add a comment…"
           value={text}
           onChange={e => setText(e.target.value)}
@@ -150,6 +192,7 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving 
           {saving ? '…' : 'Add'}
         </Button>
       </Box>
+      )}
     </Dialog>
   )
 }

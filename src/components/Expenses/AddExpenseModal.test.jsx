@@ -64,8 +64,30 @@ describe('AddExpenseModal amount expressions', () => {
     render(<AddExpenseModal initial={expenseRow()} categories={CATS} year={2026} month={9}
       onSave={noop} onClose={noop} />)
 
-    fireEvent.change(amountInput(), { target: { value: '1+2+3' } })
+    fireEvent.change(amountInput(), { target: { value: '12abc' } })
     expect(screen.getAllByText(/Can't read that/).length).toBeGreaterThan(0)
+  })
+
+  it('adds several values at once and shows the whole sum', () => {
+    render(<AddExpenseModal initial={expenseRow()} categories={CATS} year={2026} month={9}
+      onSave={noop} onClose={noop} />)
+
+    fireEvent.change(amountInput(), { target: { value: '+200+300' } })
+    expect(screen.getByText(/₹5,000 \+ ₹200 \+ ₹300 =/)).toBeTruthy()
+    expect(screen.getAllByText(/5,500/).length).toBeGreaterThan(0)
+  })
+
+  it('logs a chained adjustment into the comment thread on save', async () => {
+    const onSave = vi.fn().mockResolvedValue()
+    render(<AddExpenseModal initial={expenseRow()} categories={CATS} year={2026} month={9}
+      onSave={onSave} onClose={noop} />)
+
+    fireEvent.change(amountInput(), { target: { value: '+200+300' } })
+    fireEvent.click(screen.getByRole('button', { name: /Update Expense/ }))
+    await vi.waitFor(() => expect(onSave).toHaveBeenCalled())
+    const [payload] = onSave.mock.calls[0]
+    expect(payload.amount).toBe(5500)
+    expect(JSON.parse(payload.note).at(-1).text).toBe('₹5,000 + ₹200 + ₹300 = ₹5,500')
   })
 })
 

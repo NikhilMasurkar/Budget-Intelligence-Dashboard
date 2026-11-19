@@ -4,6 +4,7 @@ import {
   saveIncome, readAllIncomeRows, writeAllIncomeRows, getToken, uid
 } from '../api/sheets'
 import { toSentenceCase, dateForMonth, isYearLocked } from '../utils/constants'
+import { requireConnection } from '../utils/offline'
 
 export function useIncome({ loadAll, autoSyncToDrive, setDeleteConfirm, closeModal }) {
   const handleSaveIncome = useCallback(async (inc, applyMode = 'single') => {
@@ -13,6 +14,7 @@ export function useIncome({ loadAll, autoSyncToDrive, setDeleteConfirm, closeMod
       toast.error('Cannot modify historical data: Year is locked.')
       return
     }
+    requireConnection()
     const t = getToken()
     if (!t) {
       const err = new Error('Please sign in to save changes')

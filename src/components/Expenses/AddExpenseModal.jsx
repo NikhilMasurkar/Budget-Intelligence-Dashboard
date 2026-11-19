@@ -96,7 +96,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
   const amt = expr ? Math.abs(expr.value) : 0
   // Covers the case where "=" already folded the expression into a plain
   // number, so the saved comment can still say what the adjustment was.
-  const shownExpr = (expr && expr.op !== null) ? expr : resolvedExpr
+  const shownExpr = expr?.label ? expr : resolvedExpr
   const adjusted = !!shownExpr
   const parts = splitAll ? splitWithdrawal(Math.round(amt), available) : []
 
@@ -126,11 +126,13 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
     const amountChanged = !!form.id && withMoney && amt !== baseAmount
     if (!amountChanged) return note
 
-    const money = adjusted
-      ? `${shownExpr.op === '-' ? '−' : shownExpr.op}`
-      + `${shownExpr.op === '+' || shownExpr.op === '-' ? inr(shownExpr.operand) : shownExpr.operand}`
-      + ` · ${inr(baseAmount)} → ${inr(amt)}`
-      : `${inr(baseAmount)} → ${inr(amt)}`
+    // "₹5,000 + ₹200 + ₹300 = ₹5,500" when adjusting the old amount;
+    // "₹5,000 → ₹700 · ₹500 + ₹200" when a fresh sum replaced it.
+    const money = !adjusted
+      ? `${inr(baseAmount)} → ${inr(amt)}`
+      : shownExpr.relative
+        ? `${shownExpr.label} = ${inr(amt)}`
+        : `${inr(baseAmount)} → ${inr(amt)} · ${shownExpr.label}`
     return note ? `${money} — ${note}` : money
   }
 
@@ -364,7 +366,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             onChange={e => { setResolvedExpr(null); set('amount', e.target.value) }}
             onFocus={() => setPadOpen(true)}
             onClick={() => setPadOpen(true)}
-            placeholder={baseAmount ? 'e.g. +200, -50, *2 or a new amount' : '0'}
+            placeholder={baseAmount ? 'e.g. +200+150 to add, -50, or a new amount' : 'e.g. 450 or 200+150+80'}
             fullWidth
             variant="outlined"
             size="small"
@@ -382,20 +384,20 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
 
           {/* Show the resolved sum before it is saved, so an expression is never
               a guess. Also flags input the parser could not read at all. */}
-          {adjusted && (
+          {expr?.label && (
             <Box sx={{
               width: '100%', mt: '-4px',
               background: 'rgba(91,127,255,0.08)', border: '1px solid rgba(91,127,255,0.3)',
               borderRadius: '8px', p: '8px 12px',
             }}>
               <Typography sx={{ fontSize: 12, color: '#a0b4ff', fontVariantNumeric: 'tabular-nums' }}>
-                {inr(baseAmount)} {expr.op === '-' ? '−' : expr.op} {expr.operand} = <b>{inr(amt)}</b>
+                {expr.label} = <b>{inr(amt)}</b>
               </Typography>
             </Box>
           )}
           {form.amount.trim() && !expr && (
             <Typography sx={{ width: '100%', mt: '-4px', fontSize: 11.5, color: '#ff7a7a' }}>
-              Can't read that — type a number, or +200 / -50 / *2 to adjust the current amount.
+              Can't read that — type a number, a sum like 200+150, or +200 to add to the current amount.
             </Typography>
           )}
 
@@ -409,7 +411,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
                 if (!expr) return
                 // Fold the expression into a plain number, remembering what it
                 // was so the saved comment still explains the change.
-                if (expr.op !== null) setResolvedExpr(expr)
+                if (expr.label) setResolvedExpr(expr)
                 set('amount', String(expr.value))
               }}
             />

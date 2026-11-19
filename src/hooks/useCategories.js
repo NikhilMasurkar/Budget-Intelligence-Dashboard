@@ -2,11 +2,13 @@ import { useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import { getSheetId, uid } from '../api/sheets'
 import { saveCategoryFS, saveAllCategoriesFS } from '../api/firestoreCategories'
+import { requireConnection } from '../utils/offline'
 
 export function useCategories({ loadAll, autoSyncToDrive, setDeleteConfirm, setCategories }) {
   const handleSaveCategory = useCallback(async (cat) => {
     const sid = getSheetId()
     if (!sid) { toast.error('No sheet connected'); return }
+    requireConnection()
     try {
       const category = { ...cat, id: cat.id || uid(), order: cat.order ?? 0 }
       await saveCategoryFS(sid, category)
@@ -25,6 +27,7 @@ export function useCategories({ loadAll, autoSyncToDrive, setDeleteConfirm, setC
   const handleReorderCategory = useCallback(async (orderedCats) => {
     const sid = getSheetId()
     if (!sid) return
+    try { requireConnection() } catch { return }
     setCategories(orderedCats) // optimistic update
     try {
       await saveAllCategoriesFS(sid, orderedCats)

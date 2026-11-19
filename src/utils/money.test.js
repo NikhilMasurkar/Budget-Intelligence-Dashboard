@@ -131,11 +131,40 @@ describe('applyAmountExpression', () => {
   it('replaces the amount when given a bare number', () => {
     const r = applyAmountExpression(5000, '750')
     expect(r.value).toBe(750)
-    expect(r.op).toBeNull()
+    expect(r.label).toBeNull()
   })
 
-  it('reports the operator and operand so the change can be logged', () => {
-    expect(applyAmountExpression(5000, '+200')).toEqual({ value: 5200, op: '+', operand: 200 })
+  it('writes the sum out so the change can be shown and logged', () => {
+    expect(applyAmountExpression(5000, '+200')).toEqual({ value: 5200, label: '₹5,000 + ₹200', relative: true })
+    expect(applyAmountExpression(5000, '750')).toEqual({ value: 750, label: null, relative: false })
+  })
+
+  it('chains any number of steps, adding several bills at once', () => {
+    expect(applyAmountExpression(5000, '+200+300')).toMatchObject({ value: 5500, label: '₹5,000 + ₹200 + ₹300' })
+    expect(applyAmountExpression(0, '500+200+300')).toMatchObject({ value: 1000, relative: false })
+    expect(applyAmountExpression(5000, '-100-50').value).toBe(4850)
+  })
+
+  it('does × and ÷ before + and −, like a phone calculator', () => {
+    expect(applyAmountExpression(0, '100+50*2').value).toBe(200)
+    expect(applyAmountExpression(0, '300-200/4').value).toBe(250)
+  })
+
+  it('on a new expense, a leading + reads as a plain sum', () => {
+    expect(applyAmountExpression(0, '+200+300')).toMatchObject({ value: 500, label: '₹200 + ₹300' })
+  })
+
+  it('tolerates commas, ₹, × ÷ symbols, and a number still being typed', () => {
+    expect(applyAmountExpression(0, '₹5,000').value).toBe(5000)
+    expect(applyAmountExpression(0, '2×3').value).toBe(6)
+    expect(applyAmountExpression(0, '500+').value).toBe(500)   // operator pressed, next number not yet
+    expect(applyAmountExpression(0, '5.').value).toBe(5)
+  })
+
+  it('rejects division by zero and junk', () => {
+    expect(applyAmountExpression(0, '100/0')).toBeNull()
+    expect(applyAmountExpression(0, '12abc')).toBeNull()
+    expect(applyAmountExpression(0, '5++3')).toBeNull()
   })
 
   it('handles decimals and ignores surrounding spaces', () => {
@@ -169,8 +198,8 @@ describe('applyAmountExpression — plain infix from the keypad', () => {
     expect(applyAmountExpression(5000, '+200').value).toBe(5200)
   })
 
-  it('rejects anything more complex rather than evaluating it', () => {
-    expect(applyAmountExpression(0, '1+2+3')).toBeNull()
+  it('rejects brackets and powers rather than evaluating them', () => {
+    expect(applyAmountExpression(0, '1+2+3').value).toBe(6)   // chains are fine
     expect(applyAmountExpression(0, '(1+2)*3')).toBeNull()
     expect(applyAmountExpression(0, '2**3')).toBeNull()
     expect(applyAmountExpression(0, '500/0')).toBeNull()

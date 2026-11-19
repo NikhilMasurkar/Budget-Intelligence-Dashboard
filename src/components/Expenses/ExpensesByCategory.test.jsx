@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { CATEGORIES, EXPENSES, INCOME, YEAR, MONTH, noop, handlers } from '../../test/fixtures'
 import ExpensesByCategory from './ExpensesByCategory'
 import ExpenseCommentsModal from './ExpenseCommentsModal'
@@ -113,6 +113,39 @@ describe('ExpenseCommentsModal', () => {
     )).not.toThrow()
   })
 
+  const thread = '[{"text":"weekly shop","ts":1}]'
+
+  it('keeps the typed text when a save fails, and clears it when it succeeds', async () => {
+    const onSave = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce()
+    render(<ExpenseCommentsModal expense={{ itemName: 'Rent', note: '' }}
+      onClose={noop} onSave={onSave} saving={false} />)
+    const box = screen.getByPlaceholderText('Add a comment…')
+    fireEvent.change(box, { target: { value: 'paid by card' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1))
+    expect(box.value).toBe('paid by card')
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await waitFor(() => expect(box.value).toBe(''))
+  })
+
+  it('deletes only on a second tap', async () => {
+    const onSave = vi.fn().mockResolvedValue()
+    render(<ExpenseCommentsModal expense={{ itemName: 'Rent', note: thread }}
+      onClose={noop} onSave={onSave} saving={false} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Delete comment' }))
+    expect(onSave).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete?' }))
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.anything(), '[]'))
+  })
+
+  it('is read-only for a locked year', () => {
+    render(<ExpenseCommentsModal expense={{ itemName: 'Rent', note: thread }}
+      onClose={noop} onSave={noop} saving={false} canEdit={false} />)
+    expect(screen.getByText('weekly shop')).toBeTruthy()
+    expect(screen.queryByPlaceholderText('Add a comment…')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Delete comment' })).toBeNull()
+  })
+
   it('renders while saving', () => {
     expect(() => render(
       <ExpenseCommentsModal expense={{ itemName: 'Rent', note: '' }}
@@ -130,5 +163,33 @@ describe('AmountKeypad', () => {
     expect(() => render(
       <AmountKeypad value="+200" onChange={noop} onDone={noop} onEquals={noop} resultLabel="= ₹5,200" />
     )).not.toThrow()
+  })
+})
+
+describe('ExpensesByCategory offline', () => {
+  const thisMonth = year2026.filter(e => String(e.month) === String(MONTH))
+  const pendingRow = { ...thisMonth[0], id: 'q1', itemName: 'Chai offline', pending: true }
+
+  it('marks an expense added offline as not synced, with no edit, delete or comment', () => {
+    render(<ExpensesByCategory {...props} expenses={[pendingRow]} />)
+    expect(screen.getByText('⏳ Not synced')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Add comment' })).toBeNull()
+  })
+
+  it('offline: adding stays available, row and category changes are hidden', () => {
+    render(<ExpensesByCategory {...props} online={false} />)
+    expect(screen.getByRole('button', { name: '+ Add Expense' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: '+ Category' })).toBeNull()
+    expect(screen.queryAllByRole('button', { name: 'Edit' })).toHaveLength(0)
+    expect(screen.queryAllByRole('button', { name: 'Category options' })).toHaveLength(0)
+  })
+
+  it('online: row edits are back', () => {
+    render(<ExpensesByCategory {...props} />)
+    expect(screen.queryAllByRole('button', { name: 'Category options' }).length).toBeGreaterThan(0)
+    // Proves the 'Edit' / 'Add comment' queries above can find something at all.
+    expect(screen.queryAllByRole('button', { name: 'Edit' }).length).toBeGreaterThan(0)
+    expect(screen.queryAllByRole('button', { name: /comment/i }).length).toBeGreaterThan(0)
   })
 })

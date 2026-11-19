@@ -62,6 +62,7 @@ function areRowPropsEqual(prev, next) {
     prev.exp.isFixed === next.exp.isFixed &&
     prev.exp.note === next.exp.note &&
     prev.exp.updatedAt === next.exp.updatedAt &&
+    prev.exp.pending === next.exp.pending &&
     prev.isSelected === next.isSelected &&
     prev.canEdit === next.canEdit &&
     prev.onToggle === next.onToggle &&
@@ -72,7 +73,10 @@ function areRowPropsEqual(prev, next) {
 }
 
 const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected, onToggle, onComment, onEdit, onDelete }) {
-  const commentCount = parseComments(exp.note).length
+  const comments = parseComments(exp.note)
+  const commentCount = comments.length
+  const lastComment = comments[commentCount - 1]?.text
+  const updated = fmtUpdated(exp.updatedAt)
   return (
     <Box className={classes.expenseRow}
       sx={isSelected ? { background: 'rgba(91,127,255,0.06)' } : undefined}>
@@ -86,9 +90,21 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
       )}
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography className={classes.expenseName} sx={{ flex: 'unset' }}>{exp.itemName}</Typography>
-        {fmtUpdated(exp.updatedAt) && (
+        {/* Latest note right under the name, so it's readable without opening the thread. */}
+        {lastComment && (
+          <Typography
+            onClick={() => onComment(exp)}
+            sx={{
+              fontSize: 11, color: '#8891b8', lineHeight: 1.4, cursor: 'pointer',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}
+          >
+            💬 {lastComment}
+          </Typography>
+        )}
+        {updated && (
           <Typography sx={{ fontSize: 10, color: '#3d4466', display: 'block', lineHeight: 1.4 }}>
-            Updated {fmtUpdated(exp.updatedAt)}
+            Updated {updated}
           </Typography>
         )}
       </Box>
@@ -98,12 +114,22 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
       {+exp.amount < 0 && (
         <Box component="span" className={classes.withdrawBadge}>↓ WITHDRAWN</Box>
       )}
+      {exp.pending && (
+        <Tooltip title="Added offline — saved on this phone, goes to your sheet when you're back online" arrow>
+          <Box component="span" sx={{
+            fontSize: 10, fontWeight: 700, color: '#ffb03a', whiteSpace: 'nowrap',
+            background: 'rgba(255,176,58,0.12)', border: '1px solid rgba(255,176,58,0.35)',
+            borderRadius: '6px', px: '6px', py: '1px',
+          }}>⏳ Not synced</Box>
+        </Tooltip>
+      )}
       <Typography
         className={classes.expenseAmount}
         sx={+exp.amount < 0 ? { color: '#ff7a7a' } : undefined}
       >
         {fmt(exp.amount)}
       </Typography>
+      {!exp.pending && (
       <Tooltip title={commentCount > 0 ? `${commentCount} comment${commentCount !== 1 ? 's' : ''}` : 'Add comment'} arrow>
         <IconButton
           size="small"
@@ -128,6 +154,7 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
           )}
         </IconButton>
       </Tooltip>
+      )}
       {canEdit && (
         <>
           <Tooltip title="Edit" arrow>
@@ -154,10 +181,12 @@ export default memo(function ExpensesByCategory({
   onReorderCategory, onCopyToNextMonth,
   selectedIds = [], onSelectionChange, onBulkPin, onBulkDelete,
   onSaveComment,
-  canEdit
+  canEdit,
+  online = true,       // false: only adding works (it queues); row changes need a connection
 }) {
   const { classes, cx } = useExpensesByCategoryStyles()
   const { classes: g } = useGlobalStyles()
+  const canChange = canEdit && online
 
   const [menuAnchor, setMenuAnchor] = useState(null)
   const [menuCat, setMenuCat] = useState(null)
@@ -336,9 +365,11 @@ export default memo(function ExpensesByCategory({
           </Button>
           {canEdit && (
             <>
-              <Button size="small" variant="outlined" onClick={onAddCategory} className={classes.addBtn}>
-                + Category
-              </Button>
+              {online && (
+                <Button size="small" variant="outlined" onClick={onAddCategory} className={classes.addBtn}>
+                  + Category
+                </Button>
+              )}
               <Button size="small" variant="contained" onClick={() => onAddExpense(null)} className={g.containedBlueButton}>
                 + Add Expense
               </Button>
@@ -415,7 +446,7 @@ export default memo(function ExpensesByCategory({
       )}
 
       {/* ── Bulk action bar ── */}
-      {canEdit && selectedExpenses.length > 0 && (
+      {canChange && selectedExpenses.length > 0 && (
         <Box sx={{
           display: 'flex', alignItems: 'center', gap: '10px',
           padding: '10px 14px', marginBottom: '10px', flexWrap: 'wrap',
@@ -557,7 +588,7 @@ export default memo(function ExpensesByCategory({
                       ? <ExpandLessIcon className={classes.expandIcon} />
                       : <ExpandMoreIcon className={classes.expandIcon} />
                     }
-                    {canEdit && catExpsFull.length > 0 && (
+                    {canChange && catExpsFull.length > 0 && (
                       <Tooltip title={catAllSelected ? 'Deselect all' : 'Select all in category'} arrow>
                         <Checkbox
                           size="small"
@@ -592,9 +623,11 @@ export default memo(function ExpensesByCategory({
                       </Button>
                     )}
 
-                    <IconButton size="small" className={classes.menuBtn} onClick={e => openMenu(e, cat)}>
-                      <MoreVertIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
+                    {canChange && (
+                      <IconButton size="small" className={classes.menuBtn} aria-label="Category options" onClick={e => openMenu(e, cat)}>
+                        <MoreVertIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    )}
                   </Box>
                   {cat.budget > 0 && <CategoryBudgetText actual={catTotalFull} budget={cat.budget} />}
                 </Box>
@@ -610,7 +643,7 @@ export default memo(function ExpensesByCategory({
                           key={exp.id}
                           exp={exp}
                           classes={classes}
-                          canEdit={canEdit}
+                          canEdit={canChange && !exp.pending}
                           isSelected={selectedSet.has(exp.id)}
                           onToggle={handleToggle}
                           onComment={handleComment}
@@ -666,7 +699,7 @@ export default memo(function ExpensesByCategory({
                     key={exp.id}
                     exp={exp}
                     classes={classes}
-                    canEdit={canEdit}
+                    canEdit={canChange && !exp.pending}
                     isSelected={selectedSet.has(exp.id)}
                     onToggle={handleToggle}
                     onComment={handleComment}
@@ -685,6 +718,8 @@ export default memo(function ExpensesByCategory({
         <ExpenseCommentsModal
           expense={commentExp}
           saving={commentSaving}
+          canEdit={canChange}
+          readOnlyNote={canEdit && !online ? '📴 Offline — comments can be added once you\'re back online' : undefined}
           onClose={() => { if (!commentSaving) setCommentExp(null) }}
           onSave={async (exp, noteJson) => {
             setCommentSaving(true)
@@ -708,7 +743,7 @@ export default memo(function ExpensesByCategory({
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        {canEdit && [
+        {canChange && [
           <MenuItem key="edit" className={classes.menuItem}
             onClick={() => { onEditCategory(menuCat); closeMenu() }}>
             <ListItemIcon className={classes.menuIcon}><EditOutlinedIcon sx={{ fontSize: 15 }} /></ListItemIcon>

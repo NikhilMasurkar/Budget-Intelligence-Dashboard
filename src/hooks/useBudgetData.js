@@ -6,12 +6,17 @@ import {
   DEFAULT_CATEGORIES, downloadExcelFromDrive,
   readAllExpenseRows, writeAllExpenseRows,
   readAllIncomeRows, writeAllIncomeRows,
-  uploadExcelToDrive, uid, autoFixedCopyToMonth
+  uploadExcelToDrive, uid, autoFixedCopyToMonth,
+  appendRows, forgetCachedTab, TABS
 } from '../api/sheets'
+import {
+  isOffline, isNetworkError, saveSnapshot, loadSnapshot,
+  getQueue, setQueue, queueRow, rowToExpense
+} from '../utils/offline'
 import {
   fetchCategoriesFS, saveAllCategoriesFS
 } from '../api/firestoreCategories'
-import { fetchExpenseMetaFS, expensePinKey } from '../api/firestoreExpenseMeta'
+import { fetchExpenseMetaFS, expensePinKey, setExpenseMetaFS } from '../api/firestoreExpenseMeta'
 import { getSheetSyncMetaFS, setSheetFormatVersionFS } from '../api/firestoreSettings'
 import { YEAR_NOW, SHEET_FORMAT_VERSION, toSentenceCase } from '../utils/constants'
 import { reconcileExpenses, reconcileIncome } from '../utils/reconcile'
@@ -24,19 +29,76 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
   const [needsSetup, setNeedsSetup] = useState(false)
   const [availableYears, setAvailableYears] = useState([YEAR_NOW])
   const [didInitialLoad, setDidInitialLoad] = useState(false)
+  // Set while showing the phone's saved copy: when that copy was taken.
+  const [offlineSince, setOfflineSince] = useState(null)
+  const [pendingCount, setPendingCount] = useState(() => getQueue(getSheetId()).length)
 
   const missingConfig = !import.meta.env.VITE_GOOGLE_SHEETS_API_KEY ||
     !import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID ||
     !import.meta.env.VITE_FIREBASE_PROJECT_ID
 
+  // Expenses added offline, shown in the list until they reach the sheet.
+  const pendingExpenses = (sid) => getQueue(sid).map(r => rowToExpense(r, { pending: true }))
+
+  // Show the last data that loaded successfully. False when there is none.
+  const showSnapshot = (sid) => {
+    const snap = loadSnapshot(sid)
+    if (!snap) return false
+    setCategories(snap.categories || [])
+    setExpenses([...(snap.expenses || []), ...pendingExpenses(sid)])
+    setIncome(snap.income || [])
+    if (snap.availableYears?.length) setAvailableYears(snap.availableYears)
+    setOfflineSince(snap.savedAt)
+    setPendingCount(getQueue(sid).length)
+    setDidInitialLoad(true)
+    return true
+  }
+
+  // Send queued offline expenses to the sheet. Reads the sheet fresh first and
+  // skips ids already there, so a connection that dropped mid-send can't
+  // duplicate a row. Only rows that were queued when this started are removed.
+  const syncingRef = useRef(false)
+  const syncQueue = async (sid, t) => {
+    const queued = getQueue(sid)
+    if (!queued.length || !t || syncingRef.current) return 0
+    syncingRef.current = true
+    try {
+      forgetCachedTab(TABS.EXPENSES)
+      const inSheet = new Set((await readAllExpenseRows(t)).map(r => r[0]))
+      const toSend = queued.filter(r => !inSheet.has(r[0]))
+      if (toSend.length) await appendRows(TABS.EXPENSES, toSend, t)
+      const sent = new Set(queued.map(r => r[0]))
+      setQueue(sid, getQueue(sid).filter(r => !sent.has(r[0])))
+      setPendingCount(getQueue(sid).length)
+      // Pins and notes also live in Firestore (the Excel backup drops them).
+      await Promise.all(toSend.map(r => setExpenseMetaFS(sid,
+        { year: r[1], month: r[2], categoryId: r[3], itemName: r[4] },
+        { isFixed: r[6], note: r[7] }).catch(() => {})))
+      toast.success(`Synced ${queued.length} expense${queued.length > 1 ? 's' : ''} added offline ✓`, { duration: 4000 })
+      return queued.length
+    } finally {
+      syncingRef.current = false
+    }
+  }
+
   const loadAll = useCallback(async (opts = {}) => {
     if (missingConfig) return
     const t = getToken()
     const sid = getSheetId()
-    if (!t || !sid) { setCategories([]); setExpenses([]); setIncome([]); return }
+    if (!sid) { setCategories([]); setExpenses([]); setIncome([]); return }
+    // No connection: show the saved copy. (Online without a token is a lapsed
+    // sign-in — fall through to the sign-in screen as before, not stale data.)
+    if (isOffline() && showSnapshot(sid)) return
+    if (!t) { setCategories([]); setExpenses([]); setIncome([]); return }
     setLoading(true)
     setNeedsSetup(false)
     try {
+      let synced = 0
+      try { synced = await syncQueue(sid, t) } catch (e) {
+        if (!isNetworkError(e)) toast.error('Could not sync offline expenses yet: ' + e.message)
+        else throw e
+      }
+
       // ── Categories: Firestore is the source of truth ──────────────────────
       let cats = await fetchCategoriesFS(sid)
 
@@ -132,7 +194,8 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
         })
       }
 
-      setExpenses(exps)
+      // Anything still queued (a sync that failed) stays visible as pending.
+      setExpenses([...exps, ...pendingExpenses(sid)])
       setIncome(inc)
 
       const systemYear = new Date().getFullYear()
@@ -143,9 +206,16 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
         .filter(y => y <= systemYear || exps.some(e => parseInt(e.year) === y) || inc.some(i => parseInt(i.year) === y))
         .sort((a, b) => a - b)
       setAvailableYears(filteredYears)
+      setOfflineSince(null)
+      saveSnapshot(sid, { categories: cats, expenses: exps, income: inc, availableYears: filteredYears })
+      if (synced) autoSyncToDrive()
 
     } catch (e) {
-      if (e.message.includes('Unable to parse range')) {
+      if (isNetworkError(e) && showSnapshot(sid)) {
+        // Lost the connection — the saved copy is on screen.
+      } else if (isNetworkError(e)) {
+        toast.error("You're offline, and there's no saved copy on this phone yet. Connect once to load your data.")
+      } else if (e.message.includes('Unable to parse range')) {
         setNeedsSetup(true)
       } else if (e.message.includes('The caller does not have permission')) {
         toast.error('Access Denied. Signing out...', { duration: 5000 })
@@ -162,6 +232,23 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
   }, [missingConfig, userName, authd])
 
   useEffect(() => { loadAll() }, [loadAll])
+
+  // Back online: reload, which sends anything queued first. If Google sign-in
+  // lapsed meanwhile, useAuth re-signs in and its authd change reloads instead.
+  useEffect(() => {
+    const onOnline = () => { if (getToken()) loadAll() }
+    window.addEventListener('online', onOnline)
+    return () => window.removeEventListener('online', onOnline)
+  }, [loadAll])
+
+  // Save a NEW expense on the phone (offline, or the request never got through)
+  // and show it straight away as pending.
+  const queueOffline = useCallback((row) => {
+    const sid = getSheetId()
+    queueRow(sid, row)
+    setExpenses(prev => [...prev, rowToExpense(row, { pending: true })])
+    setPendingCount(getQueue(sid).length)
+  }, [])
 
   useEffect(() => {
     if (!authd) return
@@ -301,6 +388,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
   return {
     categories, expenses, income, loading, didInitialLoad, needsSetup, availableYears,
     loadAll, autoSyncToDrive,
-    setCategories, setNeedsSetup, missingConfig
+    setCategories, setNeedsSetup, missingConfig,
+    offlineSince, pendingCount, queueOffline
   }
 }

@@ -5,10 +5,11 @@ import {
   readAllExpenseRows, writeAllExpenseRows, getToken, getSheetId, uid
 } from '../api/sheets'
 import { setExpenseMetaFS } from '../api/firestoreExpenseMeta'
+import { isOffline, isNetworkError, requireConnection } from '../utils/offline'
 
 import { MONTHS, toSentenceCase, isYearLocked } from '../utils/constants'
 
-export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteConfirm, closeModal, clearSelection }) {
+export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteConfirm, closeModal, clearSelection, queueOffline }) {
   const handleSaveExpense = useCallback(async (exp, applyMode = 'single') => {
     // applyMode 'split' — one withdrawal spread across several investments, so
     // each pot's balance drops by its own share instead of the whole amount
@@ -16,6 +17,7 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
     if (applyMode === 'split') {
       const rows = Array.isArray(exp) ? exp : [exp]
       if (!rows.length) return
+      requireConnection()
       const targetY = parseInt(rows[0].year || year)
       if (isYearLocked(targetY)) {
         toast.error('Cannot modify historical data: Year is locked.')
@@ -63,7 +65,21 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
       toast.error('Cannot modify historical data: Year is locked.')
       return
     }
+    // A new single expense can wait on the phone; edits and multi-month
+    // saves rewrite the sheet, so they need a connection.
+    const isNew = !exp.id
+    const queueable = applyMode === 'single' && isNew && !!queueOffline
+    // Fix the id up front so a retry or a later sync can never add it twice.
+    if (queueable) exp.id = uid()
+    const saveOnPhone = () => {
+      queueOffline([exp.id, String(exp.year), String(exp.month), exp.categoryId, exp.itemName,
+        exp.amount, exp.isFixed ? 'TRUE' : 'FALSE', exp.note || '', 'U' + Date.now()])
+      toast.success("Saved on this phone — it will sync when you're back online", { icon: '⏳', duration: 4000 })
+      closeModal()
+    }
     const t = getToken()
+    if (queueable && (!t || isOffline())) { saveOnPhone(); return }
+    if (!queueable) requireConnection()
     if (!t) {
       const err = new Error('Please sign in to save changes')
       toast.error(err.message); throw err
@@ -74,7 +90,7 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
         await saveExpense(exp, t)
         // Persist pin + note to Firestore (survives the Excel round-trip)
         await setExpenseMetaFS(sid, exp, { isFixed: exp.isFixed, note: exp.note })
-        toast.success(exp.id ? 'Updated!' : 'Added!')
+        toast.success(isNew ? 'Added!' : 'Updated!')
       } else {
         const startMonth = applyMode === 'all_year' ? 1 : parseInt(exp.month)
         const count = 12 - startMonth + 1
@@ -107,9 +123,11 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
       loadAll({ skipExcel: true })
       autoSyncToDrive()
     } catch (e) {
+      // The request never got through (weak signal) — keep it on the phone.
+      if (queueable && isNetworkError(e)) { saveOnPhone(); return }
       toast.error(e.message); throw e
     }
-  }, [year, loadAll, autoSyncToDrive, closeModal])
+  }, [year, loadAll, autoSyncToDrive, closeModal, queueOffline])
 
   const handleDeleteExpense = useCallback((exp) => {
     setDeleteConfirm({ type: 'expense', item: exp })
@@ -117,6 +135,7 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
 
   const handleCopySelected = useCallback(async (selectedIds) => {
     if (!selectedIds.length) { toast.error('No expenses selected'); return }
+    try { requireConnection() } catch { return }
     if (isYearLocked(year)) {
       toast.error('Cannot modify historical data: Year is locked.')
       return
@@ -138,6 +157,7 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
   // then batched Firestore writes — far faster than editing each one.
   const handleBulkPin = useCallback(async (selected, pinned) => {
     if (!selected?.length) { toast.error('No expenses selected'); return }
+    try { requireConnection() } catch { return }
     if (isYearLocked(year)) {
       toast.error('Cannot modify historical data: Year is locked.')
       return
@@ -172,6 +192,7 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
   // One Sheet write (read → filter out selected ids → write back).
   const handleBulkDelete = useCallback(async (selected) => {
     if (!selected?.length) { toast.error('No expenses selected'); return }
+    try { requireConnection() } catch { return }
     if (isYearLocked(year)) {
       toast.error('Cannot modify historical data: Year is locked.')
       return
@@ -193,25 +214,27 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
 
   // Append a new comment to an expense's note (stored as JSON array in Sheet + Firestore).
   const handleSaveComment = useCallback(async (expense, noteJson) => {
-    if (isYearLocked(expense.year || year)) {
-      toast.error('Cannot modify historical data: Year is locked.')
-      return
-    }
+    const fail = (msg) => { toast.error(msg); throw new Error(msg) }
+    if (isYearLocked(expense.year || year)) fail('Cannot modify historical data: Year is locked.')
+    requireConnection()
     const t = getToken()
-    if (!t) { toast.error('Sign in required'); return }
+    if (!t) fail('Sign in required')
     const sid = getSheetId()
     try {
       const allRows = await readAllExpenseRows(t)
       const idx = allRows.findIndex(r => r[0] === expense.id)
-      if (idx >= 0) {
-        allRows[idx][7] = noteJson
-        allRows[idx][8] = 'U' + Date.now()
-        await writeAllExpenseRows(allRows, t)
-      }
+      if (idx < 0) throw new Error('This expense was changed elsewhere — refresh and try again')
+      allRows[idx][7] = noteJson
+      allRows[idx][8] = 'U' + Date.now()
+      await writeAllExpenseRows(allRows, t)
       await setExpenseMetaFS(sid, expense, { note: noteJson })
       loadAll({ skipExcel: true })
       autoSyncToDrive()
-    } catch (e) { toast.error(e.message) }
+    } catch (e) {
+      // Rethrow so the comments box keeps the typed text and doesn't show a
+      // comment that never reached the sheet.
+      toast.error(e.message); throw e
+    }
   }, [year, loadAll, autoSyncToDrive])
 
   return { handleSaveExpense, handleDeleteExpense, handleCopySelected, handleBulkPin, handleBulkDelete, handleSaveComment }

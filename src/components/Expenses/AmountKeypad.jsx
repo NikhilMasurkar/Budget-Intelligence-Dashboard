@@ -14,11 +14,9 @@ export function nextAmountInput(value, ch) {
   const cur = String(value || '')
 
   if (ch in OPERATORS) {
-    // Swap a trailing operator rather than stacking onto it.
+    // Swap a trailing operator rather than stacking onto it. Any number of
+    // steps can follow, so "+200+150+80" adds three bills in one go.
     if (/[+\-*/]$/.test(cur)) return cur.slice(0, -1) + ch
-    // Only one operation is supported — "+200" or "500+200". A second operator
-    // would make the field unparseable, so refuse rather than allow a dead end.
-    if (/[+\-*/]/.test(cur)) return null
     return cur + ch
   }
 

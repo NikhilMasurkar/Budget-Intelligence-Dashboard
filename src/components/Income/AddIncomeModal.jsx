@@ -67,7 +67,7 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
   const isOther = !SOURCES.slice(0, -1).includes(form.source)
   const expr     = applyAmountExpression(baseAmount, form.amount)
   const amt      = expr ? Math.abs(expr.value) : 0
-  const adjusted = !!expr && expr.op !== null
+  const adjusted = !!expr?.label
   const valid = amt > 0 && form.source.toString().trim() !== ''
 
   return (
@@ -171,7 +171,7 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
             onChange={e => set('amount', e.target.value)}
             onFocus={() => setPadOpen(true)}
             onClick={() => setPadOpen(true)}
-            placeholder={baseAmount ? 'e.g. +200, -50, *2 or a new amount' : '0'}
+            placeholder={baseAmount ? 'e.g. +200+150 to add, -50, or a new amount' : 'e.g. 450 or 200+150+80'}
             fullWidth
             variant="outlined"
             size="small"
@@ -198,13 +198,13 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
               borderRadius: '8px', p: '8px 12px',
             }}>
               <Typography sx={{ fontSize: 12, color: '#7fd6a8', fontVariantNumeric: 'tabular-nums' }}>
-                {fmt(baseAmount)} {expr.op === '-' ? '−' : expr.op} {expr.operand} = <b>{fmt(amt)}</b>
+                {expr.label} = <b>{fmt(amt)}</b>
               </Typography>
             </Box>
           )}
           {form.amount.toString().trim() && !expr && (
             <Typography sx={{ width: '100%', mt: '-4px', fontSize: 11.5, color: '#ff7a7a' }}>
-              Can't read that — type a number, or +200 / -50 / *2 to adjust the current amount.
+              Can't read that — type a number, a sum like 200+150, or +200 to add to the current amount.
             </Typography>
           )}
 

@@ -16,6 +16,8 @@ export const setSheetId = (id) => {
 // ─── IN-MEMORY CACHE (full-tab reads only) ───────────────────
 const _cache = new Map()
 function _invalidate(tab) { _cache.delete(tab) }
+// Force the next read of a tab to hit the network (e.g. before de-duplicating).
+export const forgetCachedTab = (tab) => _invalidate(tab)
 
 export const TABS = {
   CATEGORIES: 'Categories',

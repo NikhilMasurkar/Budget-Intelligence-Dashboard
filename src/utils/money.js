@@ -83,52 +83,60 @@ export function splitWithdrawal(amount, holdings = []) {
 /**
  * Apply an arithmetic expression to an existing amount.
  *
- * Typing a bare number replaces the amount as before. Leading with an operator
- * adjusts the CURRENT value instead, so a ₹5,000 expense can be corrected with
- * "+200" rather than doing the sum yourself:
+ * Typing a bare number replaces the amount. Leading with an operator adjusts
+ * the CURRENT value instead, so a ₹5,000 expense can be corrected with "+200"
+ * rather than doing the sum yourself. Any number of steps can be chained, so
+ * several bills can be added in one go:
  *
- *   base 5000, "+200" -> 5200      base 5000, "*2"  -> 10000
- *   base 5000, "-10"  -> 4990      base 5000, "/2"  -> 2500
+ *   base 5000, "+200"      -> 5200     "500+200+300" -> 1000
+ *   base 5000, "+200+300"  -> 5500     "100+50*2"    -> 200  (× ÷ before + −)
  *
- * Returns null for anything unparseable so the caller can leave the field alone
- * rather than silently writing a wrong number. Rounds to 2dp to match how
- * amounts are stored (see money() in parseExcel).
+ * Returns { value, label, relative } — label is the sum written out for display
+ * ("₹5,000 + ₹200 + ₹300"), null for a bare number; relative is true when it
+ * started from the existing amount. Returns null for anything unparseable so
+ * the caller never silently writes a wrong number. No eval anywhere near user
+ * input. Rounds to 2dp to match how amounts are stored (see money() in parseExcel).
  */
+const NUM = String.raw`(?:\d+\.?\d*|\.\d+)`
+const EXPR = new RegExp(String.raw`^([+\-*/])?(${NUM}(?:[+\-*/]${NUM})*)$`)
+const SYM = { '+': '+', '-': '−', '*': '×', '/': '÷' }
+
 export function applyAmountExpression(base, input) {
-  const raw = String(input ?? '').trim().replace(/\s+/g, '')
-  if (!raw) return null
+  const raw = String(input ?? '')
+    .replace(/[\s,₹]/g, '')
+    .replace(/[×xX]/g, '*').replace(/÷/g, '/').replace(/−/g, '-')
+    // A trailing operator means the next number is still being typed — read
+    // what is there so far instead of flashing an error mid-entry.
+    .replace(/[+\-*/]$/, '')
+  const m = EXPR.exec(raw)
+  if (!m) return null
 
-  // Leading operator — adjust the current amount: "+200" on ₹5,000 -> ₹5,200.
-  let m = /^([+\-*/])(.+)$/.exec(raw)
-  let b, op, operand
+  const nums = m[2].split(/[+\-*/]/).map(Number)
+  const ops = m[2].match(/[+\-*/]/g) || []
+  const relative = !!m[1]
+  if (relative) { nums.unshift(Number(base) || 0); ops.unshift(m[1]) }
+  if (!ops.length) return { value: round2(nums[0]), label: null, relative: false }
 
-  if (m) {
-    op = m[1]
-    operand = Number(m[2])
-    b = Number(base) || 0
-  } else {
-    // Plain infix — the on-screen keypad invites "500+200", which should mean
-    // 700 rather than being rejected. Deliberately a single operation on two
-    // literals: no precedence, no parens, and no eval anywhere near user input.
-    const infix = /^(\d*\.?\d+)([+\-*/])(\d*\.?\d+)$/.exec(raw)
-    if (!infix) {
-      const abs = Number(raw)
-      return Number.isFinite(abs) ? { value: round2(abs), op: null, operand: null } : null
-    }
-    b = Number(infix[1])
-    op = infix[2]
-    operand = Number(infix[3])
+  // × and ÷ bind tighter than + and −, the way a phone calculator does it.
+  const terms = [nums[0]], signs = []
+  for (let i = 0; i < ops.length; i++) {
+    const n = nums[i + 1]
+    if (ops[i] === '*') terms[terms.length - 1] *= n
+    else if (ops[i] === '/') {
+      if (n === 0) return null
+      terms[terms.length - 1] /= n
+    } else { signs.push(ops[i]); terms.push(n) }
   }
+  const value = terms.reduce((sum, t, i) => i === 0 ? t : signs[i - 1] === '+' ? sum + t : sum - t, 0)
+  if (!Number.isFinite(value)) return null
 
-  if (!Number.isFinite(operand) || !Number.isFinite(b)) return null
-  let value
-  if (op === '+') value = b + operand
-  else if (op === '-') value = b - operand
-  else if (op === '*') value = b * operand
-  else if (op === '/') value = operand === 0 ? null : b / operand
-
-  if (value == null || !Number.isFinite(value)) return null
-  return { value: round2(value), op, operand }
+  // Multipliers are plain numbers ("× 2"); everything else is money.
+  const show = (n, op) => (op === '*' || op === '/' ? '' : '₹') + n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
+  let parts = [show(nums[0])]
+  ops.forEach((op, i) => parts.push(SYM[op], show(nums[i + 1], op)))
+  // "+200+300" on a brand-new expense reads "₹200 + ₹300", not "₹0 + …".
+  if (relative && nums[0] === 0 && ops[0] === '+') parts = parts.slice(2)
+  return { value: round2(value), label: parts.join(' '), relative }
 }
 
 const round2 = (n) => Math.round(n * 100) / 100
