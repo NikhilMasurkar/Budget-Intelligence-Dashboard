@@ -27,19 +27,17 @@ const WITHDRAW_ALL = '__all__'
 // "Save & pay": the expense is saved first, then the UPI app opens and you pay
 // there as usual (scan the QR). UPI apps don't report back to a website, so
 // saving first is the only order that never loses an entry.
-// ponytail: Android intent links only (opens the app, Play Store if missing);
-// add iOS URL schemes if it's ever used on an iPhone.
 export const UPI_APPS = [
-  { id: 'phonepe', label: 'PhonePe', pkg: 'com.phonepe.app' },
-  { id: 'gpay', label: 'GPay', pkg: 'com.google.android.apps.nbu.paisa.user' },
-  { id: 'bhim', label: 'BHIM', pkg: 'in.org.npci.upiapp' },
-  { id: 'paytm', label: 'Paytm', pkg: 'net.one97.paytm' },
+  { id: 'phonepe', label: 'PhonePe', pkg: 'com.phonepe.app', scheme: 'phonepe', path: '' },
+  { id: 'gpay', label: 'GPay', pkg: 'com.google.android.apps.nbu.paisa.user', scheme: 'tez', path: 'upi/' },
+  { id: 'bhim', label: 'BHIM', pkg: 'in.org.npci.upiapp', scheme: 'bhim', path: '' },
+  { id: 'paytm', label: 'Paytm', pkg: 'net.one97.paytm', scheme: 'paytmmp', path: '' },
 ]
 const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent)
 const UPI_KEY = 'budgetiq_upi_app'
 const lastUpi = () => { try { return localStorage.getItem(UPI_KEY) } catch { return null } }
-export const upiIntent = (pkg) =>
-  `intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${pkg};end`
+export const upiIntent = (app) =>
+  `intent://${app.path}#Intent;scheme=${app.scheme};package=${app.pkg};end`
 
 export default function AddExpenseModal({ initial, categories, year, month, availableYears = [new Date().getFullYear()], holdings = [], suggestions = [], expenses = [], onSave, onClose }) {
   const { classes } = useAddExpenseModalStyles()
@@ -194,7 +192,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
         const payload = { ...form, amount: total, note: appendComment(form.note, typed ? `${line} — ${typed}` : line) }
         await onSave(payload, 'single')
         try { localStorage.setItem(UPI_KEY, payWith.id) } catch { /* fine */ }
-        window.location.href = upiIntent(payWith.pkg)
+        window.location.href = upiIntent(payWith)
         return
       }
       // A withdrawal can't be "fixed/recurring" (the toggle is hidden for it),
