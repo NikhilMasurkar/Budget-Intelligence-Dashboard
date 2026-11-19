@@ -1,11 +1,12 @@
 import { useCallback } from 'react'
 import { toast } from 'react-hot-toast'
+import { getSheetId, uid } from '../api/sheets'
 import {
-  saveExpense, copyExpensesToNextMonth,
-  readAllExpenseRows, writeAllExpenseRows, getToken, getSheetId, uid
-} from '../api/sheets'
+  saveExpense, copyExpensesToNextMonth, readAllExpenseRows, writeAllExpenseRows,
+  getWriteToken as getToken, requireConnection, usingFirestore,
+} from '../api/store'
 import { setExpenseMetaFS } from '../api/firestoreExpenseMeta'
-import { isOffline, isNetworkError, requireConnection } from '../utils/offline'
+import { isOffline, isNetworkError } from '../utils/offline'
 
 import { MONTHS, toSentenceCase, isYearLocked } from '../utils/constants'
 
@@ -68,7 +69,8 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
     // A new single expense can wait on the phone; edits and multi-month
     // saves rewrite the sheet, so they need a connection.
     const isNew = !exp.id
-    const queueable = applyMode === 'single' && isNew && !!queueOffline
+    // (Firestore mode needs none of this: its own offline cache takes every write.)
+    const queueable = applyMode === 'single' && isNew && !!queueOffline && !usingFirestore()
     // Fix the id up front so a retry or a later sync can never add it twice.
     if (queueable) exp.id = uid()
     const saveOnPhone = () => {

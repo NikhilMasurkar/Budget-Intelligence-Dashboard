@@ -1,14 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'react-hot-toast'
+import * as sheets from '../api/sheets'
 import {
-  fetchCategories, fetchExpenses, fetchIncome,
-  getToken, getSheetId, signOut,
-  DEFAULT_CATEGORIES, downloadExcelFromDrive,
-  readAllExpenseRows, writeAllExpenseRows,
-  readAllIncomeRows, writeAllIncomeRows,
-  uploadExcelToDrive, uid, autoFixedCopyToMonth,
-  appendRows, forgetCachedTab, TABS
+  fetchCategories, getToken, getSheetId, signOut,
+  DEFAULT_CATEGORIES, downloadExcelFromDrive, uploadExcelToDrive, uid, TABS
 } from '../api/sheets'
+import {
+  fetchExpenses, fetchIncome,
+  readAllExpenseRows, writeAllExpenseRows, readAllIncomeRows, writeAllIncomeRows,
+  autoFixedCopyToMonth, appendRows, forgetCachedTab,
+  resolveDbMode, usingFirestore, getDbSettings, setDbMode,
+} from '../api/store'
+import { migrateToFirestore } from '../api/migrate'
 import {
   isOffline, isNetworkError, saveSnapshot, loadSnapshot,
   getQueue, setQueue, queueRow, rowToExpense
@@ -32,6 +35,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
   // Set while showing the phone's saved copy: when that copy was taken.
   const [offlineSince, setOfflineSince] = useState(null)
   const [pendingCount, setPendingCount] = useState(() => getQueue(getSheetId()).length)
+  const [dbMode, setDbModeState] = useState('sheets')
 
   const missingConfig = !import.meta.env.VITE_GOOGLE_SHEETS_API_KEY ||
     !import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID ||
@@ -71,7 +75,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
       setQueue(sid, getQueue(sid).filter(r => !sent.has(r[0])))
       setPendingCount(getQueue(sid).length)
       // Pins and notes also live in Firestore (the Excel backup drops them).
-      await Promise.all(toSend.map(r => setExpenseMetaFS(sid,
+      if (!usingFirestore()) await Promise.all(toSend.map(r => setExpenseMetaFS(sid,
         { year: r[1], month: r[2], categoryId: r[3], itemName: r[4] },
         { isFixed: r[6], note: r[7] }).catch(() => {})))
       toast.success(`Synced ${queued.length} expense${queued.length > 1 ? 's' : ''} added offline ✓`, { duration: 4000 })
@@ -86,15 +90,20 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
     const t = getToken()
     const sid = getSheetId()
     if (!sid) { setCategories([]); setExpenses([]); setIncome([]); return }
-    // No connection: show the saved copy. (Online without a token is a lapsed
-    // sign-in — fall through to the sign-in screen as before, not stale data.)
-    if (isOffline() && showSnapshot(sid)) return
-    if (!t) { setCategories([]); setExpenses([]); setIncome([]); return }
+    const mode = await resolveDbMode(sid)
+    setDbModeState(mode)
+    const fsMode = mode === 'firestore'
+    // Sheet mode, no connection: show the saved copy. Firestore mode reads its
+    // own offline cache instead, which also holds changes made offline.
+    // (Online without a token is a lapsed sign-in — fall through to the sign-in
+    // screen as before, not stale data.)
+    if (!fsMode && isOffline() && showSnapshot(sid)) return
+    if (!t && !(fsMode && isOffline())) { setCategories([]); setExpenses([]); setIncome([]); return }
     setLoading(true)
     setNeedsSetup(false)
     try {
       let synced = 0
-      try { synced = await syncQueue(sid, t) } catch (e) {
+      try { synced = await syncQueue(sid, t || 'firestore') } catch (e) {
         if (!isNetworkError(e)) toast.error('Could not sync offline expenses yet: ' + e.message)
         else throw e
       }
@@ -120,9 +129,11 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
 
       setCategories(cats)
 
-      // ── Expenses + Income: Google Sheets (unchanged) ──────────────────────
+      // ── Expenses + Income ─────────────────────────────────────────────────
+      // Firestore mode: read the months. Sheet mode: the Sheet, reconciled
+      // against the Drive Excel (which Firestore mode only ever writes).
       let xlsxExps = [], xlsxInc = [], xlsxOk = false
-      if (!opts.skipExcel) {
+      if (!opts.skipExcel && !usingFirestore()) {
         try {
           const buffer = await downloadExcelFromDrive(t, userName)
           if (buffer) {
@@ -168,6 +179,14 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
         rawInc = await fetchIncome(null, t)
       }
 
+      // One-time move to Firestore, now that the Sheet is fully up to date.
+      // Only switches when the copy checks out; otherwise nothing changes.
+      if (!usingFirestore() && t && !isOffline() && await migrateToFirestore(sid, t)) {
+        setDbModeState('firestore')
+        rawExps = await fetchExpenses(null, t)
+        rawInc = await fetchIncome(null, t)
+      }
+
       let exps = rawExps.map(e => ({ ...e, itemName: toSentenceCase(e.itemName) }))
       const inc = rawInc.map(i => ({ ...i, source: toSentenceCase(i.source) }))
 
@@ -181,7 +200,8 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
       // comments if the Sheet copy is ever lost. Letting a stale/empty Firestore
       // note overwrite the Sheet's was wiping comments from the UI even though
       // they were still visible in the Sheet.
-      const metaMap = await fetchExpenseMetaFS(sid)
+      // (Firestore mode stores pins and comments on the expense itself.)
+      const metaMap = usingFirestore() ? {} : await fetchExpenseMetaFS(sid)
       if (Object.keys(metaMap).length) {
         exps = exps.map(e => {
           const m = metaMap[expensePinKey(e)]
@@ -206,12 +226,14 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
         .filter(y => y <= systemYear || exps.some(e => parseInt(e.year) === y) || inc.some(i => parseInt(i.year) === y))
         .sort((a, b) => a - b)
       setAvailableYears(filteredYears)
-      setOfflineSince(null)
-      saveSnapshot(sid, { categories: cats, expenses: exps, income: inc, availableYears: filteredYears })
+      // In Firestore mode an offline load is live local data, not an old copy;
+      // offlineSince just marks that it's being shown without a connection.
+      setOfflineSince(usingFirestore() && isOffline() ? Date.now() : null)
+      if (!usingFirestore()) saveSnapshot(sid, { categories: cats, expenses: exps, income: inc, availableYears: filteredYears })
       if (synced) autoSyncToDrive()
 
     } catch (e) {
-      if (isNetworkError(e) && showSnapshot(sid)) {
+      if (isNetworkError(e) && !usingFirestore() && showSnapshot(sid)) {
         // Lost the connection — the saved copy is on screen.
       } else if (isNetworkError(e)) {
         toast.error("You're offline, and there's no saved copy on this phone yet. Connect once to load your data.")
@@ -236,7 +258,9 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
   // Back online: reload, which sends anything queued first. If Google sign-in
   // lapsed meanwhile, useAuth re-signs in and its authd change reloads instead.
   useEffect(() => {
-    const onOnline = () => { if (getToken()) loadAll() }
+    // Firestore mode: changes made offline have synced by themselves; refresh
+    // the Sheet/Excel copies too.
+    const onOnline = () => { if (getToken()) { loadAll(); if (usingFirestore()) autoSyncToDrive() } }
     window.addEventListener('online', onOnline)
     return () => window.removeEventListener('online', onOnline)
   }, [loadAll])
@@ -250,35 +274,12 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
     setPendingCount(getQueue(sid).length)
   }, [])
 
-  useEffect(() => {
-    if (!authd) return
-    const t = getToken()
-    if (!t) return
-    async function scanYears() {
-      try {
-        const [allExp, allInc] = await Promise.all([
-          fetchExpenses(null, t),
-          fetchIncome(null, t)
-        ])
-        const extraYears = new Set()
-        allExp.forEach(e => { if (e.year) extraYears.add(parseInt(e.year)) })
-        allInc.forEach(i => { if (i.year) extraYears.add(parseInt(i.year)) })
-        setAvailableYears(prev => {
-          const merged = new Set([...prev, ...extraYears])
-          const sorted = Array.from(merged).sort((a, b) => a - b)
-          if (sorted.length === prev.length && sorted.every((y, i) => y === prev[i])) return prev
-          return sorted
-        })
-      } catch (e) {
-        console.error('Year scan failed:', e)
-      }
-    }
-    scanYears()
-  }, [authd])
 
-  // Auto-copy fixed expenses once per calendar month
+  // Auto-copy fixed expenses once per calendar month. Waits for the first load
+  // so it writes to whichever store that load settled on (and never races the
+  // one-time move to Firestore).
   useEffect(() => {
-    if (!authd) return
+    if (!authd || !didInitialLoad) return
     const t = getToken()
     if (!t) return
     const now = new Date()
@@ -298,7 +299,7 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
         localStorage.removeItem(key)
         console.error('[AutoFixed]', e)
       })
-  }, [authd])
+  }, [authd, didInitialLoad]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Regenerate the Drive Excel from the current Sheet data + current export code.
   // Returns true when it completes without error (including the "no data yet"
@@ -308,11 +309,12 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
     const sid = getSheetId()
     if (!t || !sid) return false
     try {
-      const [allExpRows, allIncRows, freshCats] = await Promise.all([
+      let [allExpRows, allIncRows, freshCats] = await Promise.all([
         readAllExpenseRows(t),
         readAllIncomeRows(t),
         fetchCategoriesFS(sid)          // use Firestore, not the Sheet tab
       ])
+      if (usingFirestore()) allExpRows = await mirrorToSheet(sid, t, allExpRows, allIncRows)
       const toObjs = (rows, fields) => rows.map(r => {
         const obj = {}; fields.forEach((f, i) => obj[f] = r[i]); return obj
       })
@@ -334,6 +336,28 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
       return false
     }
   }, [userName])
+
+  // Firestore mode: keep the Google Sheet as an exact copy, so switching back
+  // (settings/db → 'sheets') loses nothing. Before overwriting it, rescue rows
+  // an older copy of the app may have written to the Sheet since the last
+  // mirror — new ids with a newer timestamp — instead of erasing them.
+  // Returns the expense rows including anything rescued.
+  async function mirrorToSheet(sid, t, expRows, incRows) {
+    const { lastMirrorAt = 0 } = await getDbSettings(sid)
+    sheets.forgetCachedTab(TABS.EXPENSES)
+    const inSheet = await sheets.readAllExpenseRows(t)
+    const known = new Set(expRows.map(r => String(r[0])))
+    const rescued = inSheet.filter(r => r[0] && !known.has(String(r[0])) && +String(r[8] || '').slice(1) > lastMirrorAt)
+    if (rescued.length) {
+      await appendRows(TABS.EXPENSES, rescued, t)
+      console.warn('[BudgetIQ] Rescued rows written to the Sheet after the switch:', rescued)
+    }
+    const all = [...expRows, ...rescued]
+    await sheets.writeAllExpenseRows(all, t)
+    await sheets.writeAllIncomeRows(incRows, t)
+    await setDbMode(sid, 'firestore', { lastMirrorAt: Date.now() })
+    return all
+  }
 
   // After the initial load, regenerate the Drive sheet ONCE if it was last
   // written with an older export format than the running code. If it's already
@@ -389,6 +413,6 @@ export function useBudgetData({ authd, userName, onUnauthorized }) {
     categories, expenses, income, loading, didInitialLoad, needsSetup, availableYears,
     loadAll, autoSyncToDrive,
     setCategories, setNeedsSetup, missingConfig,
-    offlineSince, pendingCount, queueOffline
+    offlineSince, pendingCount, queueOffline, dbMode
   }
 }

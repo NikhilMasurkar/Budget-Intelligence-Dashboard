@@ -3,14 +3,14 @@ import { Toaster, toast } from 'react-hot-toast'
 import { Box, Typography, Button } from '@mui/material'
 import { useGlobalStyles } from './styles/globalStyles'
 import { useStyles } from './App.styles'
+import { getToken, getSheetId, setupSheet, getDriveExcelUrl } from './api/sheets'
 import {
-  deleteExpense, deleteIncome,
-  readAllExpenseRows, writeAllExpenseRows,
-  readAllIncomeRows, writeAllIncomeRows,
-  getToken, getSheetId, setupSheet, getDriveExcelUrl
-} from './api/sheets'
+  deleteExpense, deleteIncome, readAllExpenseRows, writeAllExpenseRows,
+  readAllIncomeRows, writeAllIncomeRows, getWriteToken, requireConnection, usingFirestore,
+} from './api/store'
 import { deleteCategoryFS } from './api/firestoreCategories'
-import { hasPinFS, setPinFS, verifyPinFS, hashPin } from './api/firestoreSettings'
+import { hasPinFS, setPinFS, verifyPinFS, checkPin } from './api/firestoreSettings'
+import { wipeLocalCache } from './firebase'
 import { useOnline, isOffline, getQueue, clearOfflineData, cachePinHash, getCachedPinHash } from './utils/offline'
 import PinScreen from './components/PinScreen'
 
@@ -76,11 +76,17 @@ export default function App() {
     if (ask && unsent && !window.confirm(
       `${unsent} expense${unsent > 1 ? 's' : ''} added offline ${unsent > 1 ? "haven't" : "hasn't"} synced yet and will be lost. Sign out anyway?`
     )) return
+    if (ask && usingFirestore() && isOffline() && !window.confirm(
+      "You're offline — changes made since you lost connection may not have synced yet and would be lost. Sign out anyway?"
+    )) return
     // The saved copy and the queue are this account's data — don't leave them on the phone.
     clearOfflineData(sid)
     await handleSignOut()
     setPinVerified(false)
     setPinMode(null)
+    // Firestore's on-device copy too. Only when the user chose to sign out: an
+    // expired session must not throw away offline changes still waiting to sync.
+    if (ask && usingFirestore()) { await wipeLocalCache(); window.location.reload() }
   }
 
   const [txnTab, setTxnTab] = useState('expenses')
@@ -156,7 +162,7 @@ export default function App() {
   const {
     categories, expenses, income, loading, didInitialLoad, needsSetup, availableYears,
     loadAll, autoSyncToDrive, setCategories, setNeedsSetup, missingConfig,
-    offlineSince, pendingCount, queueOffline
+    offlineSince, pendingCount, queueOffline, dbMode
   } = useBudgetData({ authd, userName, onUnauthorized: () => handleSignOutFull({ ask: false }) })
 
   // ── Offline ───────────────────────────────────────────────────
@@ -166,6 +172,10 @@ export default function App() {
   const offline = !online || !!offlineSince
   // Signing in to Google needs the network, so offline the saved copy stands in.
   const showData = authd || !!offlineSince
+  // Firestore keeps every change offline and syncs it later; the Sheet can
+  // only queue new expenses.
+  const fullyOffline = dbMode === 'firestore'
+  const canWrite = !offline || fullyOffline
 
   // ── CRUD hooks ────────────────────────────────────────────────
   const { handleSaveExpense, handleDeleteExpense, handleCopySelected, handleBulkPin, handleBulkDelete, handleSaveComment } = useExpenses({
@@ -258,7 +268,8 @@ export default function App() {
       toast.error('Cannot modify historical data: Year is locked.')
       return
     }
-    const t = getToken()
+    try { requireConnection() } catch { return }
+    const t = getWriteToken()
     if (!t) {
       const err = new Error('Sign in required')
       toast.error(err.message); throw err
@@ -337,9 +348,9 @@ export default function App() {
         userName={userName}
         sheetId={sid}
         onSetPin={async (pin) => {
-          await setPinFS(sid, pin)
+          const hash = await setPinFS(sid, pin)
           localStorage.setItem('budgetiq_has_pin', '1')
-          cachePinHash(sid, await hashPin(pin))
+          cachePinHash(sid, hash)
         }}
         onVerify={async (enteredPin) => {
           if (pinMode === 'setup') return true
@@ -352,12 +363,12 @@ export default function App() {
               toast.error("You're offline. Use fingerprint / Face ID, or connect once so your PIN works offline.", { id: 'pin-offline' })
               return false
             }
-            return (await hashPin(enteredPin)) === cached
+            return checkPin(enteredPin, cached)
           }
           await authReady()
-          const ok = await verifyPinFS(sid, enteredPin)
-          if (ok) cachePinHash(sid, await hashPin(enteredPin))
-          return ok
+          const hash = await verifyPinFS(sid, enteredPin)
+          if (hash) cachePinHash(sid, hash)
+          return !!hash
         }}
         onUnlock={unlock}
       />
@@ -399,8 +410,12 @@ export default function App() {
                   {offline && (
                     <>
                       <strong>Offline</strong>
-                      {offlineSince && <> — showing your data from {new Date(offlineSince).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</>}
-                      . You can add expenses; other changes need a connection.
+                      {fullyOffline
+                        ? <> — everything still works. Changes are saved on this phone and sync by themselves when you're back online.</>
+                        : <>
+                            {offlineSince && <> — showing your data from {new Date(offlineSince).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</>}
+                            . You can add expenses; other changes need a connection.
+                          </>}
                     </>
                   )}
                   {pendingCount > 0 && (
@@ -568,9 +583,10 @@ export default function App() {
                     onBulkPin={handleBulkPin}
                     onBulkDelete={handleBulkDelete}
                     onSaveComment={handleSaveComment}
-                    // Adding works offline (it queues); row changes need a connection.
+                    // Adding always works offline; other row changes need a
+                    // connection unless the data is in Firestore.
                     canEdit={showData && !isLocked}
-                    online={!offline}
+                    online={canWrite}
                   />
                 ) : (
                   <>
@@ -579,7 +595,7 @@ export default function App() {
                       <MonthStepper year={year} month={month} availableYears={availableYears}
                         onYearChange={setYear} onMonthChange={setMonth} />
                       <Box className={classes.flexFiller} />
-                      {authd && !isLocked && !offline && (
+                      {showData && !isLocked && canWrite && (
                         <Button
                           variant="contained"
                           onClick={() => { setEditRow(null); setModal('add-income') }}
@@ -594,7 +610,7 @@ export default function App() {
                       income={income.filter(i => String(i.year) === String(year) && String(i.month) === String(month))}
                       onEdit={row => { setEditRow(row); setModal('add-income') }}
                       onDelete={handleDeleteIncome}
-                      canEdit={authd && !isLocked && !offline}
+                      canEdit={showData && !isLocked && canWrite}
                     />
                   </>
                 )}

@@ -1,10 +1,10 @@
 import { useCallback } from 'react'
 import { toast } from 'react-hot-toast'
+import { uid } from '../api/sheets'
 import {
-  saveIncome, readAllIncomeRows, writeAllIncomeRows, getToken, uid
-} from '../api/sheets'
+  saveIncome, readAllIncomeRows, writeAllIncomeRows, getWriteToken as getToken, requireConnection,
+} from '../api/store'
 import { toSentenceCase, dateForMonth, isYearLocked } from '../utils/constants'
-import { requireConnection } from '../utils/offline'
 
 export function useIncome({ loadAll, autoSyncToDrive, setDeleteConfirm, closeModal }) {
   const handleSaveIncome = useCallback(async (inc, applyMode = 'single') => {

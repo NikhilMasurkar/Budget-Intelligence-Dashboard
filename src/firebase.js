@@ -1,5 +1,8 @@
 import { initializeApp } from 'firebase/app'
-import { getFirestore } from 'firebase/firestore'
+import {
+  getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  terminate, clearIndexedDbPersistence,
+} from 'firebase/firestore'
 import {
   getAuth, GoogleAuthProvider,
   signInWithCredential, signOut as fbSignOut
@@ -15,7 +18,24 @@ const firebaseConfig = {
 }
 
 const app = initializeApp(firebaseConfig)
-export const db = getFirestore(app)
+// Keep a copy of the data on the device (IndexedDB): reads work offline and
+// writes made offline are saved and sent when the connection is back.
+// Falls back to memory-only where IndexedDB isn't available (some private modes).
+function makeDb() {
+  try {
+    return initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })
+  } catch (e) {
+    console.warn('[BudgetIQ] Offline cache unavailable:', e?.message)
+    return getFirestore(app)
+  }
+}
+export const db = makeDb()
+
+// Remove this account's data from the device (sign-out). The page must reload
+// afterwards — a terminated Firestore instance can't be used again.
+export async function wipeLocalCache() {
+  try { await terminate(db); await clearIndexedDbPersistence(db) } catch (e) { console.warn('[BudgetIQ] Cache wipe:', e?.message) }
+}
 export const auth = getAuth(app)
 
 // ── Firebase Auth bridge ─────────────────────────────────────────────────────

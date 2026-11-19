@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import { getSheetId, uid } from '../api/sheets'
 import { saveCategoryFS, saveAllCategoriesFS } from '../api/firestoreCategories'
-import { requireConnection } from '../utils/offline'
+import { requireConnection } from '../api/store'
 
 export function useCategories({ loadAll, autoSyncToDrive, setDeleteConfirm, setCategories }) {
   const handleSaveCategory = useCallback(async (cat) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { getToken } from '../api/sheets'
+import { getWriteToken as getToken, fetchExpenses, fetchIncome } from '../api/store'
 import toast from 'react-hot-toast'
 import {
   Dialog,
@@ -171,7 +171,6 @@ export default function ExportModal({ categories, onClose }) {
     async function loadYears() {
       try {
         const t = getToken()
-        const { fetchExpenses, fetchIncome } = await import('../api/sheets')
         const [exps, inc] = await Promise.all([
           fetchExpenses(null, t),
           fetchIncome(null, t)
@@ -230,6 +229,16 @@ export default function ExportModal({ categories, onClose }) {
     } finally {
       setBusy(false)
     }
+  }
+
+  // Everything, every year, as one JSON file — a copy you hold yourself,
+  // independent of Google and Firebase.
+  const handleBackup = async () => {
+    const backup = { app: 'BudgetIQ', exportedAt: new Date().toISOString(), categories, ...allData }
+    const { saveAs } = await import('file-saver')
+    saveAs(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }),
+      `budgetiq_backup_${new Date().toISOString().slice(0, 10)}.json`)
+    toast.success(`Backup saved — ${allData.expenses.length} expenses, ${allData.income.length} income entries`)
   }
 
   return (
@@ -373,6 +382,9 @@ export default function ExportModal({ categories, onClose }) {
                 Cancel
               </Button>
             </Box>
+            <Button size="small" onClick={handleBackup} disabled={busy || loading} sx={{ mt: 1.5, color: 'text.secondary', textTransform: 'none' }}>
+              Full backup of all years (.json)
+            </Button>
           </>
         )}
       </Box>

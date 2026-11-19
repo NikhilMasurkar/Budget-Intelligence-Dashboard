@@ -1,4 +1,5 @@
 import { db } from '../firebase'
+import { settle } from './firestoreMonths'
 import {
   collection, doc, getDocs,
   setDoc, deleteDoc, writeBatch,
@@ -28,11 +29,11 @@ export async function fetchCategoriesFS(sheetId) {
 
 export async function saveCategoryFS(sheetId, category) {
   const ref = doc(db, 'sheets', sheetId, 'categories', category.id)
-  await setDoc(ref, category, { merge: true })
+  await settle(setDoc(ref, category, { merge: true }))   // settle: don't hang offline
 }
 
 export async function deleteCategoryFS(sheetId, categoryId) {
-  await deleteDoc(doc(db, 'sheets', sheetId, 'categories', categoryId))
+  await settle(deleteDoc(doc(db, 'sheets', sheetId, 'categories', categoryId)))
 }
 
 // Write all categories at once (used for reorder + initial migration).
@@ -43,5 +44,5 @@ export async function saveAllCategoriesFS(sheetId, categories) {
     const ref = doc(db, 'sheets', sheetId, 'categories', cat.id)
     batch.set(ref, { ...cat, order: i })
   })
-  await batch.commit()
+  await settle(batch.commit())
 }
