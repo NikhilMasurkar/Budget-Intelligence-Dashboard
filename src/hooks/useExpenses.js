@@ -6,7 +6,7 @@ import {
 } from '../api/sheets'
 import { setExpenseMetaFS } from '../api/firestoreExpenseMeta'
 
-import { MONTHS, toSentenceCase } from '../utils/constants'
+import { MONTHS, toSentenceCase, isYearLocked } from '../utils/constants'
 
 export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteConfirm, closeModal, clearSelection }) {
   const handleSaveExpense = useCallback(async (exp, applyMode = 'single') => {
@@ -17,7 +17,7 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
       const rows = Array.isArray(exp) ? exp : [exp]
       if (!rows.length) return
       const targetY = parseInt(rows[0].year || year)
-      if (targetY < new Date().getFullYear()) {
+      if (isYearLocked(targetY)) {
         toast.error('Cannot modify historical data: Year is locked.')
         return
       }
@@ -59,7 +59,7 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
 
     exp.itemName = toSentenceCase(exp.itemName)
     const targetYear = parseInt(exp.year || year)
-    if (targetYear < new Date().getFullYear()) {
+    if (isYearLocked(targetYear)) {
       toast.error('Cannot modify historical data: Year is locked.')
       return
     }
@@ -117,7 +117,7 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
 
   const handleCopySelected = useCallback(async (selectedIds) => {
     if (!selectedIds.length) { toast.error('No expenses selected'); return }
-    if (parseInt(year) < new Date().getFullYear()) {
+    if (isYearLocked(year)) {
       toast.error('Cannot modify historical data: Year is locked.')
       return
     }
@@ -138,7 +138,7 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
   // then batched Firestore writes — far faster than editing each one.
   const handleBulkPin = useCallback(async (selected, pinned) => {
     if (!selected?.length) { toast.error('No expenses selected'); return }
-    if (parseInt(year) < new Date().getFullYear()) {
+    if (isYearLocked(year)) {
       toast.error('Cannot modify historical data: Year is locked.')
       return
     }
@@ -172,7 +172,7 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
   // One Sheet write (read → filter out selected ids → write back).
   const handleBulkDelete = useCallback(async (selected) => {
     if (!selected?.length) { toast.error('No expenses selected'); return }
-    if (parseInt(year) < new Date().getFullYear()) {
+    if (isYearLocked(year)) {
       toast.error('Cannot modify historical data: Year is locked.')
       return
     }
@@ -193,7 +193,7 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
 
   // Append a new comment to an expense's note (stored as JSON array in Sheet + Firestore).
   const handleSaveComment = useCallback(async (expense, noteJson) => {
-    if (parseInt(expense.year || year) < new Date().getFullYear()) {
+    if (isYearLocked(expense.year || year)) {
       toast.error('Cannot modify historical data: Year is locked.')
       return
     }

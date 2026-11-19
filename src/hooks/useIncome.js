@@ -3,13 +3,13 @@ import { toast } from 'react-hot-toast'
 import {
   saveIncome, readAllIncomeRows, writeAllIncomeRows, getToken, uid
 } from '../api/sheets'
-import { toSentenceCase, dateForMonth } from '../utils/constants'
+import { toSentenceCase, dateForMonth, isYearLocked } from '../utils/constants'
 
 export function useIncome({ loadAll, autoSyncToDrive, setDeleteConfirm, closeModal }) {
   const handleSaveIncome = useCallback(async (inc, applyMode = 'single') => {
     inc.source = toSentenceCase(inc.source)
     const targetYear = parseInt(inc.year)
-    if (targetYear < new Date().getFullYear()) {
+    if (isYearLocked(targetYear)) {
       toast.error('Cannot modify historical data: Year is locked.')
       return
     }

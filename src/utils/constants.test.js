@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fmt, fmtK, toSentenceCase, defaultMonths, dateForMonth, YEAR_NOW, MONTH_NOW } from './constants'
+import { fmt, fmtK, toSentenceCase, defaultMonths, dateForMonth, YEAR_NOW, MONTH_NOW, isYearLocked, inLockGrace } from './constants'
 
 describe('fmt', () => {
   it('formats positive rupees with grouping', () => {
@@ -84,5 +84,23 @@ describe('defaultMonths', () => {
     const now = new Date()
     expect(defaultMonths(now.getFullYear() + 1)).toHaveLength(now.getMonth() + 1)
     expect(defaultMonths(String(now.getFullYear()))).toHaveLength(now.getMonth() + 1)
+  })
+})
+
+describe('isYearLocked (January grace)', () => {
+  const jan = new Date(2027, 0, 31), feb = new Date(2027, 1, 1), dec = new Date(2026, 11, 31)
+  it('keeps last year editable through January', () => {
+    expect(isYearLocked(2026, jan)).toBe(false)
+    expect(inLockGrace(2026, jan)).toBe(true)
+  })
+  it('locks last year from 1 February', () => {
+    expect(isYearLocked(2026, feb)).toBe(true)
+    expect(inLockGrace(2026, feb)).toBe(false)
+  })
+  it('locks older years, never the current or a future one', () => {
+    expect(isYearLocked(2025, jan)).toBe(true)
+    expect(isYearLocked('2027', jan)).toBe(false)
+    expect(isYearLocked(2026, dec)).toBe(false)
+    expect(isYearLocked(2027, dec)).toBe(false)
   })
 })

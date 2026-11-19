@@ -47,6 +47,17 @@ export function defaultMonths(year) {
     : [...Array(12).keys()]                   // whole year
 }
 
+// Last year stays editable through January, so late December bills and card
+// statements can still be filed under December. From 1 Feb it is read-only.
+export function isYearLocked(year, now = new Date()) {
+  const y = parseInt(year), cur = now.getFullYear()
+  return y < cur - 1 || (y === cur - 1 && now.getMonth() > 0)
+}
+// True while last year is in its January grace period.
+export function inLockGrace(year, now = new Date()) {
+  return parseInt(year) === now.getFullYear() - 1 && now.getMonth() === 0
+}
+
 export const CHART_OPTS = {
   responsive: true,
   maintainAspectRatio: false,

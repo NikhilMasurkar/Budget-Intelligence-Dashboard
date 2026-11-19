@@ -34,7 +34,7 @@ import CategoryModal from './components/Category/CategoryModal'
 import ErrorBoundary from './components/ErrorBoundary'
 import MonthStepper from './components/MonthStepper'
 
-import { YEAR_NOW, MONTH_NOW_1 as MONTH_NOW, toSentenceCase, defaultMonths, AI_ENABLED, SOURCES } from './utils/constants'
+import { YEAR_NOW, MONTH_NOW_1 as MONTH_NOW, toSentenceCase, defaultMonths, AI_ENABLED, SOURCES, isYearLocked, inLockGrace } from './utils/constants'
 import { getPushStatus, subscribeToPush, unsubscribeFromPush } from './api/pushSubscription'
 import { investmentCategoryIds } from './utils/money'
 
@@ -84,7 +84,7 @@ export default function App() {
   const [aiMounted, setAiMounted] = useState(false) // stays true after first open so the close animation runs
   const [notifStatus, setNotifStatus] = useState('unsubscribed')
 
-  const isLocked = parseInt(year) < new Date().getFullYear()
+  const isLocked = isYearLocked(year)
 
   // Reset selMonths when year changes
   useEffect(() => { setSelMonths(defaultMonths(year)) }, [year])
@@ -236,7 +236,7 @@ export default function App() {
   const executeDelete = async (scope) => {
     const { type, item } = deleteConfirm
     const targetYear = parseInt(item?.year || year)
-    if (type !== 'category' && targetYear && targetYear < new Date().getFullYear()) {
+    if (type !== 'category' && targetYear && isYearLocked(targetYear)) {
       toast.error('Cannot modify historical data: Year is locked.')
       return
     }
@@ -398,6 +398,14 @@ export default function App() {
                     </Typography>
                   </Box>
                 )}
+                {inLockGrace(year) && (
+                  <Box className={classes.lockedBanner}>
+                    <span style={{ marginRight: '8px', fontSize: '16px' }}>⏳</span>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      Year {year} is still editable until 31 Jan for late entries, then it locks.
+                    </Typography>
+                  </Box>
+                )}
                 <Box className={classes.headerRow}>
                   <Typography variant="h5" className={classes.titleText}>Dashboard</Typography>
                   <Box className={classes.yearTabsContainer}>
@@ -448,6 +456,14 @@ export default function App() {
                     <span style={{ marginRight: '8px', fontSize: '16px' }}>🔒</span>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
                       <strong>Historical Archive:</strong> Year {year} is locked. Data is preserved as read-only.
+                    </Typography>
+                  </Box>
+                )}
+                {inLockGrace(year) && (
+                  <Box className={classes.lockedBanner}>
+                    <span style={{ marginRight: '8px', fontSize: '16px' }}>⏳</span>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      Year {year} is still editable until 31 Jan for late entries, then it locks.
                     </Typography>
                   </Box>
                 )}
