@@ -22,7 +22,7 @@ const useStyles = makeStyles()((theme) => ({
       backgroundColor: '#101218',
       backgroundImage: 'none',
       boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.5)',
-      overflow: 'hidden',
+      overflowY: 'auto', maxHeight: 'calc(100dvh - 32px)',
     },
   },
   container: {

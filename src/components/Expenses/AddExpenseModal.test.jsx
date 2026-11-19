@@ -188,13 +188,15 @@ describe('AddExpenseModal More options', () => {
 
 describe('AddExpenseModal pick an existing item', () => {
   const PETROL = { id: 'p1', year: 2026, month: 9, categoryId: 'c_food', itemName: 'Petrol', amount: '2000', isFixed: 'FALSE', note: '' }
+  const itemSelect = () => screen.getByRole('option', { name: '+ New item' }).closest('select')
 
   it('lists this month\'s items in the category and adds the amount to the one picked', async () => {
     const onSave = vi.fn()
     render(<AddExpenseModal initial={{ categoryId: 'c_food' }} categories={CATS} year={2026} month={9}
       expenses={[PETROL, { ...PETROL, id: 'x', month: 8, itemName: 'Last month' }]} onSave={onSave} onClose={noop} />)
-    expect(screen.queryByRole('button', { name: /Last month/ })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Petrol · ₹2,000' }))
+    expect(screen.queryByRole('option', { name: /Last month/ })).toBeNull()
+    fireEvent.change(itemSelect(), { target: { value: 'p1' } })
+    expect(screen.queryByPlaceholderText('e.g. Electricity Bill')).toBeNull()
     expect(amountInput().value).toBe('+')
     fireEvent.change(amountInput(), { target: { value: '+500' } })
     fireEvent.click(screen.getByRole('button', { name: 'Add to Petrol' }))
@@ -206,8 +208,8 @@ describe('AddExpenseModal pick an existing item', () => {
   it('"+ New item" goes back to adding a separate item', () => {
     render(<AddExpenseModal initial={{ categoryId: 'c_food' }} categories={CATS} year={2026} month={9}
       expenses={[PETROL]} onSave={noop} onClose={noop} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Petrol · ₹2,000' }))
-    fireEvent.click(screen.getByRole('button', { name: '+ New item' }))
+    fireEvent.change(itemSelect(), { target: { value: 'p1' } })
+    fireEvent.change(itemSelect(), { target: { value: '' } })
     expect(screen.getByPlaceholderText('e.g. Electricity Bill').value).toBe('')
     expect(screen.getByRole('button', { name: 'Add Expense' })).toBeTruthy()
   })

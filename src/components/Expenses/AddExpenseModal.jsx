@@ -301,29 +301,28 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             </Select>
           </FormControl>
 
-          {/* Already this month in the chosen category: tap one to add to it. */}
+          {/* Already this month in the chosen category: pick one to add to it. */}
           {!isWithdraw && existingItems.length > 0 && (
-            <Box sx={{ width: '100%' }}>
-              <Typography variant="caption" className={classes.applyLabel}>
-                Add to an item already this month, or a new one
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
-                {existingItems.map(e => (
-                  <Button key={e.id} size="small" disabled={saving}
-                    variant={picked?.id === e.id ? 'contained' : 'outlined'}
-                    onClick={() => pick(e)}
-                    sx={{ minHeight: 36, textTransform: 'none', borderRadius: 2 }}>
-                    {e.itemName} · {inr(+e.amount)}
-                  </Button>
-                ))}
-                <Button size="small" disabled={saving}
-                  variant={picked ? 'outlined' : 'contained'}
-                  onClick={unpick}
-                  sx={{ minHeight: 36, textTransform: 'none', borderRadius: 2 }}>
-                  + New item
-                </Button>
-              </Box>
-            </Box>
+            <FormControl size="small" fullWidth className={classes.fieldStyles}>
+              <InputLabel id="expense-item-label" shrink sx={{ color: 'text.secondary' }}>
+                Item
+              </InputLabel>
+              <Select
+                native
+                labelId="expense-item-label"
+                value={picked?.id || ''}
+                onChange={e => {
+                  const hit = existingItems.find(x => x.id === e.target.value)
+                  hit ? pick(hit) : unpick()
+                }}
+                disabled={saving}
+                label="Item"
+                notched
+              >
+                <option value="">+ New item</option>
+                {existingItems.map(e => <option key={e.id} value={e.id}>{e.itemName} ({inr(+e.amount)})</option>)}
+              </Select>
+            </FormControl>
           )}
 
           {/* Deposit / Withdraw toggle — only for savings / investment categories */}
@@ -414,13 +413,12 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
           )}
 
           {/* Item Name — a withdrawal takes its name from the dropdown above */}
-          {!isWithdraw && (
+          {!isWithdraw && !picked && (
             <>
               <TextField
-                label="Item Name"
+                label={existingItems.length ? 'New item name' : 'Item Name'}
                 value={form.itemName}
                 onChange={e => handleItemName(e.target.value)}
-                disabled={!!picked}
                 placeholder="e.g. Electricity Bill"
                 fullWidth
                 variant="outlined"
