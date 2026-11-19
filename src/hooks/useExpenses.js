@@ -9,6 +9,7 @@ import { setExpenseMetaFS } from '../api/firestoreExpenseMeta'
 import { isOffline, isNetworkError } from '../utils/offline'
 
 import { MONTHS, toSentenceCase, isYearLocked } from '../utils/constants'
+import { mergeSameItem } from '../utils/money'
 
 export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteConfirm, closeModal, clearSelection, queueOffline }) {
   const handleSaveExpense = useCallback(async (exp, applyMode = 'single') => {
@@ -89,10 +90,15 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
     try {
       const sid = getSheetId()
       if (applyMode === 'single') {
-        await saveExpense(exp, t)
+        // Same item already in this month + category → add to it, not a duplicate.
+        const merged = isNew ? mergeSameItem(await readAllExpenseRows(t), exp) : null
+        const toSave = merged || exp
+        await saveExpense(toSave, t)
         // Persist pin + note to Firestore (survives the Excel round-trip)
-        await setExpenseMetaFS(sid, exp, { isFixed: exp.isFixed, note: exp.note })
-        toast.success(isNew ? 'Added!' : 'Updated!')
+        await setExpenseMetaFS(sid, toSave, { isFixed: toSave.isFixed, note: toSave.note })
+        toast.success(merged
+          ? `Added ₹${Math.abs(merged.added).toLocaleString('en-IN')} to ${merged.itemName} — now ₹${Math.abs(merged.amount).toLocaleString('en-IN')}`
+          : isNew ? 'Added!' : 'Updated!')
       } else {
         const startMonth = applyMode === 'all_year' ? 1 : parseInt(exp.month)
         const count = 12 - startMonth + 1
