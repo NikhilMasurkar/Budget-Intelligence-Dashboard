@@ -1,21 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap');
 
+/* Colours (--bg, --text, --accent, ... and their -rgb triples) are set on
+   :root at startup from src/theme/tokens.js — edit them there. */
 :root {
-  --bg: #101218;
-  --surface: #101218;
-  --surface2: #181b28;
-  --surface3: #222640;
-  --border: rgba(255,255,255,0.07);
-  --border2: rgba(255,255,255,0.13);
-  --text: #e4e8f5;
-  --text2: #8891b8;
-  --text3: #484f72;
-  --accent: #5b7fff;
-  --accent2: #3de8a0;
-  --danger: #ff5f5f;
-  --warn: #ffb347;
-  --purple: #b97fff;
-  --pink: #ff6eb4;
+  --border: rgb(var(--ink-rgb) / 0.07);
+  --border2: rgb(var(--ink-rgb) / 0.13);
   --r: 12px;
   --r-sm: 8px;
 }

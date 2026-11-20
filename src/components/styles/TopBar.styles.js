@@ -72,14 +72,14 @@ export const useTopBarStyles = makeStyles()((theme) => ({
     color: theme.palette.text.secondary,
     backgroundColor: 'transparent',
     '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+      backgroundColor: 'rgb(var(--ink-rgb) / 0.03)',
     },
   },
   navButtonActive: {
     color: theme.palette.primary.main,
-    backgroundColor: 'rgba(91, 127, 255, 0.08)',
+    backgroundColor: 'rgb(var(--accent-rgb) / 0.08)',
     '&:hover': {
-      backgroundColor: 'rgba(91, 127, 255, 0.12)',
+      backgroundColor: 'rgb(var(--accent-rgb) / 0.12)',
     },
   },
   actionGroup: {
@@ -117,7 +117,7 @@ export const useTopBarStyles = makeStyles()((theme) => ({
     borderColor: theme.palette.divider,
     backgroundColor: theme.palette.background.default,
     '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      backgroundColor: 'rgb(var(--ink-rgb) / 0.05)',
       borderColor: theme.palette.primary.main,
     },
   },
@@ -177,7 +177,7 @@ export const useTopBarStyles = makeStyles()((theme) => ({
     paddingTop: theme.spacing(1),
     paddingBottom: theme.spacing(1),
     '&:hover': {
-      backgroundColor: 'rgba(255, 95, 95, 0.08)',
+      backgroundColor: 'rgb(var(--danger-rgb) / 0.08)',
     },
   },
   menuSignOutIcon: {
@@ -230,8 +230,8 @@ export const useTopBarStyles = makeStyles()((theme) => ({
     right: 0,
     bottom: 0,
     zIndex: theme.zIndex.appBar,
-    backgroundColor: '#101218',
-    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'var(--bg)',
+    borderTop: '1px solid rgb(var(--ink-rgb) / 0.08)',
     paddingBottom: 'env(safe-area-inset-bottom)',
     [theme.breakpoints.up('md')]: {
       display: 'none',
@@ -241,14 +241,14 @@ export const useTopBarStyles = makeStyles()((theme) => ({
     backgroundColor: 'transparent',
   },
   bottomNavAction: {
-    color: '#8891b8',
+    color: 'var(--text2)',
     minWidth: 0,
     '& .MuiBottomNavigationAction-label': {
       fontSize: '11px',
       fontWeight: 600,
     },
     '&.Mui-selected': {
-      color: '#5b7fff',
+      color: 'var(--accent)',
     },
     '&.Mui-selected .MuiBottomNavigationAction-label': {
       fontSize: '11px',

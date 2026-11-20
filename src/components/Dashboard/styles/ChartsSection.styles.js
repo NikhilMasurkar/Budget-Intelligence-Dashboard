@@ -11,8 +11,8 @@ export const useStyles = makeStyles()((theme) => ({
     }
   },
   chartCard: {
-    backgroundColor: '#101218',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'var(--bg)',
+    border: '1px solid rgb(var(--ink-rgb) / 0.08)',
     borderRadius: '12px',
     padding: '16px',
     [theme.breakpoints.up('sm')]: {
@@ -20,8 +20,8 @@ export const useStyles = makeStyles()((theme) => ({
     }
   },
   stackedCard: {
-    backgroundColor: '#101218',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'var(--bg)',
+    border: '1px solid rgb(var(--ink-rgb) / 0.08)',
     borderRadius: '12px',
     padding: '16px',
     marginBottom: '16px',
@@ -32,12 +32,12 @@ export const useStyles = makeStyles()((theme) => ({
   chartTitle: {
     fontWeight: 800,
     fontSize: '16px',
-    color: '#e4e8f5',
+    color: 'var(--text)',
     marginBottom: '4px'
   },
   chartSubtitle: {
     fontSize: '12px',
-    color: '#8891b8',
+    color: 'var(--text2)',
     marginBottom: '18px'
   },
   chartContainer260: {
@@ -53,7 +53,7 @@ export const useStyles = makeStyles()((theme) => ({
   captionRight: {
     display: 'block',
     fontSize: '11px',
-    color: '#6c7293',
+    color: 'var(--text-muted)',
     marginTop: '8px',
     textAlign: 'right'
   }

@@ -15,8 +15,8 @@ const useStyles = makeStyles()((theme) => ({
       width: 'calc(100% - 32px)',
       margin: theme.spacing(2),
       borderRadius: theme.spacing(3),
-      border: '1px solid rgba(255, 255, 255, 0.13)',
-      backgroundColor: '#101218',
+      border: '1px solid rgb(var(--ink-rgb) / 0.13)',
+      backgroundColor: 'var(--bg)',
       backgroundImage: 'none',
       boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.5)',
       overflowY: 'auto', maxHeight: 'calc(100dvh - 32px)',
@@ -36,13 +36,13 @@ const useStyles = makeStyles()((theme) => ({
     width: '56px',
     height: '56px',
     borderRadius: '50%',
-    backgroundColor: 'rgba(255, 95, 95, 0.1)',
+    backgroundColor: 'rgb(var(--danger-rgb) / 0.1)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing(2.5),
-    border: '1px solid rgba(255, 95, 95, 0.25)',
-    boxShadow: '0 0 12px rgba(255, 95, 95, 0.1)',
+    border: '1px solid rgb(var(--danger-rgb) / 0.25)',
+    boxShadow: '0 0 12px rgb(var(--danger-rgb) / 0.1)',
   },
   icon: {
     fontSize: '28px',
@@ -79,9 +79,9 @@ const useStyles = makeStyles()((theme) => ({
     fontWeight: 700,
     borderRadius: theme.spacing(2),
     fontSize: '13px',
-    boxShadow: '0 4px 12px rgba(255, 95, 95, 0.2)',
+    boxShadow: '0 4px 12px rgb(var(--danger-rgb) / 0.2)',
     '&:hover': {
-      boxShadow: '0 6px 16px rgba(255, 95, 95, 0.3)',
+      boxShadow: '0 6px 16px rgb(var(--danger-rgb) / 0.3)',
     },
   },
   btnGroup: {
@@ -100,9 +100,9 @@ const useStyles = makeStyles()((theme) => ({
     fontWeight: 700,
     borderRadius: theme.spacing(2),
     fontSize: '13px',
-    boxShadow: '0 4px 12px rgba(255, 95, 95, 0.2)',
+    boxShadow: '0 4px 12px rgb(var(--danger-rgb) / 0.2)',
     '&:hover': {
-      boxShadow: '0 6px 16px rgba(255, 95, 95, 0.3)',
+      boxShadow: '0 6px 16px rgb(var(--danger-rgb) / 0.3)',
     },
   },
   yearBtn: {
@@ -112,11 +112,11 @@ const useStyles = makeStyles()((theme) => ({
     fontWeight: 700,
     borderRadius: theme.spacing(2),
     fontSize: '13px',
-    backgroundColor: '#8B0000',
-    boxShadow: '0 4px 12px rgba(139, 0, 0, 0.2)',
+    backgroundColor: 'var(--danger-deep)',
+    boxShadow: '0 4px 12px rgb(var(--danger-deep-rgb) / 0.2)',
     '&:hover': {
-      backgroundColor: '#6B0000',
-      boxShadow: '0 6px 16px rgba(139, 0, 0, 0.3)',
+      backgroundColor: 'var(--danger-deep)',
+      boxShadow: '0 6px 16px rgb(var(--danger-deep-rgb) / 0.3)',
     },
   },
   cancelBtn: {
@@ -131,7 +131,7 @@ const useStyles = makeStyles()((theme) => ({
     '&:hover': {
       borderColor: theme.palette.text.primary,
       color: theme.palette.text.primary,
-      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+      backgroundColor: 'rgb(var(--ink-rgb) / 0.03)',
     },
   },
 }))

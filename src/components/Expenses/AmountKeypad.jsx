@@ -39,17 +39,17 @@ export default function AmountKeypad({ value, onChange, onDone, onEquals, result
         gridColumn: wide ? 'span 2' : undefined,
         minWidth: 0, height: 44, borderRadius: '10px', fontSize: 17, fontWeight: 700,
         textTransform: 'none', lineHeight: 1,
-        color: variant === 'op' ? '#a0b4ff' : variant === 'go' ? '#0b0e1a' : '#e4e8f5',
+        color: variant === 'op' ? 'var(--accent-soft)' : variant === 'go' ? 'var(--bg)' : 'var(--text)',
         background:
-          variant === 'go' ? '#5b7fff'
-            : variant === 'op' ? 'rgba(91,127,255,0.10)'
-              : 'rgba(255,255,255,0.05)',
-        border: '1px solid rgba(255,255,255,0.07)',
+          variant === 'go' ? 'var(--accent)'
+            : variant === 'op' ? 'rgb(var(--accent-rgb) / 0.10)'
+              : 'rgb(var(--ink-rgb) / 0.05)',
+        border: '1px solid rgb(var(--ink-rgb) / 0.07)',
         '&:hover': {
           background:
-            variant === 'go' ? '#4a6def'
-              : variant === 'op' ? 'rgba(91,127,255,0.18)'
-                : 'rgba(255,255,255,0.09)',
+            variant === 'go' ? 'var(--accent-strong)'
+              : variant === 'op' ? 'rgb(var(--accent-rgb) / 0.18)'
+                : 'rgb(var(--ink-rgb) / 0.09)',
         },
       }}
     >
@@ -59,13 +59,13 @@ export default function AmountKeypad({ value, onChange, onDone, onEquals, result
 
   return (
     <Box sx={{
-      width: '100%', background: '#12172b',
-      border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px',
+      width: '100%', background: 'var(--surface2)',
+      border: '1px solid rgb(var(--ink-rgb) / 0.08)', borderRadius: '12px',
       p: '10px', mt: '-4px',
     }}>
       {resultLabel && (
         <Typography sx={{
-          fontSize: 12, color: '#a0b4ff', textAlign: 'right',
+          fontSize: 12, color: 'var(--accent-soft)', textAlign: 'right',
           fontVariantNumeric: 'tabular-nums', px: '4px', pb: '8px',
         }}>
           {resultLabel}

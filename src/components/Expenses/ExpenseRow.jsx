@@ -54,13 +54,13 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
   const updated = fmtUpdated(exp.updatedAt)
   return (
     <Box className={classes.expenseRow}
-      sx={isSelected ? { background: 'rgba(91,127,255,0.06)' } : undefined}>
+      sx={isSelected ? { background: 'rgb(var(--accent-rgb) / 0.06)' } : undefined}>
       {canEdit && (
         <Checkbox
           size="small"
           checked={isSelected}
           onChange={e => onToggle(exp.id, e.target.checked)}
-          sx={{ p: { xs: '8px', sm: 0 }, mr: '2px', color: '#3d4466', '&.Mui-checked': { color: '#5b7fff' } }}
+          sx={{ p: { xs: '8px', sm: 0 }, mr: '2px', color: 'var(--line)', '&.Mui-checked': { color: 'var(--accent)' } }}
         />
       )}
       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -70,7 +70,7 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
           <Typography
             onClick={() => onComment(exp)}
             sx={{
-              fontSize: 11, color: '#8891b8', lineHeight: 1.4, cursor: 'pointer',
+              fontSize: 11, color: 'var(--text2)', lineHeight: 1.4, cursor: 'pointer',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}
           >
@@ -78,7 +78,7 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
           </Typography>
         )}
         {updated && (
-          <Typography sx={{ fontSize: 10, color: '#3d4466', display: 'block', lineHeight: 1.4 }}>
+          <Typography sx={{ fontSize: 10, color: 'var(--line)', display: 'block', lineHeight: 1.4 }}>
             Updated {updated}
           </Typography>
         )}
@@ -92,15 +92,15 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
       {exp.pending && (
         <Tooltip title="Added offline — saved on this phone, goes to your sheet when you're back online" arrow>
           <Box component="span" sx={{
-            fontSize: 10, fontWeight: 700, color: '#ffb03a', whiteSpace: 'nowrap',
-            background: 'rgba(255,176,58,0.12)', border: '1px solid rgba(255,176,58,0.35)',
+            fontSize: 10, fontWeight: 700, color: 'var(--warn)', whiteSpace: 'nowrap',
+            background: 'rgb(var(--warn-rgb) / 0.12)', border: '1px solid rgb(var(--warn-rgb) / 0.35)',
             borderRadius: '6px', px: '6px', py: '1px',
           }}>⏳ Not synced</Box>
         </Tooltip>
       )}
       <Typography
         className={classes.expenseAmount}
-        sx={+exp.amount < 0 ? { color: '#ff7a7a' } : undefined}
+        sx={+exp.amount < 0 ? { color: 'var(--danger-soft)' } : undefined}
       >
         {fmt(exp.amount)}
       </Typography>
@@ -111,8 +111,8 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
           onClick={() => onComment(exp)}
           sx={{
             p: { xs: '9px', sm: '3px' }, position: 'relative',
-            color: commentCount > 0 ? '#5b7fff' : '#4a5072',
-            '&:hover': { color: '#5b7fff', background: 'rgba(91,127,255,0.1)' }
+            color: commentCount > 0 ? 'var(--accent)' : 'var(--text3)',
+            '&:hover': { color: 'var(--accent)', background: 'rgb(var(--accent-rgb) / 0.1)' }
           }}
         >
           <ChatBubbleOutlinedIcon sx={{ fontSize: { xs: 18, sm: 14 } }} />
@@ -120,7 +120,7 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
             <Box component="span" sx={{
               position: 'absolute', top: 0, right: 0,
               fontSize: 8, fontWeight: 800, lineHeight: 1,
-              background: '#5b7fff', color: '#fff',
+              background: 'var(--accent)', color: '#fff',
               borderRadius: '50%', width: 12, height: 12,
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>

@@ -11,8 +11,10 @@ if (!admin.apps.length) {
   })
 }
 
+// web-push requires a mailto: or https: URL; a bare email throws at load and 502s every call.
+const subject = process.env.VAPID_SUBJECT || ''
 webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT,
+  /^(mailto:|https:)/.test(subject) ? subject : `mailto:${subject}`,
   process.env.VITE_VAPID_PUBLIC_KEY,
   process.env.VAPID_PRIVATE_KEY
 )

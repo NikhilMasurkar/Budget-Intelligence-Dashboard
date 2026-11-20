@@ -12,8 +12,8 @@ export function stepMonth(year, month, delta, availableYears) {
   return availableYears.some(a => +a === y) ? { year: y, month: m } : null
 }
 
-const optStyle = { background: '#181b28', color: '#e4e8f5' }
-const arrowSx = { color: '#8891b8', '&.Mui-disabled': { color: '#3d4466' } }
+const optStyle = { background: 'var(--surface2)', color: 'var(--text)' }
+const arrowSx = { color: 'var(--text2)', '&.Mui-disabled': { color: 'var(--line)' } }
 
 export default function MonthStepper({ year, month, availableYears, onYearChange, onMonthChange }) {
   const { classes: g } = useGlobalStyles()

@@ -10,7 +10,7 @@ export const useStyles = makeStyles()(() => ({
   },
   filterLabel: {
     fontSize: '12px',
-    color: '#8891b8',
+    color: 'var(--text2)',
     marginRight: '4px',
     fontWeight: 600
   },
@@ -24,27 +24,27 @@ export const useStyles = makeStyles()(() => ({
     fontWeight: 600,
     minWidth: 'auto',
     textTransform: 'none',
-    border: '1px solid rgba(255, 255, 255, 0.12)',
-    color: '#8891b8',
+    border: '1px solid rgb(var(--ink-rgb) / 0.12)',
+    color: 'var(--text2)',
     backgroundColor: 'transparent',
     '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.04)',
-      borderColor: 'rgba(255, 255, 255, 0.2)'
+      backgroundColor: 'rgb(var(--ink-rgb) / 0.04)',
+      borderColor: 'rgb(var(--ink-rgb) / 0.2)'
     }
   },
   buttonActive: {
-    backgroundColor: '#5b7fff',
-    borderColor: '#5b7fff',
+    backgroundColor: 'var(--accent)',
+    borderColor: 'var(--accent)',
     color: 'white',
     '&:hover': {
-      backgroundColor: '#4a6eee',
-      borderColor: '#4a6eee'
+      backgroundColor: 'var(--accent-strong)',
+      borderColor: 'var(--accent-strong)'
     }
   },
   divider: {
     width: '1px',
     height: '20px',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgb(var(--ink-rgb) / 0.08)',
     marginLeft: '6px',
     marginRight: '6px'
   },
@@ -58,21 +58,21 @@ export const useStyles = makeStyles()(() => ({
     fontWeight: 600,
     minWidth: 'auto',
     textTransform: 'none',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    color: '#8891b8',
+    border: '1px solid rgb(var(--ink-rgb) / 0.08)',
+    color: 'var(--text2)',
     backgroundColor: 'transparent',
     '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.04)',
-      borderColor: 'rgba(255, 255, 255, 0.15)'
+      backgroundColor: 'rgb(var(--ink-rgb) / 0.04)',
+      borderColor: 'rgb(var(--ink-rgb) / 0.15)'
     }
   },
   qButtonActive: {
-    backgroundColor: '#5b7fff',
-    borderColor: '#5b7fff',
+    backgroundColor: 'var(--accent)',
+    borderColor: 'var(--accent)',
     color: 'white',
     '&:hover': {
-      backgroundColor: '#4a6eee',
-      borderColor: '#4a6eee'
+      backgroundColor: 'var(--accent-strong)',
+      borderColor: 'var(--accent-strong)'
     }
   }
 }))

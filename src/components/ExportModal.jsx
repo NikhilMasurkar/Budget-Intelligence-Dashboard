@@ -18,8 +18,8 @@ const useStyles = makeStyles()((theme) => ({
       width: 'calc(100% - 32px)',
       margin: theme.spacing(2),
       borderRadius: theme.spacing(3),
-      border: '1px solid rgba(255, 255, 255, 0.13)',
-      backgroundColor: '#101218',
+      border: '1px solid rgb(var(--ink-rgb) / 0.13)',
+      backgroundColor: 'var(--bg)',
       backgroundImage: 'none',
       boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.5)',
       overflowY: 'auto', maxHeight: 'calc(100dvh - 32px)',
@@ -45,9 +45,9 @@ const useStyles = makeStyles()((theme) => ({
     marginBottom: theme.spacing(2.5),
   },
   iconContainerLocal: {
-    backgroundColor: 'rgba(61, 232, 160, 0.1)',
-    border: '1px solid rgba(61, 232, 160, 0.25)',
-    boxShadow: '0 0 12px rgba(61, 232, 160, 0.1)',
+    backgroundColor: 'rgb(var(--accent2-rgb) / 0.1)',
+    border: '1px solid rgb(var(--accent2-rgb) / 0.25)',
+    boxShadow: '0 0 12px rgb(var(--accent2-rgb) / 0.1)',
   },
   icon: {
     fontSize: '28px',
@@ -98,15 +98,15 @@ const useStyles = makeStyles()((theme) => ({
     userSelect: 'none',
     '&:hover': {
       borderColor: theme.palette.text.secondary,
-      backgroundColor: 'rgba(255, 255, 255, 0.02)',
+      backgroundColor: 'rgb(var(--ink-rgb) / 0.02)',
     },
   },
   yearCardSelected: {
     borderColor: theme.palette.primary.main,
-    backgroundColor: 'rgba(91, 127, 255, 0.08)',
+    backgroundColor: 'rgb(var(--accent-rgb) / 0.08)',
     '&:hover': {
       borderColor: theme.palette.primary.main,
-      backgroundColor: 'rgba(91, 127, 255, 0.12)',
+      backgroundColor: 'rgb(var(--accent-rgb) / 0.12)',
     },
   },
   yearTitle: {
@@ -136,9 +136,9 @@ const useStyles = makeStyles()((theme) => ({
     fontSize: '13px',
   },
   exportBtnLocal: {
-    boxShadow: '0 4px 12px rgba(61, 232, 160, 0.2)',
+    boxShadow: '0 4px 12px rgb(var(--accent2-rgb) / 0.2)',
     '&:hover': {
-      boxShadow: '0 6px 16px rgba(61, 232, 160, 0.3)',
+      boxShadow: '0 6px 16px rgb(var(--accent2-rgb) / 0.3)',
     },
   },
   cancelBtn: {
@@ -152,7 +152,7 @@ const useStyles = makeStyles()((theme) => ({
     '&:hover': {
       borderColor: theme.palette.text.primary,
       color: theme.palette.text.primary,
-      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+      backgroundColor: 'rgb(var(--ink-rgb) / 0.03)',
     },
   },
 }))

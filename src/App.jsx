@@ -45,7 +45,7 @@ const Dashboard = lazy(loadDashboard)
 const AIInsightsSection = lazy(() => import('./components/Dashboard/subcomponents/AIInsightsSection'))
 const ExportModal = lazy(() => import('./components/ExportModal'))
 const loadingText = (
-  <Typography align="center" sx={{ p: 5, color: '#8891b8' }}>Loading…</Typography>
+  <Typography align="center" sx={{ p: 5, color: 'var(--text2)' }}>Loading…</Typography>
 )
 
 export default function App() {
@@ -306,7 +306,7 @@ export default function App() {
 
   return (
     <Box className={globalClasses.globalContainer}>
-      <Toaster position="top-right" toastOptions={{ style: { background: '#101218', color: '#e4e8f5', border: '1px solid rgba(255,255,255,0.13)' } }} />
+      <Toaster position="top-right" toastOptions={{ style: { background: 'var(--bg)', color: 'var(--text)', border: '1px solid rgb(var(--ink-rgb) / 0.13)' } }} />
 
       <TopBar
         view={view}
@@ -358,7 +358,7 @@ export default function App() {
             {/* Full-screen loading only on the very first load — after that, keep
                 content mounted so the UI doesn't blank out on every save/refresh. */}
             {loading && !didInitialLoad && (
-              <Typography align="center" sx={{ p: 5, color: '#8891b8' }}>
+              <Typography align="center" sx={{ p: 5, color: 'var(--text2)' }}>
                 Loading from Google Sheets…
               </Typography>
             )}
@@ -463,7 +463,7 @@ export default function App() {
                 )}
 
                 {/* Sub-tab switcher */}
-                <Box sx={{ display: 'flex', gap: '3px', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', p: '3px', mb: '16px', width: 'fit-content' }}>
+                <Box sx={{ display: 'flex', gap: '3px', background: 'rgb(var(--ink-rgb) / 0.04)', borderRadius: '10px', p: '3px', mb: '16px', width: 'fit-content' }}>
                   {[{ id: 'expenses', label: 'Expenses' }, { id: 'income', label: 'Income' }].map(tab => (
                     <Button
                       key={tab.id}
@@ -476,11 +476,11 @@ export default function App() {
                         fontSize: 13,
                         fontWeight: 600,
                         textTransform: 'none',
-                        color: txnTab === tab.id ? '#fff' : '#6a7190',
-                        background: txnTab === tab.id ? '#5b7fff' : 'transparent',
+                        color: txnTab === tab.id ? '#fff' : 'var(--text-muted)',
+                        background: txnTab === tab.id ? 'var(--accent)' : 'transparent',
                         minWidth: 0,
                         '&:hover': {
-                          background: txnTab === tab.id ? '#5b7fff' : 'rgba(255,255,255,0.05)',
+                          background: txnTab === tab.id ? 'var(--accent)' : 'rgb(var(--ink-rgb) / 0.05)',
                         },
                       }}
                     >

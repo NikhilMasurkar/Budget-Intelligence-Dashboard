@@ -3,8 +3,8 @@ import { makeStyles } from 'tss-react/mui'
 export const useGlobalStyles = makeStyles()((theme) => ({
   globalContainer: {
     minHeight: '100vh',
-    backgroundColor: '#101218',
-    color: '#e4e8f5'
+    backgroundColor: 'var(--bg)',
+    color: 'var(--text)'
   },
   contentArea: {
     paddingLeft: '12px',
@@ -25,8 +25,8 @@ export const useGlobalStyles = makeStyles()((theme) => ({
     }
   },
   glassCard: {
-    backgroundColor: '#181b28',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'var(--surface2)',
+    border: '1px solid rgb(var(--ink-rgb) / 0.08)',
     borderRadius: '12px',
     padding: '16px',
     marginBottom: '20px',
@@ -41,28 +41,28 @@ export const useGlobalStyles = makeStyles()((theme) => ({
     height: '34px',
     fontSize: '13px',
     fontWeight: 600,
-    backgroundColor: '#181b28',
-    color: '#e4e8f5',
+    backgroundColor: 'var(--surface2)',
+    color: 'var(--text)',
     '& .MuiOutlinedInput-notchedOutline': {
-      borderColor: 'rgba(255, 255, 255, 0.08)'
+      borderColor: 'rgb(var(--ink-rgb) / 0.08)'
     },
     '&:hover .MuiOutlinedInput-notchedOutline': {
-      borderColor: '#5b7fff'
+      borderColor: 'var(--accent)'
     },
     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-      borderColor: '#5b7fff'
+      borderColor: 'var(--accent)'
     },
     '& select': {
       paddingTop: '6px',
       paddingBottom: '6px',
       paddingLeft: '12px',
       paddingRight: '12px',
-      backgroundColor: '#181b28',
-      color: '#e4e8f5'
+      backgroundColor: 'var(--surface2)',
+      color: 'var(--text)'
     }
   },
   containedBlueButton: {
-    backgroundColor: '#5b7fff',
+    backgroundColor: 'var(--accent)',
     color: 'white',
     textTransform: 'none',
     fontWeight: 600,
@@ -73,7 +73,7 @@ export const useGlobalStyles = makeStyles()((theme) => ({
     paddingRight: '16px',
     boxShadow: 'none',
     '&:hover': {
-      backgroundColor: '#4a6eee',
+      backgroundColor: 'var(--accent-strong)',
       boxShadow: 'none'
     }
   }

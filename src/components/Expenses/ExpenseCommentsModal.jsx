@@ -57,49 +57,49 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving,
       maxWidth="xs"
       PaperProps={{
         sx: {
-          background: '#181b28',
-          border: '1px solid rgba(255,255,255,0.1)',
+          background: 'var(--surface2)',
+          border: '1px solid rgb(var(--ink-rgb) / 0.1)',
           borderRadius: '16px',
-          color: '#e4e8f5',
+          color: 'var(--text)',
           mx: 2
         }
       }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1, pt: 2, fontSize: 15, fontWeight: 700 }}>
-        <ChatBubbleOutlinedIcon sx={{ fontSize: 18, color: '#5b7fff', flexShrink: 0 }} />
+        <ChatBubbleOutlinedIcon sx={{ fontSize: 18, color: 'var(--accent)', flexShrink: 0 }} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontSize: 15, fontWeight: 700, color: '#e4e8f5', lineHeight: 1.2 }}>Comments</Typography>
-          <Typography sx={{ fontSize: 11, color: '#8891b8', mt: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Typography sx={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', lineHeight: 1.2 }}>Comments</Typography>
+          <Typography sx={{ fontSize: 11, color: 'var(--text2)', mt: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {expense?.itemName}
           </Typography>
         </Box>
-        <IconButton size="small" onClick={onClose} disabled={saving} sx={{ color: '#8891b8', flexShrink: 0 }}>
+        <IconButton size="small" onClick={onClose} disabled={saving} sx={{ color: 'var(--text2)', flexShrink: 0 }}>
           <CloseIcon sx={{ fontSize: 18 }} />
         </IconButton>
       </DialogTitle>
 
-      <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
+      <Divider sx={{ borderColor: 'rgb(var(--ink-rgb) / 0.08)' }} />
 
       <DialogContent ref={listRef} sx={{ px: 2, py: 1.5, overflowY: 'auto', minHeight: 100, maxHeight: 320 }}>
         {comments.length === 0 ? (
-          <Typography sx={{ fontSize: 13, color: '#5a6080', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
+          <Typography sx={{ fontSize: 13, color: 'var(--text-faint)', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
             {canEdit ? 'No comments yet — add a note below' : 'No comments'}
           </Typography>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {comments.map((c, i) => (
               <Box key={c.ts || `legacy-${i}`} sx={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: 'rgb(var(--ink-rgb) / 0.03)',
+                border: '1px solid rgb(var(--ink-rgb) / 0.06)',
                 borderRadius: '10px',
                 padding: '10px 12px',
                 position: 'relative',
                 '&:hover .comment-delete': { opacity: 1 }
               }}>
-                <Typography sx={{ fontSize: 13, color: '#e4e8f5', lineHeight: 1.5, wordBreak: 'break-word', whiteSpace: 'pre-wrap', pr: canEdit ? '36px' : 0 }}>
+                <Typography sx={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, wordBreak: 'break-word', whiteSpace: 'pre-wrap', pr: canEdit ? '36px' : 0 }}>
                   {c.text}
                 </Typography>
-                <Typography sx={{ fontSize: 10, color: '#5a6080', mt: '4px' }}>
+                <Typography sx={{ fontSize: 10, color: 'var(--text-faint)', mt: '4px' }}>
                   {fmtTs(c.ts)}
                 </Typography>
                 {canEdit && (confirmIdx === i ? (
@@ -112,7 +112,7 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving,
                     sx={{
                       position: 'absolute', top: 6, right: 6, minWidth: 0, px: '8px', py: '2px',
                       fontSize: 11, fontWeight: 700, textTransform: 'none', borderRadius: '6px',
-                      color: '#fff', background: '#e05555', '&:hover': { background: '#c94444' }
+                      color: '#fff', background: 'var(--danger-strong)', '&:hover': { background: 'var(--danger-strong)' }
                     }}
                   >
                     Delete?
@@ -130,8 +130,8 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving,
                       // which have no hover and could never find it otherwise.
                       opacity: 0, '@media (hover: none)': { opacity: 1 },
                       transition: 'opacity 0.15s',
-                      color: '#5a6080',
-                      '&:hover': { color: '#e05555', background: 'rgba(224,85,85,0.1)' },
+                      color: 'var(--text-faint)',
+                      '&:hover': { color: 'var(--danger-strong)', background: 'rgb(var(--danger-strong-rgb) / 0.1)' },
                       p: '6px'
                     }}
                   >
@@ -144,10 +144,10 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving,
         )}
       </DialogContent>
 
-      <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
+      <Divider sx={{ borderColor: 'rgb(var(--ink-rgb) / 0.08)' }} />
 
       {!canEdit ? (
-        <Typography sx={{ px: 2, py: 1.5, fontSize: 12, color: '#5a6080', textAlign: 'center' }}>
+        <Typography sx={{ px: 2, py: 1.5, fontSize: 12, color: 'var(--text-faint)', textAlign: 'center' }}>
           {readOnlyNote}
         </Typography>
       ) : (
@@ -167,15 +167,15 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving,
           disabled={saving}
           sx={{
             '& .MuiOutlinedInput-root': {
-              background: 'rgba(255,255,255,0.04)',
+              background: 'rgb(var(--ink-rgb) / 0.04)',
               fontSize: 13,
-              color: '#e4e8f5',
-              '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
-              '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
-              '&.Mui-focused fieldset': { borderColor: '#5b7fff' }
+              color: 'var(--text)',
+              '& fieldset': { borderColor: 'rgb(var(--ink-rgb) / 0.12)' },
+              '&:hover fieldset': { borderColor: 'rgb(var(--ink-rgb) / 0.2)' },
+              '&.Mui-focused fieldset': { borderColor: 'var(--accent)' }
             },
-            '& .MuiOutlinedInput-input': { color: '#e4e8f5' },
-            '& .MuiOutlinedInput-input::placeholder': { color: '#5a6080' }
+            '& .MuiOutlinedInput-input': { color: 'var(--text)' },
+            '& .MuiOutlinedInput-input::placeholder': { color: 'var(--text-faint)' }
           }}
         />
         <Button
@@ -185,8 +185,8 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving,
           sx={{
             minWidth: 56, fontSize: 12, fontWeight: 700, textTransform: 'none',
             borderRadius: '8px', px: 2, height: 36, flexShrink: 0,
-            background: '#5b7fff', '&:hover': { background: '#4a6def' },
-            '&.Mui-disabled': { background: 'rgba(91,127,255,0.3)', color: 'rgba(255,255,255,0.3)' }
+            background: 'var(--accent)', '&:hover': { background: 'var(--accent-strong)' },
+            '&.Mui-disabled': { background: 'rgb(var(--accent-rgb) / 0.3)', color: 'rgb(var(--ink-rgb) / 0.3)' }
           }}
         >
           {saving ? '…' : 'Add'}

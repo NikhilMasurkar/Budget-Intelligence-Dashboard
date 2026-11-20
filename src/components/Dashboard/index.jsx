@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import { Box, Typography } from '@mui/material'
 import { useStyles } from './styles/Dashboard.styles'
+import { tokens, useThemeMode } from '../../theme/tokens'
 import MonthFilterControl from './subcomponents/MonthFilterControl'
 import InvestmentsSection from './subcomponents/InvestmentsSection'
 import BudgetProgressSection from './subcomponents/BudgetProgressSection'
@@ -24,6 +25,7 @@ function periodLabel(selMonths, year) {
 }
 
 export default function Dashboard({ expenses, income, allExpenses = [], categories, year, month, selMonths, setSelMonths, onEditCategory }) {
+  useThemeMode() // re-render so chart/score colours follow the theme
   const { classes } = useStyles()
   const [detailModal, setDetailModal] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -100,7 +102,7 @@ export default function Dashboard({ expenses, income, allExpenses = [], categori
   )
 
   const filteredLabels = selMonths.map(i => MONTHS[i])
-  const catColors = ['#5b7fff','#3de8a0','#ff5f5f','#b97fff','#ffb347','#ff6eb4','#60c0ff','#ffd700','#ff8c69','#7fffd4']
+  const catColors = [tokens.accent, tokens.accent2, tokens.danger, tokens.purple, tokens.warn, tokens.pink,'#60c0ff','#ffd700','#ff8c69','#7fffd4']
 
   const curYear = new Date().getFullYear()
   const displayMonth = (year === curYear) ? (new Date().getMonth() + 1) : month
@@ -127,22 +129,22 @@ export default function Dashboard({ expenses, income, allExpenses = [], categori
       {/* Period summary + current month context */}
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px 16px', mb: '16px', px: '2px' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Box sx={{ width: 6, height: 6, borderRadius: '50%', background: '#5b7fff' }} />
-          <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#6a7190' }}>
+          <Box sx={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
+          <Typography sx={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>
             {periodLabel(selMonths, year)}
           </Typography>
-          <Typography sx={{ fontSize: 12, color: '#3a4060' }}>·</Typography>
-          <Typography sx={{ fontSize: 12, color: '#3de8a0', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+          <Typography sx={{ fontSize: 12, color: 'var(--line)' }}>·</Typography>
+          <Typography sx={{ fontSize: 12, color: 'var(--accent2)', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
             {fmt(selIncome)} earned
           </Typography>
-          <Typography sx={{ fontSize: 12, color: '#3a4060' }}>·</Typography>
-          <Typography sx={{ fontSize: 12, color: '#ff5f5f', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+          <Typography sx={{ fontSize: 12, color: 'var(--line)' }}>·</Typography>
+          <Typography sx={{ fontSize: 12, color: 'var(--danger)', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
             {fmt(selSpend)} spent
           </Typography>
           {selInvest !== 0 && (
             <>
-              <Typography sx={{ fontSize: 12, color: '#3a4060' }}>·</Typography>
-              <Typography sx={{ fontSize: 12, color: '#b97fff', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+              <Typography sx={{ fontSize: 12, color: 'var(--line)' }}>·</Typography>
+              <Typography sx={{ fontSize: 12, color: 'var(--purple)', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
                 {fmt(selInvest)} invested
               </Typography>
             </>
@@ -150,14 +152,14 @@ export default function Dashboard({ expenses, income, allExpenses = [], categori
         </Box>
         {parseInt(year) >= curYear && selMonths.length > 1 && (
           <>
-            <Box sx={{ width: '1px', height: 12, background: 'rgba(255,255,255,0.07)', display: { xs: 'none', sm: 'block' } }} />
-            <Typography sx={{ fontSize: 11, color: '#3a4060' }}>
+            <Box sx={{ width: '1px', height: 12, background: 'rgb(var(--ink-rgb) / 0.07)', display: { xs: 'none', sm: 'block' } }} />
+            <Typography sx={{ fontSize: 11, color: 'var(--line)' }}>
               {displayMonthName} now: {' '}
-              <Box component="span" sx={{ color: '#8891b8', fontVariantNumeric: 'tabular-nums' }}>{fmt(curMonthInc)} in</Box>
+              <Box component="span" sx={{ color: 'var(--text2)', fontVariantNumeric: 'tabular-nums' }}>{fmt(curMonthInc)} in</Box>
               {' · '}
-              <Box component="span" sx={{ color: '#8891b8', fontVariantNumeric: 'tabular-nums' }}>{fmt(curMonthExp)} out</Box>
+              <Box component="span" sx={{ color: 'var(--text2)', fontVariantNumeric: 'tabular-nums' }}>{fmt(curMonthExp)} out</Box>
               {' · '}
-              <Box component="span" sx={{ color: curMonthSav >= 0 ? '#3de8a0' : '#ff5f5f', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{fmt(curMonthSav)}</Box>
+              <Box component="span" sx={{ color: curMonthSav >= 0 ? 'var(--accent2)' : 'var(--danger)', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{fmt(curMonthSav)}</Box>
             </Typography>
           </>
         )}

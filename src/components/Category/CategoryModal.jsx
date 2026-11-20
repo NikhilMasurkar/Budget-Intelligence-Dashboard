@@ -181,7 +181,7 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
             InputLabelProps={{ shrink: true }}
             className={classes.fieldStyles}
             helperText="Set a monthly spend limit to track against in the dashboard"
-            FormHelperTextProps={{ sx: { color: '#8891b8', fontSize: 11 } }}
+            FormHelperTextProps={{ sx: { color: 'var(--text2)', fontSize: 11 } }}
           />
         </Box>
 

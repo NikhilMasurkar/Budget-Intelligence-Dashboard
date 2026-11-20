@@ -289,12 +289,12 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
             {masked}
           </Box>
           {otpError && (
-            <Typography sx={{ fontSize: 12, color: '#ff5f5f', marginBottom: '12px', textAlign: 'center' }}>
+            <Typography sx={{ fontSize: 12, color: 'var(--danger)', marginBottom: '12px', textAlign: 'center' }}>
               {otpError}
             </Typography>
           )}
           {otpSending ? (
-            <Box sx={{ padding: '12px 0' }}><CircularProgress size={26} style={{ color: '#5b7fff' }} /></Box>
+            <Box sx={{ padding: '12px 0' }}><CircularProgress size={26} style={{ color: 'var(--accent)' }} /></Box>
           ) : (
             <Button onClick={handleSendOtp} className={classes.primaryBtn}>
               Send code
@@ -322,20 +322,20 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
             Check your email for the 6-digit code
           </Typography>
           {otpMeta?.email && (
-            <Typography sx={{ fontSize: 12, color: '#5b7fff', marginBottom: '20px' }}>
+            <Typography sx={{ fontSize: 12, color: 'var(--accent)', marginBottom: '20px' }}>
               {otpMeta.email}
             </Typography>
           )}
 
           <PinDots count={otp.length} shake={shake} length={OTP_LENGTH} />
 
-          <Typography sx={{ margin: '0 0 20px', fontSize: 12, color: '#ff5f5f', minHeight: 16, textAlign: 'center', opacity: error ? 1 : 0, transition: 'opacity 0.2s' }}>
+          <Typography sx={{ margin: '0 0 20px', fontSize: 12, color: 'var(--danger)', minHeight: 16, textAlign: 'center', opacity: error ? 1 : 0, transition: 'opacity 0.2s' }}>
             {error || ' '}
           </Typography>
 
           {loading ? (
             <Box sx={{ padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
-              <CircularProgress size={28} style={{ color: '#5b7fff' }} />
+              <CircularProgress size={28} style={{ color: 'var(--accent)' }} />
             </Box>
           ) : (
             <>
@@ -345,7 +345,7 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
                 disabled={otp.length >= OTP_LENGTH || expired}
               />
               <Box sx={{ marginTop: '20px', display: 'flex', gap: '16px', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography sx={{ fontSize: 12, color: expired ? '#ff5f5f' : '#6a7190' }}>
+                <Typography sx={{ fontSize: 12, color: expired ? 'var(--danger)' : 'var(--text-muted)' }}>
                   {expired ? 'Code expired' : `Expires in ${mm}:${ss}`}
                 </Typography>
                 <Button
@@ -370,14 +370,14 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
         <Card className={classes.pinCard} elevation={0}>
           <LogoBox />
           <Box sx={{ fontSize: 52, margin: '4px 0 8px' }}>
-            <FingerprintIcon size={56} color="#5b7fff" />
+            <FingerprintIcon size={56} color="var(--accent)" />
           </Box>
           <Typography className={classes.title}>Enable fingerprint?</Typography>
           <Typography className={classes.subtitle} sx={{ marginBottom: '32px' }}>
             Use fingerprint or Face ID on this device instead of your PIN next time.
           </Typography>
           {loading ? (
-            <Box sx={{ padding: '16px 0' }}><CircularProgress size={28} style={{ color: '#5b7fff' }} /></Box>
+            <Box sx={{ padding: '16px 0' }}><CircularProgress size={28} style={{ color: 'var(--accent)' }} /></Box>
           ) : (
             <>
               <Button onClick={handleEnableBiometric} className={classes.primaryBtn}>
@@ -414,20 +414,20 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
             disabled={isScanning}
             className={cx(classes.fingerprintBtn, isScanning && classes.pulsingFingerprint)}
             sx={{
-              border: `2px solid ${isError ? '#ff5f5f' : isScanning ? '#5b7fff' : 'rgba(91,127,255,0.35)'}`,
-              background: isScanning ? 'rgba(91,127,255,0.1)' : 'rgba(255,255,255,0.03)',
+              border: `2px solid ${isError ? 'var(--danger)' : isScanning ? 'var(--accent)' : 'rgb(var(--accent-rgb) / 0.35)'}`,
+              background: isScanning ? 'rgb(var(--accent-rgb) / 0.1)' : 'rgb(var(--ink-rgb) / 0.03)',
               cursor: isScanning ? 'default' : 'pointer',
             }}
             disableRipple
           >
             <FingerprintIcon
               size={40}
-              color={isError ? '#ff5f5f' : isScanning ? '#5b7fff' : '#6a7190'}
+              color={isError ? 'var(--danger)' : isScanning ? 'var(--accent)' : 'var(--text-muted)'}
               scanning={isScanning}
             />
           </Button>
 
-          <Typography sx={{ fontSize: 12, color: isError ? '#ff5f5f' : '#6a7190', marginBottom: '28px', minHeight: 16, textAlign: 'center' }}>
+          <Typography sx={{ fontSize: 12, color: isError ? 'var(--danger)' : 'var(--text-muted)', marginBottom: '28px', minHeight: 16, textAlign: 'center' }}>
             {isScanning ? 'Scanning…' : isError ? (bioError || 'Try again or use your PIN') : 'Tap to authenticate'}
           </Typography>
 
@@ -461,13 +461,13 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
 
         <PinDots count={current.length} shake={shake} />
 
-        <Typography sx={{ margin: '0 0 20px', fontSize: 12, color: '#ff5f5f', minHeight: 16, textAlign: 'center', opacity: error ? 1 : 0, transition: 'opacity 0.2s' }}>
+        <Typography sx={{ margin: '0 0 20px', fontSize: 12, color: 'var(--danger)', minHeight: 16, textAlign: 'center', opacity: error ? 1 : 0, transition: 'opacity 0.2s' }}>
           {error || ' '}
         </Typography>
 
         {loading ? (
           <Box sx={{ padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
-            <CircularProgress size={28} style={{ color: '#5b7fff' }} />
+            <CircularProgress size={28} style={{ color: 'var(--accent)' }} />
           </Box>
         ) : (
           <NumPad
@@ -489,15 +489,15 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
                 disableRipple
                 size="small"
                 sx={{
-                  color: 'rgba(255,255,255,0.25)',
+                  color: 'rgb(var(--ink-rgb) / 0.25)',
                   padding: '4px 6px 4px 0',
-                  '&.Mui-checked': { color: '#5b7fff' },
+                  '&.Mui-checked': { color: 'var(--accent)' },
                 }}
               />
             }
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <FingerprintIcon size={14} color={wantBio ? '#5b7fff' : '#6a7190'} />
+                <FingerprintIcon size={14} color={wantBio ? 'var(--accent)' : 'var(--text-muted)'} />
                 <span>Enable fingerprint / Face ID</span>
               </Box>
             }
@@ -509,18 +509,18 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
           <Box className={classes.bottomLink}>
             {hasCred && biometricAvail && (
               <Button onClick={() => setScreen('biometric')} className={classes.ghostBtn}>
-                <FingerprintIcon size={16} color="#5b7fff" />
+                <FingerprintIcon size={16} color="var(--accent)" />
                 <span style={{ marginLeft: 6 }}>Use fingerprint</span>
               </Button>
             )}
-            <Button onClick={() => { setOtpError(''); setScreen('forgot') }} className={classes.ghostBtn} sx={{ color: '#3a4575', fontSize: 12 }}>
+            <Button onClick={() => { setOtpError(''); setScreen('forgot') }} className={classes.ghostBtn} sx={{ color: 'var(--line)', fontSize: 12 }}>
               Forgot PIN?
             </Button>
           </Box>
         )}
 
         {isReset && (
-          <Button onClick={() => setScreen('pin')} className={classes.ghostBtn} sx={{ marginTop: '16px', color: '#3a4575', fontSize: 12 }}>
+          <Button onClick={() => setScreen('pin')} className={classes.ghostBtn} sx={{ marginTop: '16px', color: 'var(--line)', fontSize: 12 }}>
             Cancel reset
           </Button>
         )}

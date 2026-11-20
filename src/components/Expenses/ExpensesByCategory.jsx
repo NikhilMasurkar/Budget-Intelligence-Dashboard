@@ -25,7 +25,7 @@ import { useGlobalStyles } from '../../styles/globalStyles'
 function CategoryBudgetText({ actual, budget }) {
   const pct = budget > 0 ? Math.round((actual / budget) * 100) : 0
   const over = actual > budget
-  const color = over ? '#ff7a7a' : pct > 80 ? '#ffb03a' : '#8891b8'
+  const color = over ? 'var(--danger-soft)' : pct > 80 ? 'var(--warn)' : 'var(--text2)'
   return (
     <Typography sx={{ fontSize: 11, color, fontWeight: 600, pl: '20px' }}>
       Budget {fmt(actual)} / {fmt(budget)} · {pct}%{over ? ' · over' : ''}
@@ -220,7 +220,7 @@ export default memo(function ExpensesByCategory({
         <Box sx={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <Button size="small" variant="text"
             onClick={expanded.size > 0 ? collapseAll : expandAll}
-            sx={{ fontSize: 12, color: '#8891b8', textTransform: 'none', minWidth: 0 }}>
+            sx={{ fontSize: 12, color: 'var(--text2)', textTransform: 'none', minWidth: 0 }}>
             {expanded.size > 0 ? 'Collapse all' : 'Expand all'}
           </Button>
           {canEdit && (
@@ -243,32 +243,32 @@ export default memo(function ExpensesByCategory({
         <Box className={classes.totalBar}>
           <Box className={classes.statBlock}>
             <Typography className={classes.statLabel}>{MONTHS[month - 1]} Income</Typography>
-            <Typography className={classes.statValue} sx={{ color: '#3de8a0' }}>{fmt(monthIncomeTotal)}</Typography>
+            <Typography className={classes.statValue} sx={{ color: 'var(--accent2)' }}>{fmt(monthIncomeTotal)}</Typography>
           </Box>
           <Box className={classes.statBlock}>
             <Typography className={classes.statLabel}>Spent</Typography>
-            <Typography className={classes.statValue} sx={{ color: '#ff7a7a' }}>{fmt(realSpend)}</Typography>
+            <Typography className={classes.statValue} sx={{ color: 'var(--danger-soft)' }}>{fmt(realSpend)}</Typography>
           </Box>
           {invested !== 0 && (
             <Box className={classes.statBlock}>
               <Typography className={classes.statLabel}>Invested</Typography>
-              <Typography className={classes.statValue} sx={{ color: '#b97fff' }}>{fmt(invested)}</Typography>
+              <Typography className={classes.statValue} sx={{ color: 'var(--purple)' }}>{fmt(invested)}</Typography>
             </Box>
           )}
           <Box className={classes.statBlock}>
             <Typography className={classes.statLabel}>{remaining >= 0 ? 'Remaining' : 'Short by'}</Typography>
-            <Typography className={classes.statValue} sx={{ color: remaining >= 0 ? '#a0b4ff' : '#ff7a7a' }}>
+            <Typography className={classes.statValue} sx={{ color: remaining >= 0 ? 'var(--accent-soft)' : 'var(--danger-soft)' }}>
               {fmt(Math.abs(remaining))}
             </Typography>
           </Box>
           <Box sx={{ flex: 1, minWidth: 120 }}>
-            <Box sx={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+            <Box sx={{ height: 6, borderRadius: 3, background: 'rgb(var(--ink-rgb) / 0.08)', overflow: 'hidden' }}>
               <Box sx={{
                 width: `${spentPct}%`, height: '100%', transition: 'width 0.3s',
-                background: spentPct >= 100 ? '#ff7a7a' : spentPct > 80 ? '#ffb03a' : '#5b7fff'
+                background: spentPct >= 100 ? 'var(--danger-soft)' : spentPct > 80 ? 'var(--warn)' : 'var(--accent)'
               }} />
             </Box>
-            <Typography sx={{ fontSize: 10, color: '#8891b8', mt: '4px' }}>
+            <Typography sx={{ fontSize: 10, color: 'var(--text2)', mt: '4px' }}>
               {monthIncomeTotal > 0 ? `${spentPct}% of income used · ${itemCount} item${itemCount !== 1 ? 's' : ''}` : `${itemCount} item${itemCount !== 1 ? 's' : ''}`}
             </Typography>
           </Box>
@@ -285,7 +285,7 @@ export default memo(function ExpensesByCategory({
             onChange={e => setSearch(e.target.value)}
             size="small"
             InputProps={{
-              startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: '#5a6080' }} /></InputAdornment>
+              startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: 'var(--text-faint)' }} /></InputAdornment>
             }}
           />
           <Button
@@ -294,10 +294,10 @@ export default memo(function ExpensesByCategory({
             onClick={() => setFixedOnly(v => !v)}
             className={classes.fixedToggleBtn}
             sx={fixedOnly ? {
-              background: '#5b7fff', '&:hover': { background: '#4a6def' }
+              background: 'var(--accent)', '&:hover': { background: 'var(--accent-strong)' }
             } : {
-              color: '#a0b4ff', borderColor: 'rgba(91,127,255,0.35)',
-              '&:hover': { borderColor: 'rgba(91,127,255,0.6)', background: 'rgba(91,127,255,0.07)' }
+              color: 'var(--accent-soft)', borderColor: 'rgb(var(--accent-rgb) / 0.35)',
+              '&:hover': { borderColor: 'rgb(var(--accent-rgb) / 0.6)', background: 'rgb(var(--accent-rgb) / 0.07)' }
             }}
           >
             Fixed only
@@ -310,31 +310,31 @@ export default memo(function ExpensesByCategory({
         <Box sx={{
           display: 'flex', alignItems: 'center', gap: '10px',
           padding: '10px 14px', marginBottom: '10px', flexWrap: 'wrap',
-          background: 'rgba(91,127,255,0.1)',
-          border: '1px solid rgba(91,127,255,0.35)',
+          background: 'rgb(var(--accent-rgb) / 0.1)',
+          border: '1px solid rgb(var(--accent-rgb) / 0.35)',
           borderRadius: '10px', position: 'sticky', top: 8, zIndex: 5,
           backdropFilter: 'blur(6px)'
         }}>
-          <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#a0b4ff' }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-soft)' }}>
             {selectedExpenses.length} selected
           </Typography>
           <Box sx={{ flex: 1 }} />
           {bulkDeleteConfirm ? (
             <>
-              <Typography sx={{ fontSize: 12, color: '#ff9b9b' }}>
+              <Typography sx={{ fontSize: 12, color: 'var(--danger-soft)' }}>
                 Delete {selectedExpenses.length}?
               </Typography>
               <Button
                 size="small" variant="contained"
                 onClick={() => { onBulkDelete(selectedExpenses); setBulkDeleteConfirm(false) }}
-                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', background: '#ff5f5f', '&:hover': { background: '#e64a4a' } }}
+                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', background: 'var(--danger)', '&:hover': { background: 'var(--danger-strong)' } }}
               >
                 Yes, delete
               </Button>
               <Button
                 size="small" variant="text"
                 onClick={() => setBulkDeleteConfirm(false)}
-                sx={{ fontSize: 12, color: '#8891b8', textTransform: 'none', minWidth: 0 }}
+                sx={{ fontSize: 12, color: 'var(--text2)', textTransform: 'none', minWidth: 0 }}
               >
                 Cancel
               </Button>
@@ -344,35 +344,35 @@ export default memo(function ExpensesByCategory({
               <Button
                 size="small" variant="contained" startIcon={<PushPinIcon sx={{ fontSize: 15 }} />}
                 onClick={() => onBulkPin(selectedExpenses, true)}
-                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', background: '#5b7fff', '&:hover': { background: '#4a6def' } }}
+                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', background: 'var(--accent)', '&:hover': { background: 'var(--accent-strong)' } }}
               >
                 Pin
               </Button>
               <Button
                 size="small" variant="outlined"
                 onClick={() => onBulkPin(selectedExpenses, false)}
-                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', color: '#a0b4ff', borderColor: 'rgba(91,127,255,0.4)', '&:hover': { borderColor: 'rgba(91,127,255,0.7)', background: 'rgba(91,127,255,0.08)' } }}
+                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', color: 'var(--accent-soft)', borderColor: 'rgb(var(--accent-rgb) / 0.4)', '&:hover': { borderColor: 'rgb(var(--accent-rgb) / 0.7)', background: 'rgb(var(--accent-rgb) / 0.08)' } }}
               >
                 Unpin
               </Button>
               <Button
                 size="small" variant="outlined"
                 onClick={() => onCopyToNextMonth(selectedExpenses.map(e => e.id))}
-                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', color: '#c8cfea', borderColor: 'rgba(255,255,255,0.15)', '&:hover': { borderColor: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.04)' } }}
+                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', color: 'var(--text-soft)', borderColor: 'rgb(var(--ink-rgb) / 0.15)', '&:hover': { borderColor: 'rgb(var(--ink-rgb) / 0.3)', background: 'rgb(var(--ink-rgb) / 0.04)' } }}
               >
                 📋 Copy to next month
               </Button>
               <Button
                 size="small" variant="outlined" startIcon={<DeleteOutlinedIcon sx={{ fontSize: 15 }} />}
                 onClick={() => setBulkDeleteConfirm(true)}
-                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', color: '#ff7a7a', borderColor: 'rgba(255,95,95,0.4)', '&:hover': { borderColor: 'rgba(255,95,95,0.7)', background: 'rgba(255,95,95,0.08)' } }}
+                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', color: 'var(--danger-soft)', borderColor: 'rgb(var(--danger-rgb) / 0.4)', '&:hover': { borderColor: 'rgb(var(--danger-rgb) / 0.7)', background: 'rgb(var(--danger-rgb) / 0.08)' } }}
               >
                 Delete
               </Button>
               <Button
                 size="small" variant="text"
                 onClick={() => onSelectionChange([])}
-                sx={{ fontSize: 12, color: '#8891b8', textTransform: 'none', minWidth: 0 }}
+                sx={{ fontSize: 12, color: 'var(--text2)', textTransform: 'none', minWidth: 0 }}
               >
                 Clear
               </Button>
@@ -383,7 +383,7 @@ export default memo(function ExpensesByCategory({
 
       {/* ── Category Sections ── */}
       {categories.length === 0 && (
-        <Box sx={{ textAlign: 'center', py: 6, color: '#8891b8', fontSize: 14 }}>
+        <Box sx={{ textAlign: 'center', py: 6, color: 'var(--text2)', fontSize: 14 }}>
           No categories yet. Click "+ Category" to add one.
         </Box>
       )}
@@ -400,19 +400,19 @@ export default memo(function ExpensesByCategory({
             <Typography sx={{
               fontSize: 11, fontWeight: 800, letterSpacing: '0.8px',
               textTransform: 'uppercase',
-              color: group.key === 'invest' ? '#b97fff' : '#6a7190',
+              color: group.key === 'invest' ? 'var(--purple)' : 'var(--text-muted)',
             }}>
               {group.label}
             </Typography>
             {group.key === 'invest' && (deposits > 0 || withdrawals > 0) && (
-              <Typography sx={{ fontSize: 11, color: '#5a6080' }}>
+              <Typography sx={{ fontSize: 11, color: 'var(--text-faint)' }}>
                 put in {fmt(deposits)} · took out {fmt(withdrawals)}
               </Typography>
             )}
-            <Box sx={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+            <Box sx={{ flex: 1, height: '1px', background: 'rgb(var(--ink-rgb) / 0.06)' }} />
             <Typography sx={{
               fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
-              color: group.key === 'invest' ? '#b97fff' : '#8891b8',
+              color: group.key === 'invest' ? 'var(--purple)' : 'var(--text2)',
             }}>
               {fmt(group.total)}
             </Typography>
@@ -457,19 +457,19 @@ export default memo(function ExpensesByCategory({
                           onClick={e => e.stopPropagation()}
                           onChange={e => toggleCategoryAll(catExpsFull, e.target.checked)}
                           sx={{
-                            p: 0, color: '#4a5072',
-                            '&.Mui-checked': { color: '#5b7fff' },
-                            '&.MuiCheckbox-indeterminate': { color: '#5b7fff' }
+                            p: 0, color: 'var(--text3)',
+                            '&.Mui-checked': { color: 'var(--accent)' },
+                            '&.MuiCheckbox-indeterminate': { color: 'var(--accent)' }
                           }}
                         />
                       </Tooltip>
                     )}
-                    <Box className={classes.colorDot} style={{ background: cat.color || '#5b7fff' }} />
+                    <Box className={classes.colorDot} style={{ background: cat.color || 'var(--accent)' }} />
                     <Typography className={classes.catName}>{cat.name}</Typography>
                     {catExpsFull.length > 0 && (
                       <Typography className={classes.catMeta}>{catExpsFull.length} item{catExpsFull.length !== 1 ? 's' : ''}</Typography>
                     )}
-                    <Typography className={classes.catTotal} style={{ color: catTotalFull < 0 ? '#ff7a7a' : catTotalFull > 0 ? '#e4e8f5' : '#5a6080' }}>
+                    <Typography className={classes.catTotal} style={{ color: catTotalFull < 0 ? 'var(--danger-soft)' : catTotalFull > 0 ? 'var(--text)' : 'var(--text-faint)' }}>
                       {catTotalFull !== 0 ? fmt(catTotalFull) : '—'}
                     </Typography>
 
@@ -546,7 +546,7 @@ export default memo(function ExpensesByCategory({
                   ? <ExpandLessIcon className={classes.expandIcon} />
                   : <ExpandMoreIcon className={classes.expandIcon} />
                 }
-                <Box className={classes.colorDot} style={{ background: '#8891b8' }} />
+                <Box className={classes.colorDot} style={{ background: 'var(--text2)' }} />
                 <Typography className={classes.catName}>Uncategorized</Typography>
                 <Typography className={classes.catMeta}>{uncategorized.length} item{uncategorized.length !== 1 ? 's' : ''}</Typography>
                 <Typography className={classes.catTotal}>{fmt(uncatTotal)}</Typography>
@@ -609,7 +609,7 @@ export default memo(function ExpensesByCategory({
             <ListItemIcon className={classes.menuIcon}><EditOutlinedIcon sx={{ fontSize: 15 }} /></ListItemIcon>
             Edit Category
           </MenuItem>,
-          <Divider key="d1" sx={{ borderColor: 'rgba(255,255,255,0.07)', my: '4px' }} />,
+          <Divider key="d1" sx={{ borderColor: 'rgb(var(--ink-rgb) / 0.07)', my: '4px' }} />,
           <MenuItem key="copy" className={classes.menuItem}
             onClick={handleCopyCat}
             disabled={!(monthByCat.get(menuCat?.id) || []).length}>
@@ -628,10 +628,10 @@ export default memo(function ExpensesByCategory({
             <ListItemIcon className={classes.menuIcon}><ArrowDownwardIcon sx={{ fontSize: 15 }} /></ListItemIcon>
             Move Down
           </MenuItem>,
-          <Divider key="d2" sx={{ borderColor: 'rgba(255,255,255,0.07)', my: '4px' }} />,
+          <Divider key="d2" sx={{ borderColor: 'rgb(var(--ink-rgb) / 0.07)', my: '4px' }} />,
           <MenuItem key="delete" className={classes.menuItemDanger}
             onClick={() => { onDeleteCategory(menuCat); closeMenu() }}>
-            <ListItemIcon className={classes.menuIcon}><DeleteOutlinedIcon sx={{ fontSize: 15, color: '#ff7070' }} /></ListItemIcon>
+            <ListItemIcon className={classes.menuIcon}><DeleteOutlinedIcon sx={{ fontSize: 15, color: 'var(--danger-soft)' }} /></ListItemIcon>
             Delete Category
           </MenuItem>
         ]}

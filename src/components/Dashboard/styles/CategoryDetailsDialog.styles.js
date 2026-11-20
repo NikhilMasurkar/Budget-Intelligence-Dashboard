@@ -6,8 +6,8 @@ export const useStyles = makeStyles()((theme) => ({
       width: '95%',
       maxWidth: '850px',
       borderRadius: '12px',
-      border: '1px solid rgba(255, 255, 255, 0.13)',
-      backgroundColor: '#101218',
+      border: '1px solid rgb(var(--ink-rgb) / 0.13)',
+      backgroundColor: 'var(--bg)',
       backgroundImage: 'none',
       boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.5)',
       overflowY: 'auto', maxHeight: 'calc(100dvh - 32px)',
@@ -37,17 +37,17 @@ export const useStyles = makeStyles()((theme) => ({
   categoryName: {
     fontSize: '22px',
     fontWeight: 800,
-    color: '#e4e8f5'
+    color: 'var(--text)'
   },
   closeButton: {
-    color: '#8891b8',
+    color: 'var(--text2)',
     '&:hover': {
-      color: '#e4e8f5'
+      color: 'var(--text)'
     }
   },
   infoBanner: {
-    backgroundColor: '#181b28',
-    border: '1px solid rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'var(--surface2)',
+    border: '1px solid rgb(var(--ink-rgb) / 0.05)',
     borderRadius: '10px',
     padding: '16px',
     marginBottom: '24px',
@@ -57,7 +57,7 @@ export const useStyles = makeStyles()((theme) => ({
   },
   bannerLabel: {
     fontSize: '11px',
-    color: '#8891b8',
+    color: 'var(--text2)',
     fontWeight: 600,
     display: 'block',
     marginBottom: '4px'
@@ -70,25 +70,25 @@ export const useStyles = makeStyles()((theme) => ({
   bannerValuePeriod: {
     fontSize: '13.5px',
     fontWeight: 700,
-    color: '#e4e8f5'
+    color: 'var(--text)'
   },
   tableContainer: {
     maxHeight: '400px',
     overflowY: 'auto',
     overflowX: 'auto',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    border: '1px solid rgb(var(--ink-rgb) / 0.08)',
     backgroundColor: 'transparent',
     boxShadow: 'none',
     borderRadius: '8px',
     '&::-webkit-scrollbar': { width: '6px', height: '6px' },
-    '&::-webkit-scrollbar-thumb': { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }
+    '&::-webkit-scrollbar-thumb': { backgroundColor: 'rgb(var(--ink-rgb) / 0.1)', borderRadius: '3px' }
   },
   thCell: {
     fontSize: '10px',
     textTransform: 'uppercase',
-    color: '#8891b8',
+    color: 'var(--text2)',
     fontWeight: 700,
-    backgroundColor: '#181b28',
+    backgroundColor: 'var(--surface2)',
     paddingTop: '12px',
     paddingBottom: '12px',
     paddingLeft: '14px',
@@ -97,9 +97,9 @@ export const useStyles = makeStyles()((theme) => ({
   thCellRight: {
     fontSize: '10px',
     textTransform: 'uppercase',
-    color: '#8891b8',
+    color: 'var(--text2)',
     fontWeight: 700,
-    backgroundColor: '#181b28',
+    backgroundColor: 'var(--surface2)',
     paddingTop: '12px',
     paddingBottom: '12px',
     paddingLeft: '14px',
@@ -109,23 +109,23 @@ export const useStyles = makeStyles()((theme) => ({
   thCellTotal: {
     fontSize: '10px',
     textTransform: 'uppercase',
-    color: '#5b7fff',
+    color: 'var(--accent)',
     fontWeight: 800,
-    backgroundColor: '#181b28',
+    backgroundColor: 'var(--surface2)',
     paddingTop: '12px',
     paddingBottom: '12px',
     paddingLeft: '14px',
     paddingRight: '14px'
   },
   tableRow: {
-    '& td': { borderBottom: '1px solid rgba(255, 255, 255, 0.04)' },
+    '& td': { borderBottom: '1px solid rgb(var(--ink-rgb) / 0.04)' },
     '&:last-child td': { border: 0 }
   },
   monthCell: {
     fontSize: '12px',
     fontWeight: 700,
-    color: '#8891b8',
-    backgroundColor: 'rgba(255, 255, 255, 0.01)',
+    color: 'var(--text2)',
+    backgroundColor: 'rgb(var(--ink-rgb) / 0.01)',
     paddingTop: '10px',
     paddingBottom: '10px',
     paddingLeft: '14px',
@@ -143,7 +143,7 @@ export const useStyles = makeStyles()((theme) => ({
     fontSize: '12.5px',
     fontWeight: 800,
     fontVariantNumeric: 'tabular-nums',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: 'rgb(var(--ink-rgb) / 0.02)',
     paddingTop: '10px',
     paddingBottom: '10px',
     paddingLeft: '14px',

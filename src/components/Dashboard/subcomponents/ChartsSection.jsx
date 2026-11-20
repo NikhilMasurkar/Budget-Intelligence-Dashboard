@@ -2,6 +2,7 @@ import { Box, Typography } from '@mui/material'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, LineController, BarController, PointElement, ArcElement, Tooltip, Legend, Filler } from 'chart.js'
 import { useStyles } from '../styles/ChartsSection.styles'
+import { tokens, rgba, useThemeMode } from '../../../theme/tokens'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, LineController, BarController, PointElement, ArcElement, Tooltip, Legend, Filler)
 
@@ -16,6 +17,7 @@ export default function ChartsSection({
   fmtK,
   CHART_OPTS
 }) {
+  useThemeMode() // re-render so chart/score colours follow the theme
   const { classes } = useStyles()
 
   return (
@@ -39,7 +41,7 @@ export default function ChartsSection({
                     type: 'bar',
                     label: 'Earned',
                     data: selMonths.map(i => monthlyData.inc[i]),
-                    backgroundColor: 'rgba(91,127,255,0.75)',
+                    backgroundColor: rgba(tokens.accent, 0.75),
                     borderRadius: 4,
                     order: 2
                   },
@@ -47,7 +49,7 @@ export default function ChartsSection({
                     type: 'bar',
                     label: 'Spent',
                     data: selMonths.map(i => monthlyData.spend[i]),
-                    backgroundColor: 'rgba(255,95,95,0.75)',
+                    backgroundColor: rgba(tokens.danger, 0.75),
                     borderRadius: 4,
                     order: 2
                   },
@@ -55,12 +57,12 @@ export default function ChartsSection({
                     type: 'line',
                     label: 'Kept',
                     data: selMonths.map(i => monthlyData.kept[i]),
-                    borderColor: '#3de8a0',
-                    backgroundColor: 'rgba(61,232,160,0.10)',
+                    borderColor: tokens.accent2,
+                    backgroundColor: rgba(tokens.accent2, 0.10),
                     borderWidth: 2.5,
                     pointRadius: 4,
-                    pointBackgroundColor: '#3de8a0',
-                    pointBorderColor: '#13151f',
+                    pointBackgroundColor: tokens.accent2,
+                    pointBorderColor: tokens.bg,
                     pointBorderWidth: 2,
                     tension: 0.35,
                     fill: false,
@@ -76,7 +78,7 @@ export default function ChartsSection({
                     position: 'top',
                     align: 'start',
                     labels: {
-                      color: '#8891b8',
+                      color: tokens.text2,
                       boxWidth: 12,
                       font: { size: 11 },
                       padding: 16,
@@ -109,7 +111,7 @@ export default function ChartsSection({
                   // are more categories than palette entries (14 defaults > 10).
                   backgroundColor: catTotals.map((_, i) => catColors[i % catColors.length]),
                   borderWidth: 2,
-                  borderColor: '#13151f'
+                  borderColor: tokens.bg
                 }]
               }}
               options={{
@@ -119,7 +121,7 @@ export default function ChartsSection({
                 plugins: {
                   legend: {
                     position: isMobile ? 'bottom' : 'right',
-                    labels: { color: '#8891b8', font: { size: 11 }, boxWidth: 10 }
+                    labels: { color: tokens.text2, font: { size: 11 }, boxWidth: 10 }
                   },
                   tooltip: { callbacks: { label: c => `${c.label}: ${fmt(c.raw)}` } }
                 }

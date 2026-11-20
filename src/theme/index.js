@@ -1,30 +1,17 @@
 import { createTheme } from '@mui/material/styles'
+import { palettes } from './tokens'
 
-export const darkTheme = createTheme({
+// MUI needs real hex here (it derives hover/alpha shades from them).
+const build = (mode, t) => createTheme({
   palette: {
-    mode: 'dark',
-    primary: {
-      main: '#5b7fff', // --accent
-    },
-    secondary: {
-      main: '#3de8a0', // --accent2
-    },
-    error: {
-      main: '#ff5f5f', // --danger
-    },
-    warning: {
-      main: '#ffb347', // --warn
-    },
-    background: {
-      default: '#101218', // --bg / --surface
-      paper: '#181b28',   // --surface2
-    },
-    text: {
-      primary: '#e4e8f5',   // --text
-      secondary: '#8891b8', // --text2
-      disabled: '#484f72',  // --text3
-    },
-    divider: 'rgba(255, 255, 255, 0.07)', // --border
+    mode,
+    primary: { main: t.accent },
+    secondary: { main: t.accent2 },
+    error: { main: t.danger },
+    warning: { main: t.warn },
+    background: { default: t.bg, paper: t.surface2 },
+    text: { primary: t.text, secondary: t.text2, disabled: t.text3 },
+    divider: mode === 'dark' ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.09)',
   },
   typography: {
     fontFamily: "'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
@@ -55,8 +42,8 @@ export const darkTheme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          border: '1px solid rgba(255, 255, 255, 0.07)',
-          backgroundColor: '#181b28',
+          border: '1px solid var(--border)',
+          backgroundColor: 'var(--surface2)',
         },
       },
     },
@@ -70,10 +57,12 @@ export const darkTheme = createTheme({
     MuiDialog: {
       styleOverrides: {
         paper: {
-          border: '1px solid rgba(255, 255, 255, 0.13)',
-          backgroundColor: '#101218',
+          border: '1px solid var(--border2)',
+          backgroundColor: 'var(--bg)',
         },
       },
     },
   },
 })
+
+export const themes = { dark: build('dark', palettes.dark), light: build('light', palettes.light) }

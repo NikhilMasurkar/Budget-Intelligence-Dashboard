@@ -65,9 +65,9 @@ const useStyles = makeStyles()((theme) => ({
   },
   infoBox: {
     padding: theme.spacing(2),
-    backgroundColor: 'rgba(91, 127, 255, 0.05)',
+    backgroundColor: 'rgb(var(--accent-rgb) / 0.05)',
     borderRadius: theme.spacing(1),
-    border: '1px solid rgba(91, 127, 255, 0.15)',
+    border: '1px solid rgb(var(--accent-rgb) / 0.15)',
     fontSize: '13px',
     color: theme.palette.text.secondary,
     lineHeight: 1.8,

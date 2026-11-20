@@ -4,8 +4,8 @@ import { makeStyles } from 'tss-react/mui'
 
 const useStyles = makeStyles()((theme) => ({
   paper: {
-    backgroundColor: 'rgba(255, 95, 95, 0.08)',
-    border: '1px solid rgba(255, 95, 95, 0.25)',
+    backgroundColor: 'rgb(var(--danger-rgb) / 0.08)',
+    border: '1px solid rgb(var(--danger-rgb) / 0.25)',
     padding: theme.spacing(3),
     borderRadius: theme.spacing(3),
     textAlign: 'center',
@@ -18,12 +18,12 @@ const useStyles = makeStyles()((theme) => ({
     width: '60px',
     height: '60px',
     borderRadius: '50%',
-    backgroundColor: 'rgba(255, 95, 95, 0.1)',
+    backgroundColor: 'rgb(var(--danger-rgb) / 0.1)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     margin: '0 auto 16px auto',
-    border: '1px solid rgba(255, 95, 95, 0.2)',
+    border: '1px solid rgb(var(--danger-rgb) / 0.2)',
   },
   icon: {
     fontSize: '28px',

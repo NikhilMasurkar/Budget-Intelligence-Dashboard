@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { Box, Button } from '@mui/material'
 import { usePinScreenStyles } from './styles/PinScreen.styles'
+import { tokens } from '../theme/tokens'
 
 // The visual pieces of the PIN screen; the flow itself lives in PinScreen.jsx.
 export const PIN_LENGTH = 4
@@ -41,7 +42,7 @@ const FP_RIDGES = [
 
 // When `scanning`, a bright band sweeps top→bottom→top, lighting up the ridges
 // it passes over (a second, clipped copy of the print) with a leading scan line.
-export function FingerprintIcon({ size = 48, color = '#5b7fff', scanning = false }) {
+export function FingerprintIcon({ size = 48, color = 'var(--accent)', scanning = false }) {
   const clipId = 'fpScan-' + useId().replace(/:/g, '')
   const ridges = FP_RIDGES.map((d, i) => <path key={i} d={d} />)
   return (
@@ -96,9 +97,9 @@ export function NumPad({ onDigit, onDelete, disabled }) {
           >
             {isDel ? (
               <svg width="22" height="16" viewBox="0 0 22 16" fill="none">
-                <path d="M8 1H20C20.6 1 21 1.4 21 2V14C21 14.6 20.6 15 20 15H8L1 8L8 1Z" stroke="#6a7190" strokeWidth="1.5" strokeLinejoin="round"/>
-                <line x1="9.5" y1="5.5" x2="17.5" y2="10.5" stroke="#6a7190" strokeWidth="1.5" strokeLinecap="round"/>
-                <line x1="17.5" y1="5.5" x2="9.5" y2="10.5" stroke="#6a7190" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M8 1H20C20.6 1 21 1.4 21 2V14C21 14.6 20.6 15 20 15H8L1 8L8 1Z" stroke={tokens.textMuted} strokeWidth="1.5" strokeLinejoin="round"/>
+                <line x1="9.5" y1="5.5" x2="17.5" y2="10.5" stroke={tokens.textMuted} strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="17.5" y1="5.5" x2="9.5" y2="10.5" stroke={tokens.textMuted} strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
             ) : k}
           </Button>
@@ -123,8 +124,8 @@ export function PinDots({ count, shake, length = PIN_LENGTH }) {
             key={i}
             className={classes.dot}
             sx={{
-              background: filled ? '#5b7fff' : 'transparent',
-              border: `2px solid ${filled ? '#5b7fff' : '#2e3a5a'}`,
+              background: filled ? 'var(--accent)' : 'transparent',
+              border: `2px solid ${filled ? 'var(--accent)' : 'var(--line)'}`,
               transform: filled ? 'scale(1.1)' : 'scale(1)',
             }}
           />

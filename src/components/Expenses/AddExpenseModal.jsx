@@ -329,16 +329,16 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
                     disabled={saving}
                     className={txnDir === opt.value ? classes.applyButtonActive : classes.applyButtonInactive}
                     sx={txnDir === opt.value && opt.value === 'withdraw' ? {
-                      background: '#ff5f5f !important',
-                      borderColor: '#ff5f5f !important',
-                      '&:hover': { background: '#e64a4a !important' },
+                      background: 'var(--danger) !important',
+                      borderColor: 'var(--danger) !important',
+                      '&:hover': { background: 'var(--danger-strong) !important' },
                     } : undefined}
                   >
                     {opt.label}
                   </Button>
                 ))}
               </Box>
-              <Typography sx={{ fontSize: 11, color: '#8891b8', mt: '6px' }}>
+              <Typography sx={{ fontSize: 11, color: 'var(--text2)', mt: '6px' }}>
                 {isWithdraw
                   ? 'Reduces this investment’s balance; the money returns to your spendable cash.'
                   : 'Adds money into this investment / savings pot.'}
@@ -377,16 +377,16 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
           {/* Shows exactly what will be written before it is written. */}
           {splitAll && parts.length > 0 && (
             <Box sx={{
-              width: '100%', background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', p: '10px 12px',
+              width: '100%', background: 'rgb(var(--ink-rgb) / 0.03)',
+              border: '1px solid rgb(var(--ink-rgb) / 0.07)', borderRadius: '8px', p: '10px 12px',
             }}>
-              <Typography sx={{ fontSize: 11, color: '#8891b8', mb: '6px' }}>
+              <Typography sx={{ fontSize: 11, color: 'var(--text2)', mb: '6px' }}>
                 Will be taken out as:
               </Typography>
               {parts.map(p => (
                 <Box key={p.name} sx={{ display: 'flex', justifyContent: 'space-between', py: '2px' }}>
-                  <Typography sx={{ fontSize: 12, color: '#c8cfea' }}>{p.name}</Typography>
-                  <Typography sx={{ fontSize: 12, color: '#ff5f5f', fontVariantNumeric: 'tabular-nums' }}>
+                  <Typography sx={{ fontSize: 12, color: 'var(--text-soft)' }}>{p.name}</Typography>
+                  <Typography sx={{ fontSize: 12, color: 'var(--danger)', fontVariantNumeric: 'tabular-nums' }}>
                     −{inr(p.amount)}
                   </Typography>
                 </Box>
@@ -450,16 +450,16 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
           {expr?.label && (
             <Box sx={{
               width: '100%', mt: '-4px',
-              background: 'rgba(91,127,255,0.08)', border: '1px solid rgba(91,127,255,0.3)',
+              background: 'rgb(var(--accent-rgb) / 0.08)', border: '1px solid rgb(var(--accent-rgb) / 0.3)',
               borderRadius: '8px', p: '8px 12px',
             }}>
-              <Typography sx={{ fontSize: 12, color: '#a0b4ff', fontVariantNumeric: 'tabular-nums' }}>
+              <Typography sx={{ fontSize: 12, color: 'var(--accent-soft)', fontVariantNumeric: 'tabular-nums' }}>
                 {expr.label} = <b>{inr(amt)}</b>
               </Typography>
             </Box>
           )}
           {form.amount.trim() && !expr && (
-            <Typography sx={{ width: '100%', mt: '-4px', fontSize: 11.5, color: '#ff7a7a' }}>
+            <Typography sx={{ width: '100%', mt: '-4px', fontSize: 11.5, color: 'var(--danger-soft)' }}>
               Can't read that — type a number, a sum like 200+150, or +200 to add to the current amount.
             </Typography>
           )}
@@ -501,15 +501,15 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             <Box sx={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '8px 12px', borderRadius: '8px',
-              background: form.isFixed ? 'rgba(91,127,255,0.08)' : 'rgba(255,255,255,0.03)',
-              border: `1px solid ${form.isFixed ? 'rgba(91,127,255,0.3)' : 'rgba(255,255,255,0.07)'}`,
+              background: form.isFixed ? 'rgb(var(--accent-rgb) / 0.08)' : 'rgb(var(--ink-rgb) / 0.03)',
+              border: `1px solid ${form.isFixed ? 'rgb(var(--accent-rgb) / 0.3)' : 'rgb(var(--ink-rgb) / 0.07)'}`,
               transition: 'all 0.2s'
             }}>
               <Box>
-                <Typography sx={{ fontSize: 13, fontWeight: 600, color: form.isFixed ? '#a0b4ff' : '#8891b8' }}>
+                <Typography sx={{ fontSize: 13, fontWeight: 600, color: form.isFixed ? 'var(--accent-soft)' : 'var(--text2)' }}>
                   📌 Fixed / Recurring
                 </Typography>
-                <Typography sx={{ fontSize: 11, color: '#8891b8', mt: '2px' }}>
+                <Typography sx={{ fontSize: 11, color: 'var(--text2)', mt: '2px' }}>
                   Auto-copied to next month at start
                 </Typography>
               </Box>
@@ -518,8 +518,8 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
                 onChange={e => set('isFixed', e.target.checked)}
                 size="small"
                 sx={{
-                  '& .MuiSwitch-switchBase.Mui-checked': { color: '#5b7fff' },
-                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#5b7fff' }
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: 'var(--accent)' },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: 'var(--accent)' }
                 }}
               />
             </Box>
@@ -534,7 +534,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
                 size="small"
                 onClick={() => setMoreOpen(o => !o)}
                 aria-expanded={moreOpen}
-                sx={{ alignSelf: 'flex-start', textTransform: 'none', color: '#8891b8', fontSize: 12, px: '4px', minWidth: 0 }}
+                sx={{ alignSelf: 'flex-start', textTransform: 'none', color: 'var(--text2)', fontSize: 12, px: '4px', minWidth: 0 }}
               >
                 {moreOpen ? '▾' : '▸'} More options
                 {applyMode !== 'single' && ` · ${applyOptions.find(o => o.value === applyMode).label}`}
@@ -570,8 +570,8 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             disabled={saving || !valid}
             className={classes.saveButton}
             sx={overdrawn ? {
-              background: '#ff5f5f !important',
-              '&:hover': { background: '#e64a4a !important' },
+              background: 'var(--danger) !important',
+              '&:hover': { background: 'var(--danger-strong) !important' },
             } : undefined}
           >
             {saving

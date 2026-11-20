@@ -1,3 +1,4 @@
+import { tokens, rgba } from '../theme/tokens'
 // Human-readable app version (single-sourced from package.json via Vite define).
 // The `typeof` guard keeps non-Vite contexts (e.g. node test scripts) from crashing.
 export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0'
@@ -63,8 +64,9 @@ export const CHART_OPTS = {
   maintainAspectRatio: false,
   plugins: { legend: { display: false } },
   scales: {
-    x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8891b8', font: { size: 11 } } },
-    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8891b8', font: { size: 11 }, callback: v => fmtK(v) } }
+    // Getters: read the active theme's colours each time the chart draws.
+    x: { grid: { get color() { return rgba(tokens.ink, 0.06) } }, ticks: { get color() { return tokens.text2 }, font: { size: 11 } } },
+    y: { grid: { get color() { return rgba(tokens.ink, 0.06) } }, ticks: { get color() { return tokens.text2 }, font: { size: 11 }, callback: v => fmtK(v) } }
   }
 }
 

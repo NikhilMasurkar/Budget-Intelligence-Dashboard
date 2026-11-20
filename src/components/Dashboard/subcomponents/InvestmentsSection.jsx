@@ -15,7 +15,7 @@ export default function InvestmentsSection({ holdings, periodTotal, periodLabel,
   const Amount = ({ v, color, weight = 700, size = 14, dim }) => (
     <Typography sx={{
       fontSize: size, fontWeight: weight,
-      color: v === 0 && dim ? '#3a4060' : color,
+      color: v === 0 && dim ? 'var(--line)' : color,
       fontVariantNumeric: 'tabular-nums', textAlign: 'right', whiteSpace: 'nowrap',
     }}>
       {v === 0 && dim ? '—' : `${v < 0 ? '−' : ''}${fmt(Math.abs(v))}`}
@@ -24,7 +24,7 @@ export default function InvestmentsSection({ holdings, periodTotal, periodLabel,
 
   const Head = ({ children, align = 'right' }) => (
     <Typography sx={{
-      fontSize: 10, fontWeight: 700, color: '#2e3350',
+      fontSize: 10, fontWeight: 700, color: 'var(--line)',
       letterSpacing: '0.6px', textTransform: 'uppercase', textAlign: align,
     }}>
       {children}
@@ -33,51 +33,51 @@ export default function InvestmentsSection({ holdings, periodTotal, periodLabel,
 
   return (
     <Box sx={{
-      background: '#14172a', border: '1px solid rgba(255,255,255,0.07)',
+      background: 'var(--surface2)', border: '1px solid rgb(var(--ink-rgb) / 0.07)',
       borderRadius: '14px', padding: '18px 20px', mb: '18px', overflowX: 'auto',
     }}>
-      <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#e4e8f5', mb: '2px' }}>
+      <Typography sx={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', mb: '2px' }}>
         Investments
       </Typography>
-      <Typography sx={{ fontSize: 11, color: '#5a6080', mb: '10px' }}>
+      <Typography sx={{ fontSize: 11, color: 'var(--text-faint)', mb: '10px' }}>
         Balance includes earlier years — a pot can go down this period and still hold money
       </Typography>
 
-      <Grid sx={{ pb: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <Grid sx={{ pb: '8px', borderBottom: '1px solid rgb(var(--ink-rgb) / 0.05)' }}>
         <Head align="left">Investment</Head>
         <Head>{periodLabel || 'This period'}</Head>
         <Head>Balance</Head>
       </Grid>
 
       {holdings.map(h => (
-        <Grid key={h.name} sx={{ py: '9px', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+        <Grid key={h.name} sx={{ py: '9px', borderBottom: '1px solid rgb(var(--ink-rgb) / 0.03)' }}>
           <Typography sx={{
-            fontSize: 13, fontWeight: 600, color: '#c8cfea',
+            fontSize: 13, fontWeight: 600, color: 'var(--text-soft)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {h.name}
           </Typography>
           <Amount
             v={h.period}
-            color={h.period > 0 ? '#3de8a0' : h.period < 0 ? '#ffb347' : '#3a4060'}
+            color={h.period > 0 ? 'var(--accent2)' : h.period < 0 ? 'var(--warn)' : 'var(--line)'}
             weight={600}
             size={13}
             dim
           />
-          <Amount v={h.balance} color={h.balance < 0 ? '#ff5f5f' : '#b97fff'} />
+          <Amount v={h.balance} color={h.balance < 0 ? 'var(--danger)' : 'var(--purple)'} />
         </Grid>
       ))}
 
       <Grid sx={{ pt: '10px' }}>
-        <Typography sx={{ fontSize: 13, fontWeight: 800, color: '#e4e8f5' }}>Total</Typography>
+        <Typography sx={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>Total</Typography>
         <Amount
           v={periodTotal}
-          color={periodTotal > 0 ? '#3de8a0' : periodTotal < 0 ? '#ffb347' : '#3a4060'}
+          color={periodTotal > 0 ? 'var(--accent2)' : periodTotal < 0 ? 'var(--warn)' : 'var(--line)'}
           weight={800}
           size={14}
           dim
         />
-        <Amount v={balanceTotal} color="#b97fff" weight={800} size={17} />
+        <Amount v={balanceTotal} color="var(--purple)" weight={800} size={17} />
       </Grid>
     </Box>
   )

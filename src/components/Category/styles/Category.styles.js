@@ -7,8 +7,8 @@ export const useCategoryModalStyles = makeStyles()((theme) => ({
       width: 'calc(100% - 32px)',
       margin: '16px',
       borderRadius: '12px',
-      border: '1px solid rgba(255, 255, 255, 0.13)',
-      backgroundColor: '#101218',
+      border: '1px solid rgb(var(--ink-rgb) / 0.13)',
+      backgroundColor: 'var(--bg)',
       backgroundImage: 'none',
       boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.5)',
       overflowY: 'auto', maxHeight: 'calc(100dvh - 32px)',
@@ -27,19 +27,19 @@ export const useCategoryModalStyles = makeStyles()((theme) => ({
     width: '56px',
     height: '56px',
     borderRadius: '50%',
-    backgroundColor: 'rgba(91, 127, 255, 0.1)',
+    backgroundColor: 'rgb(var(--accent-rgb) / 0.1)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: '20px',
-    border: '1px solid rgba(91, 127, 255, 0.25)',
-    boxShadow: '0 0 12px rgba(91, 127, 255, 0.1)'
+    border: '1px solid rgb(var(--accent-rgb) / 0.25)',
+    boxShadow: '0 0 12px rgb(var(--accent-rgb) / 0.1)'
   },
   title: {
     fontWeight: 800,
     fontSize: '16px',
     marginBottom: '24px',
-    color: '#e4e8f5',
+    color: 'var(--text)',
     letterSpacing: '-0.01em',
     textAlign: 'center'
   },
@@ -52,7 +52,7 @@ export const useCategoryModalStyles = makeStyles()((theme) => ({
   },
   colorPickerLabel: {
     display: 'block',
-    color: '#8891b8',
+    color: 'var(--text2)',
     marginBottom: '6px',
     fontWeight: 600,
     fontSize: '11px'
@@ -66,7 +66,7 @@ export const useCategoryModalStyles = makeStyles()((theme) => ({
     width: '56px',
     height: '36px',
     backgroundColor: 'transparent',
-    border: '1px solid rgba(255, 255, 255, 0.12)',
+    border: '1px solid rgb(var(--ink-rgb) / 0.12)',
     borderRadius: '8px',
     cursor: 'pointer',
     padding: 0,
@@ -102,9 +102,9 @@ export const useCategoryModalStyles = makeStyles()((theme) => ({
     fontWeight: 700,
     borderRadius: '8px',
     fontSize: '13px',
-    boxShadow: '0 4px 12px rgba(91, 127, 255, 0.2)',
+    boxShadow: '0 4px 12px rgb(var(--accent-rgb) / 0.2)',
     '&:hover': {
-      boxShadow: '0 6px 16px rgba(91, 127, 255, 0.3)'
+      boxShadow: '0 6px 16px rgb(var(--accent-rgb) / 0.3)'
     }
   },
   cancelButton: {
@@ -112,13 +112,13 @@ export const useCategoryModalStyles = makeStyles()((theme) => ({
     paddingBottom: '7px',
     borderRadius: '8px',
     borderColor: theme.palette.divider,
-    color: '#8891b8',
+    color: 'var(--text2)',
     fontSize: '13px',
     fontWeight: 600,
     '&:hover': {
-      borderColor: '#e4e8f5',
-      color: '#e4e8f5',
-      backgroundColor: 'rgba(255, 255, 255, 0.03)'
+      borderColor: 'var(--text)',
+      color: 'var(--text)',
+      backgroundColor: 'rgb(var(--ink-rgb) / 0.03)'
     }
   },
   fieldStyles: {
@@ -130,25 +130,25 @@ export const useCategoryModalStyles = makeStyles()((theme) => ({
     },
     '& .MuiOutlinedInput-root': {
       borderRadius: '2px',
-      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+      backgroundColor: 'rgb(var(--ink-rgb) / 0.03)',
       '& fieldset': {
-        borderColor: 'rgba(255, 255, 255, 0.08)'
+        borderColor: 'rgb(var(--ink-rgb) / 0.08)'
       },
       '&:hover fieldset': {
-        borderColor: 'rgba(255, 255, 255, 0.15)'
+        borderColor: 'rgb(var(--ink-rgb) / 0.15)'
       },
       '&.Mui-focused fieldset': {
-        borderColor: '#5b7fff'
+        borderColor: 'var(--accent)'
       }
     },
     '& .MuiOutlinedInput-notchedOutline': {
-      borderColor: 'rgba(255, 255, 255, 0.08)'
+      borderColor: 'rgb(var(--ink-rgb) / 0.08)'
     },
     '&:hover .MuiOutlinedInput-notchedOutline': {
-      borderColor: 'rgba(255, 255, 255, 0.15)'
+      borderColor: 'rgb(var(--ink-rgb) / 0.15)'
     },
     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-      borderColor: '#5b7fff'
+      borderColor: 'var(--accent)'
     },
     '& .MuiSelect-select': {
       fontSize: '13px'

@@ -87,7 +87,7 @@ export default function CategoryDetailsDialog({ detailModal, onClose, selMonths,
         <TableContainer component={Paper} className={classes.tableContainer}>
           <Table stickyHeader size="small" className={classes.table}>
             <TableHead>
-              <TableRow sx={{ '& th': { borderBottom: '1px solid rgba(255,255,255,0.08)' } }}>
+              <TableRow sx={{ '& th': { borderBottom: '1px solid rgb(var(--ink-rgb) / 0.08)' } }}>
                 <TableCell className={classes.thCell}>
                   Month
                 </TableCell>
@@ -125,7 +125,7 @@ export default function CategoryDetailsDialog({ detailModal, onClose, selMonths,
                           align="right"
                           className={classes.valueCell}
                           style={{
-                            color: val < 0 ? '#ff7a7a' : val > 0 ? '#e4e8f5' : '#8891b8'
+                            color: val < 0 ? 'var(--danger-soft)' : val > 0 ? 'var(--text)' : 'var(--text2)'
                           }}
                         >
                           {val !== 0 ? fmt(val) : '—'}

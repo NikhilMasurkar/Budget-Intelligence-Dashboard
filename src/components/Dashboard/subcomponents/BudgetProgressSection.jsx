@@ -16,7 +16,7 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
         grouped[id] = {
           id,
           catName: cat?.name || id,
-          color: cat?.color || '#6c8fff',
+          color: cat?.color || 'var(--accent)',
           budget: cat?.budget || 0,
           total: 0,
           details: []
@@ -48,18 +48,18 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
   return (
     <Box sx={{ mb: '18px' }}>
       <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '8px', mb: '12px' }}>
-        <Typography sx={{ color: '#e4e8f5', fontWeight: 700, fontSize: 14 }}>
+        <Typography sx={{ color: 'var(--text)', fontWeight: 700, fontSize: 14 }}>
           Budget Overview
         </Typography>
-        <Typography sx={{ color: '#6a7190', fontSize: 11 }}>
+        <Typography sx={{ color: 'var(--text-muted)', fontSize: 11 }}>
           {selMonths.length} month{selMonths.length > 1 ? 's' : ''} · tap a row for full breakdown
         </Typography>
       </Box>
 
-      <Box sx={{ background: '#14172a', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', overflow: 'hidden' }}>
+      <Box sx={{ background: 'var(--surface2)', border: '1px solid rgb(var(--ink-rgb) / 0.07)', borderRadius: '14px', overflow: 'hidden' }}>
 
         {/* Column headers */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: COLS, px: '16px', py: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: COLS, px: '16px', py: '8px', borderBottom: '1px solid rgb(var(--ink-rgb) / 0.05)', background: 'rgb(var(--ink-rgb) / 0.02)' }}>
           {[
             { label: 'CATEGORY',    align: 'left',  xs: true  },
             { label: 'SHARE',       align: 'left',  xs: false },
@@ -68,7 +68,7 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
             { label: 'STATUS',      align: 'right', xs: false },
           ].map(col => (
             <Typography key={col.label} sx={{
-              fontSize: 10, fontWeight: 700, color: '#2e3350',
+              fontSize: 10, fontWeight: 700, color: 'var(--line)',
               letterSpacing: '0.6px', textTransform: 'uppercase',
               textAlign: col.align,
               display: col.xs ? 'block' : { xs: 'none', md: 'block' },
@@ -86,7 +86,7 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
           const budgetLimit = cat.budget * selMonths.length
           const isOver     = budgetLimit > 0 && cat.total > budgetLimit
           const isWarn     = !isOver && budgetLimit > 0 && (cat.total / budgetLimit) >= 0.80
-          const statusColor = isOver ? '#ff5f5f' : isWarn ? '#ffb347' : '#3de8a0'
+          const statusColor = isOver ? 'var(--danger)' : isWarn ? 'var(--warn)' : 'var(--accent2)'
 
           return (
             <Box
@@ -98,23 +98,23 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
                 alignItems: 'center',
                 px: '16px',
                 py: '11px',
-                borderBottom: i < catData.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                borderBottom: i < catData.length - 1 ? '1px solid rgb(var(--ink-rgb) / 0.04)' : 'none',
                 cursor: 'pointer',
                 transition: 'background 0.1s',
-                '&:hover': { background: 'rgba(255,255,255,0.025)' },
+                '&:hover': { background: 'rgb(var(--ink-rgb) / 0.025)' },
               }}
             >
               {/* Category dot + name */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, pr: '12px' }}>
                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: cat.color, boxShadow: `0 0 5px ${cat.color}60` }} />
-                <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#c8cfea', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'var(--text-soft)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {cat.catName}
                 </Typography>
               </Box>
 
               {/* Share bar + % — desktop only */}
               <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: '8px', pr: '16px' }}>
-                <Box sx={{ flex: 1, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                <Box sx={{ flex: 1, height: 5, borderRadius: 3, background: 'rgb(var(--ink-rgb) / 0.05)', overflow: 'hidden' }}>
                   <Box sx={{ height: '100%', width: `${shareBarW}%`, background: cat.color, opacity: 0.75, borderRadius: 3 }} />
                 </Box>
                 <Typography sx={{ fontSize: 11, fontWeight: 700, color: cat.color, minWidth: '38px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
@@ -123,25 +123,25 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
               </Box>
 
               {/* Total spent */}
-              <Typography sx={{ fontSize: 13, fontWeight: 800, color: cat.total < 0 ? '#ff5f5f' : '#e4e8f5', textAlign: 'right', fontVariantNumeric: 'tabular-nums', pr: '12px' }}>
+              <Typography sx={{ fontSize: 13, fontWeight: 800, color: cat.total < 0 ? 'var(--danger)' : 'var(--text)', textAlign: 'right', fontVariantNumeric: 'tabular-nums', pr: '12px' }}>
                 {fmt(cat.total)}
               </Typography>
 
               {/* Budget column — desktop only */}
               <Box sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'flex-end', pr: '12px' }}>
                 {budgetLimit > 0 ? (
-                  <Typography sx={{ fontSize: 12, fontVariantNumeric: 'tabular-nums', color: '#6a7190' }}>
+                  <Typography sx={{ fontSize: 12, fontVariantNumeric: 'tabular-nums', color: 'var(--text-muted)' }}>
                     {fmt(budgetLimit)}
                   </Typography>
                 ) : onEditCategory ? (
                   <Typography
                     onClick={e => { e.stopPropagation(); onEditCategory(categories.find(c => c.id === cat.id) || cat) }}
-                    sx={{ fontSize: 11, color: '#3a4575', cursor: 'pointer', '&:hover': { color: '#5b7fff' } }}
+                    sx={{ fontSize: 11, color: 'var(--line)', cursor: 'pointer', '&:hover': { color: 'var(--accent)' } }}
                   >
                     + Set budget
                   </Typography>
                 ) : (
-                  <Typography sx={{ fontSize: 11, color: '#252a40' }}>—</Typography>
+                  <Typography sx={{ fontSize: 11, color: 'var(--line)' }}>—</Typography>
                 )}
               </Box>
 
@@ -149,7 +149,7 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
               <Box sx={{ textAlign: 'right' }}>
                 {budgetLimit > 0 ? (
                   isOver ? (
-                    <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#ff5f5f', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, color: 'var(--danger)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                       ↑ {fmt(cat.total - budgetLimit)} <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>over</Box>
                     </Typography>
                   ) : (
@@ -158,7 +158,7 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
                     </Typography>
                   )
                 ) : (
-                  <Typography sx={{ fontSize: 11, color: '#252a40' }}>—</Typography>
+                  <Typography sx={{ fontSize: 11, color: 'var(--line)' }}>—</Typography>
                 )}
               </Box>
             </Box>
@@ -172,14 +172,14 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
             gridTemplateColumns: COLS,
             alignItems: 'center',
             px: '16px', py: '10px',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            background: 'rgba(255,255,255,0.02)',
+            borderTop: '1px solid rgb(var(--ink-rgb) / 0.06)',
+            background: 'rgb(var(--ink-rgb) / 0.02)',
           }}>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: '#3a4060', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: 'var(--line)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Total
             </Typography>
             <Box sx={{ display: { xs: 'none', md: 'block' } }} />
-            <Typography sx={{ fontSize: 14, fontWeight: 800, color: '#a0b4ff', textAlign: 'right', fontVariantNumeric: 'tabular-nums', pr: '12px' }}>
+            <Typography sx={{ fontSize: 14, fontWeight: 800, color: 'var(--accent-soft)', textAlign: 'right', fontVariantNumeric: 'tabular-nums', pr: '12px' }}>
               {fmt(selSpend)}
             </Typography>
             <Box sx={{ display: { xs: 'none', md: 'block' } }} />

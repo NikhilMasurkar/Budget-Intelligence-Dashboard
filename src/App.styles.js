@@ -12,14 +12,14 @@ export const useStyles = makeStyles()(() => ({
   titleText: {
     fontWeight: 800,
     fontSize: '18px',
-    color: '#e4e8f5',
+    color: 'var(--text)',
     marginRight: '4px'
   },
   yearTabsContainer: {
     display: 'flex',
     gap: '6px',
-    backgroundColor: '#181b28', // var(--surface2)
-    border: '1px solid rgba(255, 255, 255, 0.08)', // var(--border)
+    backgroundColor: 'var(--surface2)', // var(--surface2)
+    border: '1px solid rgb(var(--ink-rgb) / 0.08)', // var(--border)
     borderRadius: '24px',
     padding: '3px'
   },
@@ -36,18 +36,18 @@ export const useStyles = makeStyles()(() => ({
     transition: 'all 0.18s',
     minWidth: 'auto',
     textTransform: 'none',
-    color: '#8891b8',
+    color: 'var(--text2)',
     backgroundColor: 'transparent',
     '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.04)'
+      backgroundColor: 'rgb(var(--ink-rgb) / 0.04)'
     }
   },
   yearTabActiveButton: {
-    backgroundColor: '#5b7fff',
+    backgroundColor: 'var(--accent)',
     color: 'white',
-    boxShadow: '0 2px 8px rgba(91, 127, 255, 0.35)',
+    boxShadow: '0 2px 8px rgb(var(--accent-rgb) / 0.35)',
     '&:hover': {
-      backgroundColor: '#4a6eee'
+      backgroundColor: 'var(--accent-strong)'
     }
   },
   flexFiller: {
@@ -62,12 +62,12 @@ export const useStyles = makeStyles()(() => ({
   lockedBanner: {
     display: 'flex',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 179, 71, 0.06)',
-    border: '1px solid rgba(255, 179, 71, 0.18)',
+    backgroundColor: 'rgb(var(--warn-rgb) / 0.06)',
+    border: '1px solid rgb(var(--warn-rgb) / 0.18)',
     borderRadius: '10px',
     padding: '10px 14px',
     marginBottom: '16px',
-    color: '#ffb347',
+    color: 'var(--warn)',
     width: '100%',
     boxSizing: 'border-box'
   }

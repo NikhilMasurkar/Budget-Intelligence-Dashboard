@@ -4,16 +4,16 @@ import { Box, Typography, Button } from '@mui/material'
 function ErrorFallback({ error, resetErrorBoundary }) {
   return (
     <Box sx={{ p: 4, textAlign: 'center' }}>
-      <Typography variant="h6" sx={{ mb: 1, color: '#ff6b6b' }}>
+      <Typography variant="h6" sx={{ mb: 1, color: 'var(--danger-soft)' }}>
         Something went wrong
       </Typography>
-      <Typography variant="body2" sx={{ mb: 2, color: '#8891b8' }}>
+      <Typography variant="body2" sx={{ mb: 2, color: 'var(--text2)' }}>
         {error?.message}
       </Typography>
       <Button
         variant="outlined"
         size="small"
-        sx={{ color: '#6c8fff', borderColor: '#6c8fff' }}
+        sx={{ color: 'var(--accent)', borderColor: 'var(--accent)' }}
         onClick={resetErrorBoundary}
       >
         Try again

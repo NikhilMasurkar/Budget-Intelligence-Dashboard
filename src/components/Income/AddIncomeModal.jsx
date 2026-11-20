@@ -79,7 +79,7 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
       <Box className={classes.content}>
         
         <Box className={classes.iconBadge}>
-          <TrendingUpIcon sx={{ fontSize: 28, color: '#52B788' }} />
+          <TrendingUpIcon sx={{ fontSize: 28, color: 'var(--income)' }} />
         </Box>
 
         <Typography variant="h6" className={classes.title}>
@@ -194,16 +194,16 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
           {adjusted && (
             <Box sx={{
               width: '100%', mt: '-4px',
-              background: 'rgba(82,183,136,0.10)', border: '1px solid rgba(82,183,136,0.35)',
+              background: 'rgb(var(--income-rgb) / 0.10)', border: '1px solid rgb(var(--income-rgb) / 0.35)',
               borderRadius: '8px', p: '8px 12px',
             }}>
-              <Typography sx={{ fontSize: 12, color: '#7fd6a8', fontVariantNumeric: 'tabular-nums' }}>
+              <Typography sx={{ fontSize: 12, color: 'var(--income-soft)', fontVariantNumeric: 'tabular-nums' }}>
                 {expr.label} = <b>{fmt(amt)}</b>
               </Typography>
             </Box>
           )}
           {form.amount.toString().trim() && !expr && (
-            <Typography sx={{ width: '100%', mt: '-4px', fontSize: 11.5, color: '#ff7a7a' }}>
+            <Typography sx={{ width: '100%', mt: '-4px', fontSize: 11.5, color: 'var(--danger-soft)' }}>
               Can't read that — type a number, a sum like 200+150, or +200 to add to the current amount.
             </Typography>
           )}

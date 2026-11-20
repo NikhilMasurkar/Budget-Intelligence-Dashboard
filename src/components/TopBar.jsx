@@ -22,6 +22,9 @@ import DownloadIcon from '@mui/icons-material/Download'
 import GetAppIcon from '@mui/icons-material/GetApp'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import LogoutIcon from '@mui/icons-material/Logout'
+import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined'
+import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined'
+import { useThemeMode, setThemeMode } from '../theme/tokens'
 import AddIcon from '@mui/icons-material/Add'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
@@ -70,6 +73,7 @@ export default function TopBar({
   onToggleNotifications,
   onAddExpense
 }) {
+  const themeMode = useThemeMode()
   const { classes, cx } = useTopBarStyles()
   const [anchorEl, setAnchorEl] = useState(null)
   const openMenu = Boolean(anchorEl)
@@ -101,7 +105,7 @@ export default function TopBar({
   const install = installPrompt ? {
     key: 'install', label: 'Install app', tip: 'Install BudgetIQ as an app',
     icon: <GetAppIcon sx={{ fontSize: 18 }} />,
-    sx: { color: '#3de8a0 !important', borderColor: 'rgba(61,232,160,0.4) !important' },
+    sx: { color: 'var(--accent2) !important', borderColor: 'rgb(var(--accent2-rgb) / 0.4) !important' },
     onClick: async () => {
       installPrompt.prompt()
       const { outcome } = await installPrompt.userChoice
@@ -126,7 +130,7 @@ export default function TopBar({
       : <NotificationsNoneIcon sx={{ fontSize: 18 }} />,
     onClick: notifStatus !== 'denied' ? onToggleNotifications : undefined,
     disabled: notifStatus === 'loading',
-    sx: notifStatus === 'subscribed' ? { color: '#3de8a0 !important', borderColor: 'rgba(61,232,160,0.4) !important' }
+    sx: notifStatus === 'subscribed' ? { color: 'var(--accent2) !important', borderColor: 'rgb(var(--accent2-rgb) / 0.4) !important' }
       : notifStatus === 'denied' ? { opacity: 0.45, cursor: 'default' } : undefined
   } : null
 
@@ -187,8 +191,8 @@ export default function TopBar({
           {authd && hasAIKey && (
             <Tooltip title="AI Budget Insights — get simple tips on your spending" arrow>
               <IconButton onClick={onAIInsights} className={classes.actionButton} aria-label="AI Budget Insights"
-                sx={{ color: '#a0b4ff !important', borderColor: 'rgba(91,127,255,0.35) !important',
-                  '&:hover': { borderColor: 'rgba(91,127,255,0.7) !important', background: 'rgba(91,127,255,0.08) !important' }
+                sx={{ color: 'var(--accent-soft) !important', borderColor: 'rgb(var(--accent-rgb) / 0.35) !important',
+                  '&:hover': { borderColor: 'rgb(var(--accent-rgb) / 0.7) !important', background: 'rgb(var(--accent-rgb) / 0.08) !important' }
                 }}>
                 <AutoAwesomeIcon sx={{ fontSize: 18 }} />
               </IconButton>
@@ -260,6 +264,19 @@ export default function TopBar({
                 ))}
 
                 <MenuItem
+                  onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
+                  className={classes.menuItem}
+                >
+                  <ListItemIcon className={classes.menuItemIcon}>
+                    {themeMode === 'dark' ? <LightModeOutlinedIcon sx={{ fontSize: 18 }} /> : <DarkModeOutlinedIcon sx={{ fontSize: 18 }} />}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={themeMode === 'dark' ? 'Light theme' : 'Dark theme'}
+                    primaryTypographyProps={{ className: classes.signOutText }}
+                  />
+                </MenuItem>
+
+                <MenuItem
                   onClick={handleSignOutClick}
                   className={classes.menuSignOutItem}
                 >
@@ -276,7 +293,7 @@ export default function TopBar({
 
                 <Typography
                   variant="caption"
-                  sx={{ display: 'block', textAlign: 'center', color: '#4a5072', fontSize: 10, py: '6px' }}
+                  sx={{ display: 'block', textAlign: 'center', color: 'var(--text3)', fontSize: 10, py: '6px' }}
                 >
                   BudgetIQ v{APP_VERSION}
                 </Typography>
