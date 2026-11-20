@@ -37,7 +37,6 @@ function areRowPropsEqual(prev, next) {
     prev.exp.isFixed === next.exp.isFixed &&
     prev.exp.note === next.exp.note &&
     prev.exp.updatedAt === next.exp.updatedAt &&
-    prev.exp.pending === next.exp.pending &&
     prev.isSelected === next.isSelected &&
     prev.canEdit === next.canEdit &&
     prev.onToggle === next.onToggle &&
@@ -89,22 +88,12 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
       {+exp.amount < 0 && (
         <Box component="span" className={classes.withdrawBadge}>↓ WITHDRAWN</Box>
       )}
-      {exp.pending && (
-        <Tooltip title="Added offline — saved on this phone, goes to your sheet when you're back online" arrow>
-          <Box component="span" sx={{
-            fontSize: 10, fontWeight: 700, color: 'var(--warn)', whiteSpace: 'nowrap',
-            background: 'rgb(var(--warn-rgb) / 0.12)', border: '1px solid rgb(var(--warn-rgb) / 0.35)',
-            borderRadius: '6px', px: '6px', py: '1px',
-          }}>⏳ Not synced</Box>
-        </Tooltip>
-      )}
       <Typography
         className={classes.expenseAmount}
         sx={+exp.amount < 0 ? { color: 'var(--danger-soft)' } : undefined}
       >
         {fmt(exp.amount)}
       </Typography>
-      {!exp.pending && (
       <Tooltip title={commentCount > 0 ? `${commentCount} comment${commentCount !== 1 ? 's' : ''}` : 'Add comment'} arrow>
         <IconButton
           size="small"
@@ -129,7 +118,6 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
           )}
         </IconButton>
       </Tooltip>
-      )}
       {canEdit && (
         <>
           <Tooltip title="Edit" arrow>

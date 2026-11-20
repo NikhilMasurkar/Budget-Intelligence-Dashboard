@@ -7,7 +7,7 @@ import { useSyncExternalStore } from 'react'
 // `tokens`, which always holds the active mode's hex values.
 //
 // Not in here on purpose: category colours (user data), the category colour
-// picker palette, the Google Drive logo, and PDF/Excel export colours.
+// picker palette and PDF export colours.
 const dark = {
   bg: '#101218',          // page and dialog background
   surface2: '#181b28',    // cards

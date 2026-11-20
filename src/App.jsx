@@ -3,15 +3,15 @@ import { Toaster, toast } from 'react-hot-toast'
 import { Box, Typography, Button } from '@mui/material'
 import { useGlobalStyles } from './styles/globalStyles'
 import { useStyles } from './App.styles'
-import { getToken, getSheetId, setupSheet, getDriveExcelUrl } from './api/sheets'
+import { getSheetId } from './api/session'
 import {
   deleteExpense, deleteIncome, readAllExpenseRows, writeAllExpenseRows,
-  readAllIncomeRows, writeAllIncomeRows, getWriteToken, requireConnection, usingFirestore,
+  readAllIncomeRows, writeAllIncomeRows,
 } from './api/store'
 import { deleteCategoryFS } from './api/firestoreCategories'
 import { hasPinFS, setPinFS, verifyPinFS, checkPin } from './api/firestoreSettings'
 import { wipeLocalCache } from './firebase'
-import { useOnline, isOffline, getQueue, clearOfflineData, cachePinHash, getCachedPinHash } from './utils/offline'
+import { useOnline, isOffline, clearOfflineData, cachePinHash, getCachedPinHash } from './utils/offline'
 import PinScreen from './components/PinScreen'
 
 
@@ -31,7 +31,6 @@ import AddIncomeModal from './components/Income/AddIncomeModal'
 import ConfigScreen from './components/ConfigScreen'
 import SignInScreen from './components/SignInScreen'
 import TopBar from './components/TopBar'
-import SetupBanner from './components/SetupBanner'
 import DeleteConfirmModal from './components/DeleteConfirmModal'
 import CategoryModal from './components/Category/CategoryModal'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -72,21 +71,17 @@ export default function App() {
   // already "passed". Always reset them alongside the sign-out.
   const handleSignOutFull = async ({ ask = true } = {}) => {
     const sid = getSheetId()
-    const unsent = getQueue(sid).length
-    if (ask && unsent && !window.confirm(
-      `${unsent} expense${unsent > 1 ? 's' : ''} added offline ${unsent > 1 ? "haven't" : "hasn't"} synced yet and will be lost. Sign out anyway?`
-    )) return
-    if (ask && usingFirestore() && isOffline() && !window.confirm(
+    if (ask && isOffline() && !window.confirm(
       "You're offline — changes made since you lost connection may not have synced yet and would be lost. Sign out anyway?"
     )) return
-    // The saved copy and the queue are this account's data — don't leave them on the phone.
+    // This account's PIN copy — don't leave it on the phone.
     clearOfflineData(sid)
     await handleSignOut()
     setPinVerified(false)
     setPinMode(null)
     // Firestore's on-device copy too. Only when the user chose to sign out: an
     // expired session must not throw away offline changes still waiting to sync.
-    if (ask && usingFirestore()) { await wipeLocalCache(); window.location.reload() }
+    if (ask) { await wipeLocalCache(); window.location.reload() }
   }
 
   const [txnTab, setTxnTab] = useState('expenses')
@@ -119,7 +114,7 @@ export default function App() {
   }, [authd, pinVerified])
 
   useEffect(() => { if (view !== 'expenses') setTxnTab('expenses') }, [view])
-  // Fetch the Dashboard chunk alongside the Sheets data instead of after it.
+  // Fetch the Dashboard chunk alongside the data instead of after it.
   useEffect(() => { if (authd) loadDashboard() }, [authd])
   useEffect(() => { setSelectedExpenseIds([]) }, [year, month, view])
 
@@ -129,34 +124,24 @@ export default function App() {
 
   // ── Data ──────────────────────────────────────────────────────
   const {
-    categories, expenses, income, loading, didInitialLoad, needsSetup, availableYears,
-    loadAll, autoSyncToDrive, setCategories, setNeedsSetup, missingConfig,
-    offlineSince, pendingCount, queueOffline, dbMode
-  } = useBudgetData({ authd, userName, onUnauthorized: () => handleSignOutFull({ ask: false }) })
+    categories, expenses, income, loading, didInitialLoad, availableYears,
+    loadAll, setCategories, missingConfig,
+  } = useBudgetData({ authd, onUnauthorized: () => handleSignOutFull({ ask: false }) })
 
-  // ── Offline ───────────────────────────────────────────────────
-  // offlineSince is set while the phone's saved copy is on screen — also when
-  // the browser claims to be online but requests are failing.
-  const online = useOnline()
-  const offline = !online || !!offlineSince
-  // Signing in to Google needs the network, so offline the saved copy stands in.
-  const showData = authd || !!offlineSince
-  // Firestore keeps every change offline and syncs it later; the Sheet can
-  // only queue new expenses.
-  const fullyOffline = dbMode === 'firestore'
-  const canWrite = !offline || fullyOffline
+  // Firestore keeps every change made offline and syncs it later.
+  const offline = !useOnline()
+  const showData = authd
 
   // ── CRUD hooks ────────────────────────────────────────────────
   const { handleSaveExpense, handleDeleteExpense, handleCopySelected, handleBulkPin, handleBulkDelete, handleSaveComment } = useExpenses({
-    loadAll, autoSyncToDrive, year, month, setDeleteConfirm, closeModal,
+    loadAll, year, month, setDeleteConfirm, closeModal,
     clearSelection: () => setSelectedExpenseIds([]),
-    queueOffline,
   })
   const { handleSaveIncome, handleDeleteIncome } = useIncome({
-    loadAll, autoSyncToDrive, setDeleteConfirm, closeModal
+    loadAll, setDeleteConfirm, closeModal
   })
   const { handleSaveCategory, handleDeleteCategory, handleReorderCategory } = useCategories({
-    loadAll, autoSyncToDrive, setDeleteConfirm, setCategories
+    loadAll, setDeleteConfirm, setCategories
   })
 
   // ── Stable callbacks for ExpensesByCategory (prevent unnecessary re-renders) ──
@@ -197,38 +182,32 @@ export default function App() {
       toast.error('Cannot modify historical data: Year is locked.')
       return
     }
-    try { requireConnection() } catch { return }
-    const t = getWriteToken()
-    if (!t) {
-      const err = new Error('Sign in required')
-      toast.error(err.message); throw err
-    }
     try {
       if (type === 'expense') {
         if (scope === 'month') {
-          await deleteExpense(item.id, t)
+          await deleteExpense(item.id)
           toast.success('Deleted from this month')
         } else {
           toast.loading('Deleting from all months...', { id: 'del-all' })
-          const allRows = await readAllExpenseRows(t)
+          const allRows = await readAllExpenseRows()
           const filtered = allRows.filter(r =>
             !(toSentenceCase(r[4]) === toSentenceCase(item.itemName) &&
               r[3] === item.categoryId && String(r[1]) === String(item.year))
           )
-          await writeAllExpenseRows(filtered, t)
+          await writeAllExpenseRows(filtered)
           toast.success('Deleted from all months!', { id: 'del-all' })
         }
       } else if (type === 'income') {
         if (scope === 'month') {
-          await deleteIncome(item.id, t)
+          await deleteIncome(item.id)
           toast.success('Deleted from this month')
         } else {
           toast.loading('Deleting from all months...', { id: 'del-all' })
-          const allRows = await readAllIncomeRows(t)
+          const allRows = await readAllIncomeRows()
           const filtered = allRows.filter(r =>
             !(toSentenceCase(r[3]) === toSentenceCase(item.source) && String(r[1]) === String(item.year))
           )
-          await writeAllIncomeRows(filtered, t)
+          await writeAllIncomeRows(filtered)
           toast.success('Deleted from all months!', { id: 'del-all' })
         }
       } else if (type === 'category') {
@@ -237,26 +216,10 @@ export default function App() {
         toast.success('Deleted')
       }
       setDeleteConfirm(null)
-      loadAll({ skipExcel: true })
-      autoSyncToDrive()
+      loadAll()
     } catch (e) {
       toast.error(e.message)
       throw e
-    }
-  }
-
-  // ── Open spreadsheet ──────────────────────────────────────────
-  const handleOpenDrive = async () => {
-    const t = getToken()
-    if (!t) { toast.error('Sign in to open spreadsheet'); return }
-    try {
-      toast.loading('Finding your spreadsheet…', { id: 'open-drive' })
-      const url = await getDriveExcelUrl(t, userName)
-      toast.dismiss('open-drive')
-      if (!url) { toast.error('No spreadsheet found yet — add some data first'); return }
-      window.open(url, '_blank', 'noopener,noreferrer')
-    } catch (e) {
-      toast.error('Could not open spreadsheet: ' + e.message, { id: 'open-drive' })
     }
   }
 
@@ -315,8 +278,7 @@ export default function App() {
         loading={loading}
         userName={userName}
         userPicture={userPicture}
-        onRefresh={() => { loadAll(); toast.success('Refreshing data from Google Sheets…', { duration: 2000 }) }}
-        onOpenDrive={handleOpenDrive}
+        onRefresh={() => { loadAll(); toast.success('Refreshing…', { duration: 2000 }) }}
         onExportLocal={() => setModal('export')}
         onSignIn={handleSignIn}
         onSignOut={handleSignOutFull}
@@ -324,7 +286,7 @@ export default function App() {
         hasAIKey={AI_ENABLED}
         notifStatus={notifStatus}
         onToggleNotifications={handleToggleNotifications}
-        onAddExpense={showData && didInitialLoad && !needsSetup && !isLocked ? () => handleAddExpense(null) : undefined}
+        onAddExpense={showData && didInitialLoad && !isLocked ? () => handleAddExpense(null) : undefined}
       />
 
       <Box className={globalClasses.contentArea}>
@@ -332,25 +294,11 @@ export default function App() {
           <SignInScreen onSignIn={handleSignIn} />
         ) : (
           <>
-            {(offline || pendingCount > 0) && (
+            {offline && (
               <Box className={classes.lockedBanner} role="status">
-                <span style={{ marginRight: '8px', fontSize: '16px' }}>{offline ? '📴' : '⏳'}</span>
+                <span style={{ marginRight: '8px', fontSize: '16px' }}>📴</span>
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {offline && (
-                    <>
-                      <strong>Offline</strong>
-                      {fullyOffline
-                        ? <> — everything still works. Changes are saved on this phone and sync by themselves when you're back online.</>
-                        : <>
-                            {offlineSince && <> — showing your data from {new Date(offlineSince).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</>}
-                            . You can add expenses; other changes need a connection.
-                          </>}
-                    </>
-                  )}
-                  {pendingCount > 0 && (
-                    <> {offline ? ' ' : ''}<strong>{pendingCount} expense{pendingCount > 1 ? 's' : ''} waiting to sync</strong>
-                      {offline ? ' when you\'re back online.' : authd ? ' — sending now…' : ' — sign in to send.'}</>
-                  )}
+                  <strong>Offline</strong> — everything still works. Changes are saved on this phone and sync by themselves when you're back online.
                 </Typography>
               </Box>
             )}
@@ -359,30 +307,11 @@ export default function App() {
                 content mounted so the UI doesn't blank out on every save/refresh. */}
             {loading && !didInitialLoad && (
               <Typography align="center" sx={{ p: 5, color: 'var(--text2)' }}>
-                Loading from Google Sheets…
+                Loading your budget…
               </Typography>
             )}
 
-            {needsSetup && !loading && (
-              <SetupBanner
-                authd={authd}
-                onSetup={async () => {
-                  const t = getToken()
-                  try {
-                    toast.loading('Setting up your sheet...', { id: 'setup' })
-                    await setupSheet(t)
-                    toast.success('Sheet setup complete!', { id: 'setup' })
-                    setNeedsSetup(false)
-                    loadAll()
-                  } catch (err) {
-                    toast.error(err.message, { id: 'setup' })
-                  }
-                }}
-                onSignIn={handleSignIn}
-              />
-            )}
-
-            {didInitialLoad && !needsSetup && view === 'dashboard' && (
+            {didInitialLoad && view === 'dashboard' && (
               <ErrorBoundary>
                 {isLocked && (
                   <Box className={classes.lockedBanner}>
@@ -433,7 +362,7 @@ export default function App() {
               </ErrorBoundary>
             )}
 
-            {didInitialLoad && !needsSetup && view === 'balance' && (
+            {didInitialLoad && view === 'balance' && (
               <ErrorBoundary>
                 <BalanceSheet
                   allExpenses={expenses}
@@ -443,7 +372,7 @@ export default function App() {
               </ErrorBoundary>
             )}
 
-            {didInitialLoad && !needsSetup && view === 'expenses' && (
+            {didInitialLoad && view === 'expenses' && (
               <ErrorBoundary>
                 {isLocked && (
                   <Box className={classes.lockedBanner}>
@@ -512,10 +441,7 @@ export default function App() {
                     onBulkPin={handleBulkPin}
                     onBulkDelete={handleBulkDelete}
                     onSaveComment={handleSaveComment}
-                    // Adding always works offline; other row changes need a
-                    // connection unless the data is in Firestore.
                     canEdit={showData && !isLocked}
-                    online={canWrite}
                   />
                 ) : (
                   <>
@@ -524,7 +450,7 @@ export default function App() {
                       <MonthStepper year={year} month={month} availableYears={availableYears}
                         onYearChange={setYear} onMonthChange={setMonth} />
                       <Box className={classes.flexFiller} />
-                      {showData && !isLocked && canWrite && (
+                      {showData && !isLocked && (
                         <Button
                           variant="contained"
                           onClick={() => { setEditRow(null); setModal('add-income') }}
@@ -539,7 +465,7 @@ export default function App() {
                       income={income.filter(i => String(i.year) === String(year) && String(i.month) === String(month))}
                       onEdit={row => { setEditRow(row); setModal('add-income') }}
                       onDelete={handleDeleteIncome}
-                      canEdit={showData && !isLocked && canWrite}
+                      canEdit={showData && !isLocked}
                     />
                   </>
                 )}

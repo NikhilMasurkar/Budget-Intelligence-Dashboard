@@ -7,11 +7,11 @@ import { parseComments, appendComment } from './comments'
 // Investing is a TRANSFER, not an expense. A withdrawal is the same transfer in
 // reverse, stored as a negative amount, and is NOT income.
 //
-// This definition used to be re-implemented in seven places — the Dashboard, the
-// Excel export, the PDF export, the expenses list, two modals and the AI layer —
+// This definition used to be re-implemented in seven places — the Dashboard,
+// the PDF export, the expenses list, two modals and the AI layer —
 // with two different implementations (an explicit type check in most, a fuzzy
 // name match in the AI). They drifted, and the app ended up telling the user one
-// number on screen and a different one in their spreadsheet. Every caller now
+// number on screen and a different one in the export. Every caller now
 // imports from here, so there is exactly one place to change and one place to be
 // wrong.
 
@@ -91,7 +91,7 @@ export function splitWithdrawal(amount, holdings = []) {
  * ("₹5,000 + ₹200 + ₹300"), null for a bare number; relative is true when it
  * started from the existing amount. Returns null for anything unparseable so
  * the caller never silently writes a wrong number. No eval anywhere near user
- * input. Rounds to 2dp to match how amounts are stored (see money() in parseExcel).
+ * input. Rounds to 2dp to match how amounts are stored.
  */
 const NUM = String.raw`(?:\d+\.?\d*|\.\d+)`
 const EXPR = new RegExp(String.raw`^([+\-*/])?(${NUM}(?:[+\-*/]${NUM})*)$`)

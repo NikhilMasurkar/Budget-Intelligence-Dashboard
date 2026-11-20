@@ -16,7 +16,6 @@ vi.mock('../firebase', () => ({
 import TopBar from './TopBar'
 import BalanceSheet from './BalanceSheet'
 import SignInScreen from './SignInScreen'
-import SetupBanner from './SetupBanner'
 import ConfigScreen from './ConfigScreen'
 import ErrorBoundary from './ErrorBoundary'
 import DeleteConfirmModal from './DeleteConfirmModal'
@@ -69,7 +68,7 @@ describe('TopBar', () => {
   it('avatar menu lists the moved actions with labels', () => {
     render(<TopBar {...base} />)
     fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
-    for (const name of ['Refresh data', 'Open in Google Drive', 'Download', 'Daily 10 PM reminder: Off']) {
+    for (const name of ['Refresh data', 'Download PDF', 'Daily 10 PM reminder: Off']) {
       expect(screen.getByRole('menuitem', { name })).toBeTruthy()
     }
   })
@@ -102,11 +101,6 @@ describe('BalanceSheet', () => {
 describe('screens and banners', () => {
   it('SignInScreen renders', () => {
     expect(() => render(<SignInScreen onSignIn={noop} />)).not.toThrow()
-  })
-
-  it('SetupBanner renders signed in and signed out', () => {
-    expect(() => render(<SetupBanner authd={true} onSetup={noop} onSignIn={noop} />)).not.toThrow()
-    expect(() => render(<SetupBanner authd={false} onSetup={noop} onSignIn={noop} />)).not.toThrow()
   })
 
   it('ConfigScreen renders', () => {

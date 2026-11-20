@@ -42,11 +42,10 @@ export default memo(function ExpensesByCategory({
   selectedIds = [], onSelectionChange, onBulkPin, onBulkDelete,
   onSaveComment,
   canEdit,
-  online = true,       // false: only adding works (it queues); row changes need a connection
 }) {
   const { classes, cx } = useExpensesByCategoryStyles()
   const { classes: g } = useGlobalStyles()
-  const canChange = canEdit && online
+  const canChange = canEdit
 
   const [menuAnchor, setMenuAnchor] = useState(null)
   const [menuCat, setMenuCat] = useState(null)
@@ -225,11 +224,9 @@ export default memo(function ExpensesByCategory({
           </Button>
           {canEdit && (
             <>
-              {online && (
-                <Button size="small" variant="outlined" onClick={onAddCategory} className={classes.addBtn}>
-                  + Category
-                </Button>
-              )}
+              <Button size="small" variant="outlined" onClick={onAddCategory} className={classes.addBtn}>
+                + Category
+              </Button>
               <Button size="small" variant="contained" onClick={() => onAddExpense(null)} className={g.containedBlueButton}>
                 + Add Expense
               </Button>
@@ -579,7 +576,6 @@ export default memo(function ExpensesByCategory({
           expense={commentExp}
           saving={commentSaving}
           canEdit={canChange}
-          readOnlyNote={canEdit && !online ? '📴 Offline — comments can be added once you\'re back online' : undefined}
           onClose={() => { if (!commentSaving) setCommentExp(null) }}
           onSave={async (exp, noteJson) => {
             setCommentSaving(true)

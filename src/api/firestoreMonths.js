@@ -13,8 +13,8 @@ import {
 // one never rewrites the others — and two devices editing different expenses
 // in the same month both keep their change.
 //
-// The rest of the app still speaks in sheet ROWS (see api/store.js); this file
-// converts at the boundary so none of the screens had to change:
+// The rest of the app speaks in ROWS (see api/store.js); this file converts at
+// the boundary:
 //   expense row: [id, year, month, categoryId, itemName, amount, isFixed, note, updatedAt]
 //   income row:  [id, year, month, source, amount, date]
 
@@ -106,7 +106,7 @@ export async function writeRows(sid, kind, rows) {
   await commit(ops)
 }
 
-// Add or replace entries without deleting anything (appends, migration).
+// Add or replace entries without deleting anything.
 export async function upsertRows(sid, kind, rows) {
   await commit(rows.filter(r => r[0]).map(r => b =>
     b.set(monthRef(sid, r[1], r[2]), { year: +r[1] || 0, month: +r[2] || 0, [kind]: { [String(r[0])]: KINDS[kind].entry(r) } }, { merge: true })))
@@ -119,23 +119,4 @@ async function commit(ops) {
     ops.slice(i, i + 450).forEach(op => op(b))
     await settle(b.commit())
   }
-}
-
-// Migration only: make the months collection exactly these rows — every month
-// document rewritten whole, and any month not in the rows removed. Safe to
-// repeat after a failed attempt; leftovers from that attempt can't survive.
-export async function replaceAllMonths(sid, expenseRows, incomeRows) {
-  const months = new Map()
-  const add = (kind, r) => {
-    const mid = monthId(r[1], r[2])
-    if (!months.has(mid)) months.set(mid, { year: +r[1] || 0, month: +r[2] || 0, expenses: {}, income: {} })
-    months.get(mid)[kind][String(r[0])] = KINDS[kind].entry(r)
-  }
-  expenseRows.forEach(r => add('expenses', r))
-  incomeRows.forEach(r => add('income', r))
-  const existing = await getDocsFromServer(monthsCol(sid))
-  const ops = []
-  existing.docs.forEach(d => { if (!months.has(d.id)) ops.push(b => b.delete(d.ref)) })
-  months.forEach((data, mid) => ops.push(b => b.set(doc(db, 'sheets', sid, 'months', mid), data)))
-  await commit(ops)
 }

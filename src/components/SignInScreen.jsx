@@ -87,7 +87,7 @@ export default function SignInScreen({ onSignIn }) {
         </Typography>
 
         <Typography variant="body1" className={classes.description}>
-          For your security and privacy, this monthly budget tracker is locked. Please sign in with your Google Account to sync and view your budget sheets.
+          For your security and privacy, this monthly budget tracker is locked. Please sign in with your Google Account to view your budget.
         </Typography>
 
         <Button

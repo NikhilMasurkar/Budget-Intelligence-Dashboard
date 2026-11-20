@@ -1,6 +1,6 @@
 # BudgetIQ — Personal Budget Intelligence Dashboard
 
-BudgetIQ is a premium, client-side React web application for personal budget tracking, financial analysis, and AI-powered insights. It uses Google Sheets as a personal cloud database, Firebase Firestore for categories and app-only metadata (pins, comments, PIN lock), and Google Drive for automatic Excel backup — all with zero backend server required.
+BudgetIQ is a premium, client-side React web application for personal budget tracking, financial analysis, and AI-powered insights. All data lives in Firebase Firestore (free Spark plan), which also keeps a copy on the device so the app works offline. Hosting, reminders and AI run on free tiers (Netlify, Web Push, Gemini).
 
 ---
 
@@ -23,7 +23,7 @@ BudgetIQ is a premium, client-side React web application for personal budget tra
 - **Money-story summary** — Income · Spent · Saved for the month, with a spend-vs-income progress bar
 - **Search & filter** — live search by item name plus a "Fixed only" toggle; matching categories auto-expand
 - **Per-category budget** — a compact `Budget ₹spent / ₹limit · %` readout in each category header (amber over 80%, red when exceeded)
-- **Comment threads** — a 💬 icon on every row opens a modal of timestamped comments; add new ones inline. Stored as a JSON thread in the Sheet (column H) and mirrored to Firestore, with backward-compatibility for legacy single notes and recovery of older notes that survive only as Excel cell comments
+- **Comment threads** — a 💬 icon on every row opens a modal of timestamped comments; add new ones inline. Stored as a JSON thread on the expense; legacy single notes still parse
 - **Bulk actions** — multi-select rows (or a whole category) to **pin/unpin as fixed, copy to next month, or delete** in one operation
 - **Apply across months** — when adding an expense, apply it to this month only, the whole year, or this month → December
 - **Last-updated stamp** and a 📌 badge for fixed/recurring items per row
@@ -38,16 +38,15 @@ BudgetIQ is a premium, client-side React web application for personal budget tra
 - **Biometric unlock** — optional fingerprint/Face ID bypass via the WebAuthn platform authenticator
 
 ### Data & Sync
-- **Google Sheets** as primary database — `{user} budgetIQ_Data` spreadsheet with Categories, Expenses, and Income tabs
-- **Firebase Firestore** for category metadata (name, color, budget, type) and app-only expense metadata — the **pin** (`isFixed`) and **comment thread** (`note`) that the Excel round-trip can't reliably carry, keyed by `year-month-categoryId-itemName`
-- **Auto-sync to Google Drive** — exports a full `.xlsx` balance sheet after every write (debounced so rapid edits coalesce into one upload)
-- **PWA** — installable on desktop and mobile, works offline with Workbox service worker
+- **Firebase Firestore** is the only database — one document per month holds that month's expenses and income; categories and settings sit beside them
+- **Offline** — Firestore's on-device cache: every change made offline is kept and syncs by itself
+- **Daily 10 PM reminder** — Web Push, one subscription per device, sent by a Netlify function
+- **PWA** — installable on desktop and mobile
 - **Mobile-first UI** — responsive accordions/cards, taller touch-friendly rows, and an avatar-only account menu in the header
 
 ### Export
-- **Excel export** (`.xlsx`) via ExcelJS — formatted balance sheet
-- **PDF report** via jsPDF + AutoTable — multi-page professional report
-- **Open in Google Sheets** — one-click link to your live spreadsheet
+- **PDF report** via jsPDF + AutoTable — every year by default, multi-page
+- **JSON backup** — all data in one file, the copy you hold outside Firebase
 
 ---
 
@@ -58,10 +57,9 @@ BudgetIQ is a premium, client-side React web application for personal budget tra
 | UI framework | React 18 + Vite 5 |
 | Component library | Material UI (MUI v5) + tss-react |
 | Charts | Chart.js + react-chartjs-2 |
-| Database | Google Sheets REST API + Firebase Firestore |
-| Auth | Google OAuth 2.0 (popup, no backend) |
+| Database | Firebase Firestore |
+| Auth | Google sign-in → Firebase Auth |
 | AI | Google Gemini API (free tier) |
-| Excel | ExcelJS + FileSaver.js |
 | PDF | jsPDF + jspdf-autotable |
 | PWA | vite-plugin-pwa + Workbox |
 | Notifications | react-hot-toast |
@@ -90,10 +88,12 @@ budget-app/
 │   └── pwa-512x512.png
 ├── src/
 │   ├── api/
-│   │   ├── sheets.js          # Google Sheets + Drive CRUD, OAuth token management
+│   │   ├── session.js         # Sign-in, which data root is yours
+│   │   ├── store.js           # Expense/income reads and writes
+│   │   ├── firestoreMonths.js # Month documents ↔ rows
 │   │   ├── firestoreCategories.js   # Firestore category operations
-│   │   ├── firestoreExpenseMeta.js  # Firestore app-only expense meta (pin + comments)
 │   │   ├── firestoreSettings.js     # Firestore PIN storage
+│   │   ├── pushSubscription.js      # Daily reminder on/off (per device)
 │   │   ├── biometric.js       # WebAuthn fingerprint / Face ID unlock
 │   │   └── gemini.js          # Gemini AI API calls
 │   ├── components/
@@ -120,7 +120,7 @@ budget-app/
 │   │   │   └── CategoryModal.jsx
 │   │   └── PinScreen.jsx        # PIN setup / entry + biometric unlock gate
 │   ├── hooks/
-│   │   ├── useAuth.js          # Google OAuth2 sign-in / sign-out
+│   │   ├── useAuth.js          # Google → Firebase sign-in / sign-out
 │   │   ├── useBudgetData.js    # Loads all expenses, income, categories
 │   │   ├── useExpenses.js      # Expense CRUD + bulk operations
 │   │   ├── useIncome.js        # Income CRUD
@@ -128,9 +128,7 @@ budget-app/
 │   ├── styles/                 # MUI theme + global CSS-in-JS
 │   └── utils/
 │       ├── constants.js        # MONTHS, formatters (fmt, fmtK), defaultMonths
-│       ├── exportExcel.js      # ExcelJS export
-│       ├── exportPdf.js        # jsPDF report layout
-│       └── parseExcel.js       # Excel parser with fuzzy matching
+│       └── exportPdf.js        # jsPDF report layout
 ├── firebase.js                 # Firebase app init
 ├── vite.config.js              # Vite + PWA plugin config
 └── index.html
@@ -142,8 +140,8 @@ budget-app/
 
 ### Prerequisites
 - Node.js v18+
-- Google Cloud project with **Google Sheets API** and **Google Drive API** enabled
-- Firebase project with **Firestore** enabled
+- Google OAuth client ID (Web), scopes: openid, email, profile
+- Firebase project with **Firestore** and **Google sign-in** enabled; deploy `firestore.rules`
 - Google Gemini API key (optional — for AI insights)
 
 ### 1. Environment Variables
@@ -151,12 +149,13 @@ budget-app/
 Create a `.env` file in the project root:
 
 ```env
-VITE_GOOGLE_SHEETS_API_KEY=your_google_api_key
 VITE_GOOGLE_OAUTH_CLIENT_ID=your_oauth_client_id
 VITE_FIREBASE_API_KEY=your_firebase_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your_firebase_project_id
-VITE_GEMINI_API_KEY=your_gemini_api_key
+VITE_FIREBASE_APP_ID=your_firebase_app_id
+VITE_VAPID_PUBLIC_KEY=your_vapid_public_key
+# Server-side (Netlify env): GEMINI_API_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT, PUSH_SECRET, FIREBASE_SERVICE_ACCOUNT_JSON
 ```
 
 ### 2. Install Dependencies
@@ -181,36 +180,27 @@ npm run build
 
 ## Data Model
 
-### Expenses (Google Sheets)
-| Field | Type | Notes |
+Everything lives under `sheets/{sheetId}` (the id is historical: it was the Google Sheet's id; new accounts use their uid). The parent doc holds `ownerUid`, which the security rules check.
+
+### Months (`sheets/{sheetId}/months/{YYYY-MM}`)
+`{ year, month, expenses: { [id]: expense }, income: { [id]: income } }`
+
+| Expense field | Type | Notes |
 |---|---|---|
-| `id` | string | UUID |
-| `year` | number | e.g. 2026 |
-| `month` | number | 1–12 |
-| `categoryId` | string | Firestore category ID |
+| `categoryId` | string | Category id |
 | `itemName` | string | Description |
-| `amount` | number | INR |
-| `isFixed` | `'TRUE'`/`'FALSE'` | Recurring flag (mirrored to Firestore) |
+| `amount` | number | INR; negative in a savings category = withdrawal |
+| `isFixed` | boolean | Pinned / recurring — auto-copied to the next month |
 | `note` | string | JSON comment thread `[{text, ts}]`; legacy plain strings still parse |
-| `updatedAt` | string | `'U'`-prefixed epoch ms (letter prefix keeps Sheets from coercing it to a date) |
+| `updatedAt` | string | `'U'`-prefixed epoch ms |
 
-### Expense metadata (Firestore — `sheets/{sheetId}/expenseMeta/{key}`)
-App-only fields that the Excel backup can't reliably carry. Key = sanitized `year_month_categoryId_itemName`.
-| Field | Type | Notes |
+| Income field | Type | Notes |
 |---|---|---|
-| `isFixed` | boolean | Pin / recurring flag — Firestore wins on load |
-| `note` | string | Comment thread JSON — fallback used only when the Sheet's column H is empty |
-
-### Income (Google Sheets)
-| Field | Type | Notes |
-|---|---|---|
-| `id` | string | UUID |
-| `year` | number | |
-| `month` | number | 1–12 |
 | `source` | string | Salary / Freelance / Dividend / ITR Return / Other |
 | `amount` | number | INR |
+| `date` | string | `YYYY-MM-DD` |
 
-### Categories (Firestore — `sheets/{sheetId}/categories/{categoryId}`)
+### Categories (`sheets/{sheetId}/categories/{categoryId}`)
 | Field | Type | Notes |
 |---|---|---|
 | `name` | string | Display name |
@@ -219,6 +209,9 @@ App-only fields that the Excel backup can't reliably carry. Key = sanitized `yea
 | `type` | `'expense'`/`'savings'` | Savings type counts toward wealth metrics |
 | `order` | number | Display order |
 
+### Push subscriptions (`pushSubscriptions/{sha256(endpoint)}`)
+One per device: the browser's subscription plus the owner's `uid`.
+
 ---
 
-> Historical years (before current year) are locked as read-only. No data is ever deleted from Google Sheets by the app — only appended or overwritten via the API.
+> Closed years are read-only, in the app and in the security rules (last year stays editable through January).

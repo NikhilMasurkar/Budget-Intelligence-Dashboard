@@ -202,7 +202,7 @@ export async function getAIInsights({ expenses, income, categories, selMonths, y
   const benchSavings  = monthlyIncome * 0.20
   const benchEmergFund = monthlyExpense * 6
   // Already summed by splitSpendInvest off the explicit type='savings' flag —
-  // the same definition the Dashboard and the Excel/PDF exports use. This used
+  // the same definition the Dashboard and the PDF export uses. This used
   // to re-derive it by name-matching catTotals, which now excludes investment
   // categories entirely and would have made this silently zero.
   const totalSavingsInvested = totalInvested

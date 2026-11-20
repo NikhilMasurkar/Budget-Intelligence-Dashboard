@@ -1,4 +1,4 @@
-import { db, getFirebaseUid } from '../firebase'
+import { db } from '../firebase'
 import { doc, getDoc, setDoc, deleteDoc, deleteField } from 'firebase/firestore'
 
 // SHA-256 the PIN digits so raw numbers are never stored in Firestore.
@@ -30,28 +30,6 @@ export async function checkPin(pin, stored) {
   return (await pbkdf2(pin, salt, +iter)) === hash
 }
 export const isLegacyPinHash = (stored) => !!stored && !stored.startsWith('pbkdf2$')
-
-// ── Ownership ────────────────────────────────────────────────────────────────
-// Security rules gate every sheets/{sheetId}/** doc on the ownerUid stored in
-// the parent sheets/{sheetId} doc. This stamps it on first sign-in so the rules
-// can verify the caller. Must run (once) BEFORE any other Firestore read for the
-// sheet, otherwise the owner check has nothing to read. Safe to call repeatedly.
-export async function ensureSheetOwnerFS(sheetId) {
-  const uid = getFirebaseUid()
-  if (!sheetId || !uid) return
-  try {
-    const ref  = doc(db, 'sheets', sheetId)
-    const snap = await getDoc(ref)
-    if (!snap.exists()) {
-      await setDoc(ref, { ownerUid: uid, createdAt: new Date().toISOString() })
-    } else if (!snap.data().ownerUid) {
-      // Legacy sheet created before ownership existed — claim it for this user.
-      await setDoc(ref, { ownerUid: uid }, { merge: true })
-    }
-  } catch (e) {
-    console.warn('[BudgetIQ] ensureSheetOwner failed:', e?.code, e?.message)
-  }
-}
 
 const securityRef = (sheetId) =>
   doc(db, 'sheets', sheetId, 'settings', 'security')
@@ -119,27 +97,5 @@ export async function resetPinFS(sheetId, newPin) {
   await setDoc(securityRef(sheetId), {
     pinHash: await makePinHash(newPin),
     updatedAt: new Date().toISOString(),
-  }, { merge: true })
-}
-
-// ─── Sheet format/sync metadata ──────────────────────────────────────────────
-// Tracks which export FORMAT version the Drive Excel was last generated with,
-// so the app can auto-regenerate it after a format/calc change (see
-// SHEET_FORMAT_VERSION). Returns null on any error so callers can no-op safely.
-const syncRef = (sheetId) => doc(db, 'sheets', sheetId, 'settings', 'sync')
-
-export async function getSheetSyncMetaFS(sheetId) {
-  try {
-    const snap = await getDoc(syncRef(sheetId))
-    return snap.exists() ? snap.data() : null
-  } catch {
-    return null
-  }
-}
-
-export async function setSheetFormatVersionFS(sheetId, version) {
-  await setDoc(syncRef(sheetId), {
-    formatVersion: version,
-    updatedAt: new Date().toISOString()
   }, { merge: true })
 }

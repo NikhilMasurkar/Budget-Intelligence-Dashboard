@@ -1,12 +1,10 @@
 import { useCallback } from 'react'
 import { toast } from 'react-hot-toast'
-import { uid } from '../api/sheets'
-import {
-  saveIncome, readAllIncomeRows, writeAllIncomeRows, getWriteToken as getToken, requireConnection,
-} from '../api/store'
+import { uid } from '../api/session'
+import { saveIncome, readAllIncomeRows, writeAllIncomeRows } from '../api/store'
 import { toSentenceCase, dateForMonth, isYearLocked } from '../utils/constants'
 
-export function useIncome({ loadAll, autoSyncToDrive, setDeleteConfirm, closeModal }) {
+export function useIncome({ loadAll, setDeleteConfirm, closeModal }) {
   const handleSaveIncome = useCallback(async (inc, applyMode = 'single') => {
     inc.source = toSentenceCase(inc.source)
     const targetYear = parseInt(inc.year)
@@ -14,21 +12,15 @@ export function useIncome({ loadAll, autoSyncToDrive, setDeleteConfirm, closeMod
       toast.error('Cannot modify historical data: Year is locked.')
       return
     }
-    requireConnection()
-    const t = getToken()
-    if (!t) {
-      const err = new Error('Please sign in to save changes')
-      toast.error(err.message); throw err
-    }
     try {
       if (applyMode === 'single') {
-        await saveIncome(inc, t)
+        await saveIncome(inc)
         toast.success(inc.id ? 'Updated!' : 'Added!')
       } else {
         const startMonth = applyMode === 'all_year' ? 1 : parseInt(inc.month)
         const count = 12 - startMonth + 1
         toast.loading(`Saving to ${count} months...`, { id: 'multi-income' })
-        const allRows = await readAllIncomeRows(t)
+        const allRows = await readAllIncomeRows()
         for (let m = startMonth; m <= 12; m++) {
           const existIdx = allRows.findIndex(r =>
             toSentenceCase(r[3]) === toSentenceCase(inc.source) &&
@@ -43,16 +35,15 @@ export function useIncome({ loadAll, autoSyncToDrive, setDeleteConfirm, closeMod
           if (existIdx >= 0) allRows[existIdx] = row
           else allRows.push(row)
         }
-        await writeAllIncomeRows(allRows, t)
+        await writeAllIncomeRows(allRows)
         toast.success(`✅ Applied to ${count} months!`, { id: 'multi-income', duration: 3000 })
       }
       closeModal()
-      loadAll({ skipExcel: true })
-      autoSyncToDrive()
+      loadAll()
     } catch (e) {
       toast.error(e.message); throw e
     }
-  }, [loadAll, autoSyncToDrive, closeModal])
+  }, [loadAll, closeModal])
 
   const handleDeleteIncome = useCallback((inc) => {
     setDeleteConfirm({ type: 'income', item: inc })

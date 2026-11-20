@@ -104,9 +104,6 @@ export const useTopBarStyles = makeStyles()((theme) => ({
   refreshIconSpin: {
     animation: 'spin 1s linear infinite',
   },
-  svgIcon: {
-    display: 'block',
-  },
   downloadIcon: {
     fontSize: '18px',
   },

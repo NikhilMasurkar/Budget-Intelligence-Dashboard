@@ -1,101 +1,43 @@
 import { useCallback } from 'react'
 import { toast } from 'react-hot-toast'
-import { getSheetId, uid } from '../api/sheets'
-import {
-  saveExpense, copyExpensesToNextMonth, readAllExpenseRows, writeAllExpenseRows,
-  getWriteToken as getToken, requireConnection, usingFirestore,
-} from '../api/store'
-import { setExpenseMetaFS } from '../api/firestoreExpenseMeta'
-import { isOffline, isNetworkError } from '../utils/offline'
-
+import { uid } from '../api/session'
+import { saveExpense, copyExpensesToNextMonth, readAllExpenseRows, writeAllExpenseRows } from '../api/store'
 import { MONTHS, toSentenceCase, isYearLocked } from '../utils/constants'
 import { mergeSameItem } from '../utils/money'
 
-export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteConfirm, closeModal, clearSelection, queueOffline }) {
+const LOCKED = 'Cannot modify historical data: Year is locked.'
+
+export function useExpenses({ loadAll, year, month, setDeleteConfirm, closeModal, clearSelection }) {
   const handleSaveExpense = useCallback(async (exp, applyMode = 'single') => {
-    // applyMode 'split' — one withdrawal spread across several investments, so
-    // each pot's balance drops by its own share instead of the whole amount
-    // landing on a single unattributed row. Written in one batch.
+    // 'split' — one withdrawal spread across several investments, so each pot's
+    // balance drops by its own share. Written in one batch.
     if (applyMode === 'split') {
       const rows = Array.isArray(exp) ? exp : [exp]
       if (!rows.length) return
-      requireConnection()
-      const targetY = parseInt(rows[0].year || year)
-      if (isYearLocked(targetY)) {
-        toast.error('Cannot modify historical data: Year is locked.')
-        return
-      }
-      const t = getToken()
-      if (!t) {
-        const err = new Error('Please sign in to save changes')
-        toast.error(err.message); throw err
-      }
+      if (isYearLocked(parseInt(rows[0].year || year))) { toast.error(LOCKED); return }
       try {
-        const sid = getSheetId()
-        const allRows = await readAllExpenseRows(t)
-
-        // When splitting an EXISTING withdrawal, the original row is replaced by
-        // the split — it must be removed first. Pushing without removing left the
-        // old amount in place and counted the whole withdrawal twice.
+        const allRows = await readAllExpenseRows()
+        // Splitting an EXISTING withdrawal replaces it — drop the original first.
         const editingId = rows[0]?.id
         const kept = editingId ? allRows.filter(r => r[0] !== editingId) : allRows
-
-        rows.forEach(r => {
-          kept.push([
-            uid(), String(r.year), String(r.month), r.categoryId,
-            toSentenceCase(r.itemName), r.amount, 'FALSE', r.note || '', 'U' + Date.now(),
-          ])
-        })
-        await writeAllExpenseRows(kept, t)
-        await Promise.all(rows.map(r =>
-          setExpenseMetaFS(sid, { ...r, itemName: toSentenceCase(r.itemName) },
-            { isFixed: false, note: r.note })
-        ))
+        rows.forEach(r => kept.push([uid(), String(r.year), String(r.month), r.categoryId,
+          toSentenceCase(r.itemName), r.amount, 'FALSE', r.note || '', 'U' + Date.now()]))
+        await writeAllExpenseRows(kept)
         toast.success(`${editingId ? 'Split across' : 'Withdrawn from'} ${rows.length} investments`)
         closeModal()
-        loadAll({ skipExcel: true })
-        autoSyncToDrive()
-      } catch (e) {
-        toast.error(e.message); throw e
-      }
+        loadAll()
+      } catch (e) { toast.error(e.message); throw e }
       return
     }
 
     exp.itemName = toSentenceCase(exp.itemName)
-    const targetYear = parseInt(exp.year || year)
-    if (isYearLocked(targetYear)) {
-      toast.error('Cannot modify historical data: Year is locked.')
-      return
-    }
-    // A new single expense can wait on the phone; edits and multi-month
-    // saves rewrite the sheet, so they need a connection.
+    if (isYearLocked(parseInt(exp.year || year))) { toast.error(LOCKED); return }
     const isNew = !exp.id
-    // (Firestore mode needs none of this: its own offline cache takes every write.)
-    const queueable = applyMode === 'single' && isNew && !!queueOffline && !usingFirestore()
-    // Fix the id up front so a retry or a later sync can never add it twice.
-    if (queueable) exp.id = uid()
-    const saveOnPhone = () => {
-      queueOffline([exp.id, String(exp.year), String(exp.month), exp.categoryId, exp.itemName,
-        exp.amount, exp.isFixed ? 'TRUE' : 'FALSE', exp.note || '', 'U' + Date.now()])
-      toast.success("Saved on this phone — it will sync when you're back online", { icon: '⏳', duration: 4000 })
-      closeModal()
-    }
-    const t = getToken()
-    if (queueable && (!t || isOffline())) { saveOnPhone(); return }
-    if (!queueable) requireConnection()
-    if (!t) {
-      const err = new Error('Please sign in to save changes')
-      toast.error(err.message); throw err
-    }
     try {
-      const sid = getSheetId()
       if (applyMode === 'single') {
         // Same item already in this month + category → add to it, not a duplicate.
-        const merged = isNew ? mergeSameItem(await readAllExpenseRows(t), exp) : null
-        const toSave = merged || exp
-        await saveExpense(toSave, t)
-        // Persist pin + note to Firestore (survives the Excel round-trip)
-        await setExpenseMetaFS(sid, toSave, { isFixed: toSave.isFixed, note: toSave.note })
+        const merged = isNew ? mergeSameItem(await readAllExpenseRows(), exp) : null
+        await saveExpense(merged || exp)
         toast.success(merged
           ? `Added ₹${Math.abs(merged.added).toLocaleString('en-IN')} to ${merged.itemName} — now ₹${Math.abs(merged.amount).toLocaleString('en-IN')}`
           : isNew ? 'Added!' : 'Updated!')
@@ -103,39 +45,23 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
         const startMonth = applyMode === 'all_year' ? 1 : parseInt(exp.month)
         const count = 12 - startMonth + 1
         toast.loading(`Saving to ${count} months...`, { id: 'multi-exp' })
-        const allRows = await readAllExpenseRows(t)
+        const allRows = await readAllExpenseRows()
         for (let m = startMonth; m <= 12; m++) {
           const existIdx = allRows.findIndex(r =>
-            toSentenceCase(r[4]) === toSentenceCase(exp.itemName) &&
-            r[3] === exp.categoryId && String(r[1]) === String(exp.year) && String(r[2]) === String(m)
-          )
-          const row = [
-            existIdx >= 0 ? allRows[existIdx][0] : uid(),
-            String(exp.year), String(m), exp.categoryId, exp.itemName,
-            exp.amount, exp.isFixed ? 'TRUE' : 'FALSE', exp.note || '',
-            'U' + Date.now()
-          ]
-          if (existIdx >= 0) allRows[existIdx] = row
+            toSentenceCase(r[4]) === exp.itemName && r[3] === exp.categoryId &&
+            String(r[1]) === String(exp.year) && String(r[2]) === String(m))
+          const row = [existIdx >= 0 ? allRows[existIdx][0] : uid(), String(exp.year), String(m),
+            exp.categoryId, exp.itemName, exp.amount, exp.isFixed ? 'TRUE' : 'FALSE', exp.note || '', 'U' + Date.now()]
+          if (existIdx >= 0) allRows[existIdx] = Object.assign(allRows[existIdx], row)
           else allRows.push(row)
         }
-        await writeAllExpenseRows(allRows, t)
-        // Persist pin + note to Firestore for every month it was applied to
-        await Promise.all(
-          Array.from({ length: count }, (_, k) => startMonth + k).map(m =>
-            setExpenseMetaFS(sid, { year: exp.year, month: m, categoryId: exp.categoryId, itemName: exp.itemName }, { isFixed: exp.isFixed, note: exp.note })
-          )
-        )
+        await writeAllExpenseRows(allRows)
         toast.success(`✅ Applied to ${count} months!`, { id: 'multi-exp', duration: 3000 })
       }
       closeModal()
-      loadAll({ skipExcel: true })
-      autoSyncToDrive()
-    } catch (e) {
-      // The request never got through (weak signal) — keep it on the phone.
-      if (queueable && isNetworkError(e)) { saveOnPhone(); return }
-      toast.error(e.message); throw e
-    }
-  }, [year, loadAll, autoSyncToDrive, closeModal, queueOffline])
+      loadAll()
+    } catch (e) { toast.error(e.message, { id: 'multi-exp' }); throw e }
+  }, [year, loadAll, closeModal])
 
   const handleDeleteExpense = useCallback((exp) => {
     setDeleteConfirm({ type: 'expense', item: exp })
@@ -143,107 +69,59 @@ export function useExpenses({ loadAll, autoSyncToDrive, year, month, setDeleteCo
 
   const handleCopySelected = useCallback(async (selectedIds) => {
     if (!selectedIds.length) { toast.error('No expenses selected'); return }
-    try { requireConnection() } catch { return }
-    if (isYearLocked(year)) {
-      toast.error('Cannot modify historical data: Year is locked.')
-      return
-    }
-    const t = getToken()
-    if (!t) { toast.error('Sign in required'); return }
+    if (isYearLocked(year)) { toast.error(LOCKED); return }
     try {
       toast.loading('Copying selected expenses...', { id: 'copy-selected' })
-      const r = await copyExpensesToNextMonth(year, month, selectedIds, t)
+      const r = await copyExpensesToNextMonth(year, month, selectedIds)
       toast.success(`Copied ${r.copied} expenses to ${MONTHS[r.toMonth - 1]} ${r.toYear}`, { id: 'copy-selected' })
       clearSelection()
-      loadAll({ skipExcel: true })
-      autoSyncToDrive()
+      loadAll()
     } catch (e) { toast.error(e.message, { id: 'copy-selected' }) }
-  }, [year, month, loadAll, autoSyncToDrive, clearSelection])
+  }, [year, month, loadAll, clearSelection])
 
-  // Pin / unpin many expenses at once. `selected` is an array of expense
-  // objects (need id + year/month/categoryId/itemName). One Sheet write,
-  // then batched Firestore writes — far faster than editing each one.
-  const handleBulkPin = useCallback(async (selected, pinned) => {
+  // Change many rows in one write: `edit(row)` returns true when it changed it.
+  const bulk = useCallback(async (selected, id, busyMsg, edit, doneMsg) => {
     if (!selected?.length) { toast.error('No expenses selected'); return }
-    try { requireConnection() } catch { return }
-    if (isYearLocked(year)) {
-      toast.error('Cannot modify historical data: Year is locked.')
-      return
-    }
-    const t = getToken()
-    if (!t) { toast.error('Sign in required'); return }
-    const sid = getSheetId()
-    const verb = pinned ? 'Pinning' : 'Unpinning'
+    if (isYearLocked(year)) { toast.error(LOCKED); return }
     try {
-      toast.loading(`${verb} ${selected.length} expense${selected.length !== 1 ? 's' : ''}…`, { id: 'bulk-pin' })
-      const idSet = new Set(selected.map(e => e.id))
-      const allRows = await readAllExpenseRows(t)
-      let changed = 0
-      for (let i = 0; i < allRows.length; i++) {
-        if (idSet.has(allRows[i][0])) {
-          allRows[i][6] = pinned ? 'TRUE' : 'FALSE'
-          allRows[i][8] = 'U' + Date.now()
-          changed++
-        }
-      }
-      await writeAllExpenseRows(allRows, t)
-      // Mirror to Firestore so the pin survives the Excel round-trip
-      await Promise.all(selected.map(e => setExpenseMetaFS(sid, e, { isFixed: pinned })))
-      toast.success(`${pinned ? '📌 Pinned' : 'Unpinned'} ${changed} expense${changed !== 1 ? 's' : ''}!`, { id: 'bulk-pin', duration: 3000 })
+      toast.loading(busyMsg, { id })
+      const ids = new Set(selected.map(e => e.id))
+      const rows = await readAllExpenseRows()
+      const kept = edit ? rows : rows.filter(r => !ids.has(r[0]))
+      let changed = selected.length
+      if (edit) { changed = 0; rows.forEach(r => { if (ids.has(r[0]) && edit(r)) changed++ }) }
+      await writeAllExpenseRows(kept)
+      toast.success(doneMsg(changed), { id, duration: 3000 })
       clearSelection()
-      loadAll({ skipExcel: true })
-      autoSyncToDrive()
-    } catch (e) { toast.error(e.message, { id: 'bulk-pin' }) }
-  }, [year, loadAll, autoSyncToDrive, clearSelection])
+      loadAll()
+    } catch (e) { toast.error(e.message, { id }) }
+  }, [year, loadAll, clearSelection])
 
-  // Delete many expenses at once. `selected` is an array of expense objects.
-  // One Sheet write (read → filter out selected ids → write back).
-  const handleBulkDelete = useCallback(async (selected) => {
-    if (!selected?.length) { toast.error('No expenses selected'); return }
-    try { requireConnection() } catch { return }
-    if (isYearLocked(year)) {
-      toast.error('Cannot modify historical data: Year is locked.')
-      return
-    }
-    const t = getToken()
-    if (!t) { toast.error('Sign in required'); return }
-    try {
-      toast.loading(`Deleting ${selected.length} expense${selected.length !== 1 ? 's' : ''}…`, { id: 'bulk-del' })
-      const idSet = new Set(selected.map(e => e.id))
-      const allRows = await readAllExpenseRows(t)
-      const filtered = allRows.filter(r => !idSet.has(r[0]))
-      await writeAllExpenseRows(filtered, t)
-      toast.success(`Deleted ${selected.length} expense${selected.length !== 1 ? 's' : ''}!`, { id: 'bulk-del', duration: 3000 })
-      clearSelection()
-      loadAll({ skipExcel: true })
-      autoSyncToDrive()
-    } catch (e) { toast.error(e.message, { id: 'bulk-del' }) }
-  }, [year, loadAll, autoSyncToDrive, clearSelection])
+  const s = (n) => `${n} expense${n !== 1 ? 's' : ''}`
+  const handleBulkPin = useCallback((selected, pinned) => bulk(selected, 'bulk-pin',
+    `${pinned ? 'Pinning' : 'Unpinning'} ${s(selected?.length || 0)}…`,
+    r => { r[6] = pinned ? 'TRUE' : 'FALSE'; r[8] = 'U' + Date.now(); return true },
+    n => `${pinned ? '📌 Pinned' : 'Unpinned'} ${s(n)}!`), [bulk])
+  const handleBulkDelete = useCallback((selected) => bulk(selected, 'bulk-del',
+    `Deleting ${s(selected?.length || 0)}…`, null, n => `Deleted ${s(n)}!`), [bulk])
 
-  // Append a new comment to an expense's note (stored as JSON array in Sheet + Firestore).
+  // Save an expense's comment thread (a JSON array in its note).
   const handleSaveComment = useCallback(async (expense, noteJson) => {
     const fail = (msg) => { toast.error(msg); throw new Error(msg) }
-    if (isYearLocked(expense.year || year)) fail('Cannot modify historical data: Year is locked.')
-    requireConnection()
-    const t = getToken()
-    if (!t) fail('Sign in required')
-    const sid = getSheetId()
+    if (isYearLocked(expense.year || year)) fail(LOCKED)
     try {
-      const allRows = await readAllExpenseRows(t)
-      const idx = allRows.findIndex(r => r[0] === expense.id)
-      if (idx < 0) throw new Error('This expense was changed elsewhere — refresh and try again')
-      allRows[idx][7] = noteJson
-      allRows[idx][8] = 'U' + Date.now()
-      await writeAllExpenseRows(allRows, t)
-      await setExpenseMetaFS(sid, expense, { note: noteJson })
-      loadAll({ skipExcel: true })
-      autoSyncToDrive()
+      const rows = await readAllExpenseRows()
+      const row = rows.find(r => r[0] === expense.id)
+      if (!row) throw new Error('This expense was changed elsewhere — refresh and try again')
+      row[7] = noteJson
+      row[8] = 'U' + Date.now()
+      await writeAllExpenseRows(rows)
+      loadAll()
     } catch (e) {
-      // Rethrow so the comments box keeps the typed text and doesn't show a
-      // comment that never reached the sheet.
+      // Rethrow so the comments box keeps the typed text.
       toast.error(e.message); throw e
     }
-  }, [year, loadAll, autoSyncToDrive])
+  }, [year, loadAll])
 
   return { handleSaveExpense, handleDeleteExpense, handleCopySelected, handleBulkPin, handleBulkDelete, handleSaveComment }
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getWriteToken as getToken, fetchExpenses, fetchIncome } from '../api/store'
+import { fetchExpenses, fetchIncome } from '../api/store'
 import toast from 'react-hot-toast'
 import {
   Dialog,
@@ -160,21 +160,16 @@ const useStyles = makeStyles()((theme) => ({
 export default function ExportModal({ categories, onClose }) {
   const { classes, cx } = useStyles()
   const currentYear = new Date().getFullYear()
-  const [selectedYears, setSelectedYears] = useState([String(currentYear)])
+  const [selectedYears, setSelectedYears] = useState([])
   const [availableYears, setAvailableYears] = useState([])
   const [allData, setAllData] = useState({ expenses: [], income: [] })
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [fileType, setFileType] = useState('pdf')
 
   useEffect(() => {
     async function loadYears() {
       try {
-        const t = getToken()
-        const [exps, inc] = await Promise.all([
-          fetchExpenses(null, t),
-          fetchIncome(null, t)
-        ])
+        const [exps, inc] = await Promise.all([fetchExpenses(), fetchIncome()])
         
         // Ignore unparseable years — a bad row would otherwise put a literal
         // "NaN" in the year list and export an empty section for it.
@@ -185,6 +180,7 @@ export default function ExportModal({ categories, onClose }) {
 
         const sorted = Array.from(years).sort((a,b) => a - b).map(String)
         setAvailableYears(sorted)
+        setSelectedYears(sorted)   // full report by default
         setAllData({ expenses: exps, income: inc })
       } catch (e) {
         toast.error('Failed to load years: ' + e.message)
@@ -210,19 +206,10 @@ export default function ExportModal({ categories, onClose }) {
     try {
       setBusy(true)
       const toastId = 'local-export'
-      toast.loading(fileType === 'excel' ? 'Generating Excel...' : 'Generating PDF...', { id: toastId })
-      if (fileType === 'excel') {
-        const { exportToExcel } = await import('../utils/exportExcel')
-        const buffer = await exportToExcel(categories, allData.expenses, allData.income, selectedYears)
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-        const { saveAs } = await import('file-saver')
-        saveAs(blob, `budget_report_${selectedYears.join('_')}.xlsx`)
-        toast.success('✅ Excel Downloaded!', { id: toastId })
-      } else {
-        const { exportToPdf } = await import('../utils/exportPdf')
-        await exportToPdf(categories, allData.expenses, allData.income, selectedYears)
-        toast.success('✅ PDF Downloaded!', { id: toastId })
-      }
+      toast.loading('Generating PDF...', { id: toastId })
+      const { exportToPdf } = await import('../utils/exportPdf')
+      await exportToPdf(categories, allData.expenses, allData.income, selectedYears)
+      toast.success('✅ PDF Downloaded!', { id: toastId })
       onClose()
     } catch (e) {
       console.error(e)
@@ -232,13 +219,14 @@ export default function ExportModal({ categories, onClose }) {
     }
   }
 
-  // Everything, every year, as one JSON file — a copy you hold yourself,
-  // independent of Google and Firebase.
-  const handleBackup = async () => {
+  // Everything, every year, as one JSON file — the only copy outside Firebase.
+  const handleBackup = () => {
     const backup = { app: 'BudgetIQ', exportedAt: new Date().toISOString(), categories, ...allData }
-    const { saveAs } = await import('file-saver')
-    saveAs(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }),
-      `budgetiq_backup_${new Date().toISOString().slice(0, 10)}.json`)
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }))
+    a.download = `budgetiq_backup_${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
     toast.success(`Backup saved — ${allData.expenses.length} expenses, ${allData.income.length} income entries`)
   }
 
@@ -259,68 +247,22 @@ export default function ExportModal({ categories, onClose }) {
 
         {/* Title */}
         <Typography variant="h6" className={classes.title}>
-          Download Budget
+          Download PDF
         </Typography>
 
         {loading ? (
           <Box className={classes.loadingBox}>
             <CircularProgress size={36} color="primary" />
             <Typography variant="body2" className={classes.loadingText}>
-              Scanning your spreadsheet for years...
+              Loading your data...
             </Typography>
           </Box>
         ) : (
           <>
             {/* Description */}
             <Typography variant="body2" className={classes.description}>
-              Select which year's budget sheets to include in your {fileType === 'excel' ? 'Excel' : 'PDF'} file.
+              A PDF report of every year is ready. Untick any year you want to leave out.
             </Typography>
-
-            {/* File Type selector */}
-            <Typography
-              variant="subtitle2"
-              sx={{
-                fontWeight: 700,
-                mb: 1.5,
-                alignSelf: 'flex-start',
-                color: 'text.secondary',
-                fontSize: '11px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}
-            >
-              File Type
-            </Typography>
-            <Box className={classes.grid} sx={{ mb: 3 }}>
-              <Box
-                onClick={() => setFileType('pdf')}
-                className={cx(classes.yearCard, fileType === 'pdf' && classes.yearCardSelected)}
-              >
-                <Typography
-                  variant="subtitle2"
-                  className={cx(classes.yearTitle, fileType === 'pdf' && classes.yearTitleSelected)}
-                >
-                  PDF Report
-                </Typography>
-                <Typography variant="caption" className={classes.yearSub}>
-                  Portable Document
-                </Typography>
-              </Box>
-              <Box
-                onClick={() => setFileType('excel')}
-                className={cx(classes.yearCard, fileType === 'excel' && classes.yearCardSelected)}
-              >
-                <Typography
-                  variant="subtitle2"
-                  className={cx(classes.yearTitle, fileType === 'excel' && classes.yearTitleSelected)}
-                >
-                  Excel Spreadsheet
-                </Typography>
-                <Typography variant="caption" className={classes.yearSub}>
-                  Editable Data (.xlsx)
-                </Typography>
-              </Box>
-            </Box>
 
             <Typography
               variant="subtitle2"
@@ -372,7 +314,7 @@ export default function ExportModal({ categories, onClose }) {
                 startIcon={<FileDownloadOutlinedIcon />}
                 className={cx(classes.exportBtn, classes.exportBtnLocal)}
               >
-                {busy ? 'Processing...' : (fileType === 'excel' ? 'Download Excel' : 'Download PDF')}
+                {busy ? 'Processing...' : 'Download PDF'}
               </Button>
               <Button
                 variant="outlined"

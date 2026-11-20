@@ -26,8 +26,7 @@ vi.mock('../api/firestoreSettings', () => ({
   resetPinFS: async () => {},
 }))
 
-vi.mock('../api/sheets', () => ({
-  getToken: () => 'tok',
+vi.mock('../api/store', () => ({
   fetchExpenses: async () => EXPENSES,
   fetchIncome: async () => INCOME,
 }))

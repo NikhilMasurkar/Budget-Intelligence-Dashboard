@@ -71,7 +71,7 @@ export async function exportToPdf(categories, expenses, income, filterYears = nu
 
   // Investment/Savings categories are wealth transfers, not consumption — they
   // are excluded from "Total Expenses" and "Net Savings" so the PDF matches the
-  // app and the Excel export (a withdrawal must not reduce Total Expenses).
+  // app (a withdrawal must not reduce Total Expenses).
   const savingsCatIds = investmentCategoryIds(categories)
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -165,7 +165,7 @@ export async function exportToPdf(categories, expenses, income, filterYears = nu
     const activeCats = categories.filter(c => c.type !== 'income')
 
     // Monthly aggregation — investments/savings tracked separately so they are
-    // kept OUT of Total Expenses (matches the app + Excel export).
+    // kept OUT of Total Expenses (matches the app).
     const monthlyIncome = Array(12).fill(0)
     const monthlyExpenses = Array(12).fill(0)
     const monthlyInvest = Array(12).fill(0)

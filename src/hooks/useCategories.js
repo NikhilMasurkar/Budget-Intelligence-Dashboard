@@ -1,24 +1,21 @@
 import { useCallback } from 'react'
 import { toast } from 'react-hot-toast'
-import { getSheetId, uid } from '../api/sheets'
+import { getSheetId, uid } from '../api/session'
 import { saveCategoryFS, saveAllCategoriesFS } from '../api/firestoreCategories'
-import { requireConnection } from '../api/store'
 
-export function useCategories({ loadAll, autoSyncToDrive, setDeleteConfirm, setCategories }) {
+export function useCategories({ loadAll, setDeleteConfirm, setCategories }) {
   const handleSaveCategory = useCallback(async (cat) => {
     const sid = getSheetId()
-    if (!sid) { toast.error('No sheet connected'); return }
-    requireConnection()
+    if (!sid) { toast.error('Not signed in'); return }
     try {
       const category = { ...cat, id: cat.id || uid(), order: cat.order ?? 0 }
       await saveCategoryFS(sid, category)
       toast.success(cat.id ? 'Category updated!' : 'Category added!')
-      loadAll({ skipExcel: true })
-      autoSyncToDrive()
+      loadAll()
     } catch (e) {
       toast.error(e.message); throw e
     }
-  }, [loadAll, autoSyncToDrive])
+  }, [loadAll])
 
   const handleDeleteCategory = useCallback((cat) => {
     setDeleteConfirm({ type: 'category', item: cat })
@@ -27,17 +24,15 @@ export function useCategories({ loadAll, autoSyncToDrive, setDeleteConfirm, setC
   const handleReorderCategory = useCallback(async (orderedCats) => {
     const sid = getSheetId()
     if (!sid) return
-    try { requireConnection() } catch { return }
     setCategories(orderedCats) // optimistic update
     try {
       await saveAllCategoriesFS(sid, orderedCats)
       toast.success('Order saved!')
-      autoSyncToDrive()
     } catch (e) {
       toast.error('Reorder failed: ' + e.message)
-      loadAll({ skipExcel: true }) // rollback on failure
+      loadAll() // rollback on failure
     }
-  }, [loadAll, autoSyncToDrive, setCategories])
+  }, [loadAll, setCategories])
 
   return { handleSaveCategory, handleDeleteCategory, handleReorderCategory }
 }

@@ -19,17 +19,23 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/sheets/$(sheetId)).data.ownerUid == request.auth.uid;
     }
 
-    // Push notification subscriptions — each user owns their own record by uid.
-    // The server-side send-push function reads all docs via Firebase Admin SDK,
-    // which bypasses these rules, so no admin read rule is needed here.
-    match /pushSubscriptions/{uid} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
+    // Push subscriptions — one doc per device, owned by the uid stored in it
+    // (legacy docs were keyed by the uid itself). The send-push function reads
+    // them with the Admin SDK, which bypasses these rules.
+    match /pushSubscriptions/{id} {
+      function mine() { return id == request.auth.uid || resource.data.uid == request.auth.uid; }
+      allow read, delete: if signedIn() && mine();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if signedIn() && mine() && request.resource.data.uid == request.auth.uid;
     }
 
     match /sheets/{sheetId} {
       // Any signed-in user may read the parent doc (it only holds ownerUid),
       // so the client can detect whether a sheet is already claimed.
       allow get: if signedIn();
+      // Sign-in finds the caller's own sheet by owner (api/session.js). The
+      // query must filter on ownerUid == their uid, or it is refused.
+      allow list: if signedIn() && resource.data.ownerUid == request.auth.uid;
 
       // Claim an unowned sheet: create with your own uid, or fill in ownerUid
       // on a legacy doc that doesn't have one yet. Owners may update their doc.

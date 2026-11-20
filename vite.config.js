@@ -17,7 +17,7 @@ export default defineConfig({
       manifest: {
         name: 'BudgetIQ',
         short_name: 'BudgetIQ',
-        description: 'Personal budget tracker powered by Google Sheets',
+        description: 'Personal budget tracker',
         theme_color: '#101218',
         background_color: '#101218',
         display: 'standalone',
@@ -50,14 +50,6 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // Never cache live API calls
         runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/sheets\.googleapis\.com\/.*/i,
-            handler: 'NetworkOnly'
-          },
-          {
-            urlPattern: /^https:\/\/www\.googleapis\.com\/.*/i,
-            handler: 'NetworkOnly'
-          },
           {
             urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
             handler: 'NetworkOnly'

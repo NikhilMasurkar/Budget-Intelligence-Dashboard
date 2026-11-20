@@ -165,31 +165,3 @@ describe('AmountKeypad', () => {
     )).not.toThrow()
   })
 })
-
-describe('ExpensesByCategory offline', () => {
-  const thisMonth = year2026.filter(e => String(e.month) === String(MONTH))
-  const pendingRow = { ...thisMonth[0], id: 'q1', itemName: 'Chai offline', pending: true }
-
-  it('marks an expense added offline as not synced, with no edit, delete or comment', () => {
-    render(<ExpensesByCategory {...props} expenses={[pendingRow]} />)
-    expect(screen.getByText('⏳ Not synced')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Add comment' })).toBeNull()
-  })
-
-  it('offline: adding stays available, row and category changes are hidden', () => {
-    render(<ExpensesByCategory {...props} online={false} />)
-    expect(screen.getByRole('button', { name: '+ Add Expense' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: '+ Category' })).toBeNull()
-    expect(screen.queryAllByRole('button', { name: 'Edit' })).toHaveLength(0)
-    expect(screen.queryAllByRole('button', { name: 'Category options' })).toHaveLength(0)
-  })
-
-  it('online: row edits are back', () => {
-    render(<ExpensesByCategory {...props} />)
-    expect(screen.queryAllByRole('button', { name: 'Category options' }).length).toBeGreaterThan(0)
-    // Proves the 'Edit' / 'Add comment' queries above can find something at all.
-    expect(screen.queryAllByRole('button', { name: 'Edit' }).length).toBeGreaterThan(0)
-    expect(screen.queryAllByRole('button', { name: /comment/i }).length).toBeGreaterThan(0)
-  })
-})
