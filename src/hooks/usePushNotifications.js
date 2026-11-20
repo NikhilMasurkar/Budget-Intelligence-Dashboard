@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import { getPushStatus, subscribeToPush, unsubscribeFromPush } from '../api/pushSubscription'
 
-// The daily 9 PM reminder: its current status and an on/off toggle.
+// The daily 10 PM reminder: its current status and an on/off toggle.
 export function usePushNotifications(authd) {
   const [notifStatus, setNotifStatus] = useState('unsubscribed')
 
@@ -28,7 +28,7 @@ export function usePushNotifications(authd) {
       try {
         await subscribeToPush()
         setNotifStatus('subscribed')
-        toast.success('Daily 9 PM reminders enabled! 🔔')
+        toast.success('Daily 10 PM reminders enabled! 🔔')
       } catch (e) {
         const status = await getPushStatus().catch(() => 'unsubscribed')
         setNotifStatus(status)

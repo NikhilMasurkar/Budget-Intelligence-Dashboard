@@ -1,4 +1,4 @@
-// Triggered daily by cron-job.org at 9 PM IST (15:30 UTC).
+// Triggered daily by cron-job.org at 10 PM IST (16:30 UTC).
 // Reads all push subscriptions from Firestore and sends a reminder notification.
 const webpush = require('web-push')
 const admin = require('firebase-admin')

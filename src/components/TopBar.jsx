@@ -121,10 +121,10 @@ export default function TopBar({
   const notif = authd && notifStatus !== 'unsupported' ? {
     key: 'notif',
     label: notifStatus === 'denied' ? 'Notifications blocked'
-      : `Daily 9 PM reminder: ${notifStatus === 'subscribed' ? 'On' : 'Off'}`,
-    tip: notifStatus === 'subscribed' ? '9 PM daily reminder ON — click to disable'
+      : `Daily 10 PM reminder: ${notifStatus === 'subscribed' ? 'On' : 'Off'}`,
+    tip: notifStatus === 'subscribed' ? '10 PM daily reminder ON — click to disable'
       : notifStatus === 'denied' ? 'Notifications blocked — enable in browser settings'
-      : 'Enable daily 9 PM expense reminder',
+      : 'Enable daily 10 PM expense reminder',
     icon: notifStatus === 'subscribed' ? <NotificationsActiveIcon sx={{ fontSize: 18 }} />
       : notifStatus === 'denied' ? <NotificationsOffIcon sx={{ fontSize: 18 }} />
       : <NotificationsNoneIcon sx={{ fontSize: 18 }} />,

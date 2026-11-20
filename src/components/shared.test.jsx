@@ -69,7 +69,7 @@ describe('TopBar', () => {
   it('avatar menu lists the moved actions with labels', () => {
     render(<TopBar {...base} />)
     fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
-    for (const name of ['Refresh data', 'Open in Google Drive', 'Download', 'Daily 9 PM reminder: Off']) {
+    for (const name of ['Refresh data', 'Open in Google Drive', 'Download', 'Daily 10 PM reminder: Off']) {
       expect(screen.getByRole('menuitem', { name })).toBeTruthy()
     }
   })
