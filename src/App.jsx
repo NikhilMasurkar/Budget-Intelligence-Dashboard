@@ -52,7 +52,7 @@ export default function App() {
   const { classes: globalClasses } = useGlobalStyles()
 
   // ── Auth first — authd needed by PIN gate effect below ────────
-  const { authd, userName, userFullName, userPicture, handleSignIn, handleSignOut, authReady } = useAuth()
+  const { authd, checking, userName, userFullName, userPicture, handleSignIn, handleSignOut, authReady } = useAuth()
 
   // ── UI state ──────────────────────────────────────────────────
   const [view, setView] = useState('dashboard')
@@ -280,7 +280,7 @@ export default function App() {
         userPicture={userPicture}
         onRefresh={() => { loadAll(); toast.success('Refreshing…', { duration: 2000 }) }}
         onExportLocal={() => setModal('export')}
-        onSignIn={handleSignIn}
+        onSignIn={checking ? undefined : handleSignIn}
         onSignOut={handleSignOutFull}
         onAIInsights={() => { setAiMounted(true); setAiOpen(true) }}
         hasAIKey={AI_ENABLED}
@@ -290,7 +290,7 @@ export default function App() {
       />
 
       <Box className={globalClasses.contentArea}>
-        {!showData ? (
+        {!showData && checking ? loadingText : !showData ? (
           <SignInScreen onSignIn={handleSignIn} />
         ) : (
           <>

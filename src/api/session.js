@@ -6,7 +6,7 @@
 // Data lives under sheets/{sheetId}/**. The id is historical (it used to be the
 // Google Sheet's id); existing accounts keep theirs, new accounts use their uid.
 
-import { collection, doc, getDoc, getDocs, limit, query, setDoc, where } from 'firebase/firestore'
+import { collection, doc, getDocs, limit, query, setDoc, where } from 'firebase/firestore'
 import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth'
 import { auth, db } from '../firebase'
 
@@ -63,15 +63,10 @@ export function saveProfile(user) {
 // Find (or create) this user's data root and make sure they own it. Must run
 // before any other Firestore access: every rule checks sheets/{id}.ownerUid.
 export async function resolveSheetId(userId) {
+  // This device's last answer, without a network round trip on every load.
+  // The rules still refuse it if it isn't this user's; sign-out clears it.
   const cached = getSheetId()
-  if (cached) {
-    try {
-      const snap = await getDoc(doc(db, 'sheets', cached))
-      if (snap.exists() && snap.data().ownerUid === userId) return cached
-    } catch {
-      return cached   // offline: trust this device's last answer
-    }
-  }
+  if (cached) return cached
   const found = await getDocs(query(collection(db, 'sheets'), where('ownerUid', '==', userId), limit(1)))
   const sid = found.empty ? userId : found.docs[0].id
   if (found.empty) await setDoc(doc(db, 'sheets', sid), { ownerUid: userId, createdAt: new Date().toISOString() })

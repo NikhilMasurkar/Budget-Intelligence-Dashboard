@@ -8,6 +8,9 @@ import { signInWithGoogle, saveProfile, resolveSheetId, clearSession, getSavedUs
 // it by itself. authd = signed in AND the data root is known.
 export function useAuth() {
   const [authd, setAuthd] = useState(false)
+  // True until Firebase has restored (or ruled out) the saved session — so a
+  // refresh shows "Loading", not the sign-in screen.
+  const [checking, setChecking] = useState(true)
   const [userName, setUserName] = useState(getSavedUserName() || '')
   const [userFullName, setUserFullName] = useState(() => localStorage.getItem('budgetiq_userFullName') || getSavedUserName() || '')
   const [userPicture, setUserPicture] = useState(() => localStorage.getItem('budgetiq_userPicture') || '')
@@ -34,6 +37,7 @@ export function useAuth() {
       console.error('[BudgetIQ] Could not open your data:', e)
       toast.error('Could not open your data: ' + e.message, { id: 'auth' })
     } finally {
+      setChecking(false)
       readyRef.current.resolve()
     }
   }), [])
@@ -58,7 +62,7 @@ export function useAuth() {
   }
 
   return {
-    authd, userName, userFullName, userPicture, handleSignIn, handleSignOut,
+    authd, checking, userName, userFullName, userPicture, handleSignIn, handleSignOut,
     authReady: () => readyRef.current.promise,
   }
 }

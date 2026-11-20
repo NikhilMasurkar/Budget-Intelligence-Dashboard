@@ -286,7 +286,7 @@ export default function TopBar({
                 </Typography>
               </Menu>
             </Box>
-          ) : (
+          ) : onSignIn && (
             <Button
               variant="contained"
               size="small"
