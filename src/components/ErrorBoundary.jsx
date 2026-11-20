@@ -1,19 +1,20 @@
 import { ErrorBoundary as ReactErrorBoundary } from 'react-error-boundary'
 import { Box, Typography, Button } from '@mui/material'
+import { useErrorBoundaryUi } from './styles/ErrorBoundary.styles'
 
 function ErrorFallback({ error, resetErrorBoundary }) {
+  const { classes: ui } = useErrorBoundaryUi()
   return (
-    <Box sx={{ p: 4, textAlign: 'center' }}>
-      <Typography variant="h6" sx={{ mb: 1, color: 'var(--danger-soft)' }}>
+    <Box className={ui.box1}>
+      <Typography className={ui.typography1} variant="h6">
         Something went wrong
       </Typography>
-      <Typography variant="body2" sx={{ mb: 2, color: 'var(--text2)' }}>
+      <Typography className={ui.typography2} variant="body2">
         {error?.message}
       </Typography>
-      <Button
+      <Button className={ui.button1}
         variant="outlined"
         size="small"
-        sx={{ color: 'var(--accent)', borderColor: 'var(--accent)' }}
         onClick={resetErrorBoundary}
       >
         Try again

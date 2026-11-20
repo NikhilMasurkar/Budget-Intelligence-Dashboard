@@ -114,21 +114,12 @@ export function PinDots({ count, shake, length = PIN_LENGTH }) {
   const { classes, cx } = usePinScreenStyles()
   return (
     <Box
-      className={cx(classes.dotsContainer, shake && classes.shakingDots)}
-      sx={{ gap: length > 4 ? '10px' : '16px' }}
+      className={cx(classes.dotsContainer, length > 4 ? classes.dotsGapTight : classes.dotsGapWide, shake && classes.shakingDots)}
     >
       {Array.from({ length }).map((_, i) => {
         const filled = i < count
         return (
-          <Box
-            key={i}
-            className={classes.dot}
-            sx={{
-              background: filled ? 'var(--accent)' : 'transparent',
-              border: `2px solid ${filled ? 'var(--accent)' : 'var(--line)'}`,
-              transform: filled ? 'scale(1.1)' : 'scale(1)',
-            }}
-          />
+          <Box key={i} className={cx(classes.dot, filled ? classes.dotFilled : classes.dotEmpty)} />
         )
       })}
     </Box>

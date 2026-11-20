@@ -5,6 +5,7 @@ import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import ChatBubbleOutlinedIcon from '@mui/icons-material/ChatBubbleOutlined'
 import { fmt } from '../../utils/constants'
 import { parseComments } from './ExpenseCommentsModal'
+import { useExpenseRowUi } from './styles/ExpenseRow.styles'
 
 // One expense line inside a category: name, latest comment, badges, amount,
 // and the comment / edit / delete actions.
@@ -47,50 +48,44 @@ function areRowPropsEqual(prev, next) {
 }
 
 const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected, onToggle, onComment, onEdit, onDelete }) {
+  const { classes: ui, cx: uiCx } = useExpenseRowUi()
   const comments = parseComments(exp.note)
   const commentCount = comments.length
   const lastComment = comments[commentCount - 1]?.text
   const updated = fmtUpdated(exp.updatedAt)
   return (
-    <Box className={classes.expenseRow}
-      sx={isSelected ? { background: 'rgb(var(--accent-rgb) / 0.06)' } : undefined}>
+    <Box className={uiCx(classes.expenseRow, isSelected && ui.rowSelected)}>
       {canEdit && (
-        <Checkbox
+        <Checkbox className={ui.checkbox1}
           size="small"
           checked={isSelected}
           onChange={e => onToggle(exp.id, e.target.checked)}
-          sx={{ p: { xs: '8px', sm: 0 }, mr: '2px', color: 'var(--line)', '&.Mui-checked': { color: 'var(--accent)' } }}
         />
       )}
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography className={classes.expenseName} sx={{ flex: 'unset' }}>{exp.itemName}</Typography>
+      <Box className={ui.box1}>
+        <Typography className={uiCx(classes.expenseName, ui.typography1)}>{exp.itemName}</Typography>
         {/* Latest note right under the name, so it's readable without opening the thread. */}
         {lastComment && (
-          <Typography
+          <Typography className={ui.typography2}
             onClick={() => onComment(exp)}
-            sx={{
-              fontSize: 11, color: 'var(--text2)', lineHeight: 1.4, cursor: 'pointer',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}
           >
             💬 {lastComment}
           </Typography>
         )}
         {updated && (
-          <Typography sx={{ fontSize: 10, color: 'var(--line)', display: 'block', lineHeight: 1.4 }}>
+          <Typography className={ui.typography3}>
             Updated {updated}
           </Typography>
         )}
       </Box>
-      {exp.isFixed === 'TRUE' && (
+      {exp.isFixed === true && (
         <Box component="span" className={classes.fixedBadge}>📌</Box>
       )}
       {+exp.amount < 0 && (
         <Box component="span" className={classes.withdrawBadge}>↓ WITHDRAWN</Box>
       )}
       <Typography
-        className={classes.expenseAmount}
-        sx={+exp.amount < 0 ? { color: 'var(--danger-soft)' } : undefined}
+        className={uiCx(classes.expenseAmount, +exp.amount < 0 && ui.amountNegative)}
       >
         {fmt(exp.amount)}
       </Typography>
@@ -98,21 +93,11 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
         <IconButton
           size="small"
           onClick={() => onComment(exp)}
-          sx={{
-            p: { xs: '9px', sm: '3px' }, position: 'relative',
-            color: commentCount > 0 ? 'var(--accent)' : 'var(--text3)',
-            '&:hover': { color: 'var(--accent)', background: 'rgb(var(--accent-rgb) / 0.1)' }
-          }}
+          className={uiCx(ui.commentBtn, commentCount > 0 && ui.commentBtnHas)}
         >
-          <ChatBubbleOutlinedIcon sx={{ fontSize: { xs: 18, sm: 14 } }} />
+          <ChatBubbleOutlinedIcon className={ui.chatBubbleOutlinedIcon1} />
           {commentCount > 0 && (
-            <Box component="span" sx={{
-              position: 'absolute', top: 0, right: 0,
-              fontSize: 8, fontWeight: 800, lineHeight: 1,
-              background: 'var(--accent)', color: '#fff',
-              borderRadius: '50%', width: 12, height: 12,
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
+            <Box className={ui.box2} component="span">
               {commentCount > 9 ? '9+' : commentCount}
             </Box>
           )}
@@ -122,12 +107,12 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
         <>
           <Tooltip title="Edit" arrow>
             <IconButton size="small" className={classes.rowAction} onClick={() => onEdit(exp)}>
-              <EditOutlinedIcon sx={{ fontSize: { xs: 18, sm: 14 } }} />
+              <EditOutlinedIcon className={ui.editOutlinedIcon1} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Delete" arrow>
             <IconButton size="small" className={classes.rowDelete} onClick={() => onDelete(exp)}>
-              <DeleteOutlinedIcon sx={{ fontSize: { xs: 18, sm: 14 } }} />
+              <DeleteOutlinedIcon className={ui.deleteOutlinedIcon1} />
             </IconButton>
           </Tooltip>
         </>

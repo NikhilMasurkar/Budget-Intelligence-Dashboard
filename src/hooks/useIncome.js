@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import { uid } from '../api/session'
-import { saveIncome, readAllIncomeRows, writeAllIncomeRows } from '../api/store'
+import { saveIncome, readAllIncome, writeAllIncome } from '../api/store'
 import { toSentenceCase, dateForMonth, isYearLocked } from '../utils/constants'
 
 export function useIncome({ loadAll, setDeleteConfirm, closeModal }) {
@@ -20,22 +20,18 @@ export function useIncome({ loadAll, setDeleteConfirm, closeModal }) {
         const startMonth = applyMode === 'all_year' ? 1 : parseInt(inc.month)
         const count = 12 - startMonth + 1
         toast.loading(`Saving to ${count} months...`, { id: 'multi-income' })
-        const allRows = await readAllIncomeRows()
+        const all = await readAllIncome()
         for (let m = startMonth; m <= 12; m++) {
-          const existIdx = allRows.findIndex(r =>
-            toSentenceCase(r[3]) === toSentenceCase(inc.source) &&
-            String(r[1]) === String(inc.year) && String(r[2]) === String(m)
-          )
-          const row = [
-            existIdx >= 0 ? allRows[existIdx][0] : uid(),
-            // Shift the date onto the month being written — copying it verbatim
-            // put a September date on the January row.
-            String(inc.year), String(m), inc.source, inc.amount, dateForMonth(inc.date, m)
-          ]
-          if (existIdx >= 0) allRows[existIdx] = row
-          else allRows.push(row)
+          const hit = all.find(x => toSentenceCase(x.source) === inc.source &&
+            String(x.year) === String(inc.year) && String(x.month) === String(m))
+          // Shift the date onto the month being written — copying it verbatim
+          // put a September date on the January entry.
+          const item = { id: hit?.id || uid(), year: String(inc.year), month: String(m),
+            source: inc.source, amount: inc.amount, date: dateForMonth(inc.date, m) }
+          if (hit) Object.assign(hit, item)
+          else all.push(item)
         }
-        await writeAllIncomeRows(allRows)
+        await writeAllIncome(all)
         toast.success(`✅ Applied to ${count} months!`, { id: 'multi-income', duration: 3000 })
       }
       closeModal()

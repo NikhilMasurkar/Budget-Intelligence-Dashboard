@@ -204,4 +204,110 @@ export const usePinScreenStyles = makeStyles()((theme) => ({
     maxWidth: 300,
     lineHeight: 1.6,
   },
+  dotsGapWide: { gap: '16px' },
+  dotsGapTight: { gap: '10px' },
+  dotEmpty: {
+    background: 'transparent',
+    border: '2px solid var(--line)',
+    transform: 'scale(1)',
+  },
+  dotFilled: {
+    background: 'var(--accent)',
+    border: '2px solid var(--accent)',
+    transform: 'scale(1.1)',
+  },
+  fingerprintIdle: {
+    border: '2px solid rgb(var(--accent-rgb) / 0.35)',
+    background: 'rgb(var(--ink-rgb) / 0.03)',
+    cursor: 'pointer',
+  },
+  fingerprintScanning: {
+    border: '2px solid var(--accent)',
+    background: 'rgb(var(--accent-rgb) / 0.1)',
+    cursor: 'default',
+  },
+  fingerprintError: {
+    borderColor: 'var(--danger)',
+  },
+  statusText: {
+    fontSize: 12,
+    color: 'var(--text-muted)',
+    marginBottom: '28px',
+    minHeight: 16,
+    textAlign: 'center',
+  },
+  textDanger: {
+    color: 'var(--danger)',
+  },
+  errorLine: {
+    margin: '0 0 20px',
+    fontSize: 12,
+    color: 'var(--danger)',
+    minHeight: 16,
+    textAlign: 'center',
+    opacity: 0,
+    transition: 'opacity 0.2s',
+  },
+  errorLineShown: {
+    opacity: 1,
+  },
+  expiryText: {
+    fontSize: 12,
+    color: 'var(--text-muted)',
+  },
+}))
+
+// Moved from inline sx/style in PinScreen.jsx.
+export const usePinScreenUi = makeStyles()(() => ({
+  box1: {
+    fontSize: 52,
+    margin: '4px 0 8px',
+  },
+  typography1: {
+    marginBottom: '32px',
+  },
+  box2: {
+    padding: '16px 0',
+  },
+  circularProgress1: {
+    color: 'var(--accent)',
+  },
+  typography2: {
+    marginBottom: '32px',
+  },
+  typography3: {
+    marginBottom: '28px',
+  },
+  box3: {
+    padding: '40px 0',
+    display: 'flex',
+    justifyContent: 'center',
+  },
+  circularProgress2: {
+    color: 'var(--accent)',
+  },
+  checkbox1: {
+    color: 'rgb(var(--ink-rgb) / 0.25)',
+    padding: '4px 6px 4px 0',
+    "&.Mui-checked": {
+      color: 'var(--accent)',
+    },
+  },
+  box4: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  span1: {
+    marginLeft: 6,
+  },
+  button1: {
+    color: 'var(--line)',
+    fontSize: 12,
+  },
+  button2: {
+    marginTop: '16px',
+    color: 'var(--line)',
+    fontSize: 12,
+  },
 }))

@@ -33,7 +33,7 @@ import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
 import NotificationsOffIcon from '@mui/icons-material/NotificationsOff'
 
-import { useTopBarStyles } from './styles/TopBar.styles'
+import { useTopBarStyles, useTopBarUi } from './styles/TopBar.styles'
 import { APP_VERSION } from '../utils/constants'
 
 const NAV = [
@@ -61,6 +61,7 @@ export default function TopBar({
   onToggleNotifications,
   onAddExpense
 }) {
+  const { classes: ui, cx: uiCx } = useTopBarUi()
   const themeMode = useThemeMode()
   const { classes, cx } = useTopBarStyles()
   const [anchorEl, setAnchorEl] = useState(null)
@@ -92,8 +93,8 @@ export default function TopBar({
   // Each action is defined once: an icon button at md+, an avatar-menu item on phones.
   const install = installPrompt ? {
     key: 'install', label: 'Install app', tip: 'Install BudgetIQ as an app',
-    icon: <GetAppIcon sx={{ fontSize: 18 }} />,
-    sx: { color: 'var(--accent2) !important', borderColor: 'rgb(var(--accent2-rgb) / 0.4) !important' },
+    icon: <GetAppIcon className={ui.getAppIcon1} />,
+    className: ui.actionOn,
     onClick: async () => {
       installPrompt.prompt()
       const { outcome } = await installPrompt.userChoice
@@ -102,7 +103,7 @@ export default function TopBar({
   } : isIOS ? {
     // Safari doesn't fire beforeinstallprompt, so explain the manual route.
     key: 'install', label: 'Install app', tip: IOS_HINT,
-    icon: <GetAppIcon sx={{ fontSize: 18 }} />,
+    icon: <GetAppIcon className={ui.getAppIcon2} />,
     onClick: () => toast(IOS_HINT, { id: 'ios-install', duration: 6000 })
   } : null
 
@@ -113,13 +114,12 @@ export default function TopBar({
     tip: notifStatus === 'subscribed' ? '10 PM daily reminder ON — click to disable'
       : notifStatus === 'denied' ? 'Notifications blocked — enable in browser settings'
       : 'Enable daily 10 PM expense reminder',
-    icon: notifStatus === 'subscribed' ? <NotificationsActiveIcon sx={{ fontSize: 18 }} />
-      : notifStatus === 'denied' ? <NotificationsOffIcon sx={{ fontSize: 18 }} />
-      : <NotificationsNoneIcon sx={{ fontSize: 18 }} />,
+    icon: notifStatus === 'subscribed' ? <NotificationsActiveIcon className={ui.notificationsActiveIcon1} />
+      : notifStatus === 'denied' ? <NotificationsOffIcon className={ui.notificationsOffIcon1} />
+      : <NotificationsNoneIcon className={ui.notificationsNoneIcon1} />,
     onClick: notifStatus !== 'denied' ? onToggleNotifications : undefined,
     disabled: notifStatus === 'loading',
-    sx: notifStatus === 'subscribed' ? { color: 'var(--accent2) !important', borderColor: 'rgb(var(--accent2-rgb) / 0.4) !important' }
-      : notifStatus === 'denied' ? { opacity: 0.45, cursor: 'default' } : undefined
+    className: notifStatus === 'subscribed' ? ui.actionOn : notifStatus === 'denied' ? ui.actionDenied : undefined
   } : null
 
   const dataActions = authd ? [
@@ -135,7 +135,7 @@ export default function TopBar({
   const renderIcon = (a) => a && (
     <Tooltip key={a.key} title={a.tip}>
       <span className={cx(classes.iconWrap, authd && classes.desktopOnly)}>
-        <IconButton aria-label={a.label} onClick={a.onClick} disabled={a.disabled} className={classes.actionButton} sx={a.sx}>
+        <IconButton aria-label={a.label} onClick={a.onClick} disabled={a.disabled} className={cx(classes.actionButton, a.className)}>
           {a.icon}
         </IconButton>
       </span>
@@ -177,11 +177,9 @@ export default function TopBar({
 
           {authd && hasAIKey && (
             <Tooltip title="AI Budget Insights — get simple tips on your spending" arrow>
-              <IconButton onClick={onAIInsights} className={classes.actionButton} aria-label="AI Budget Insights"
-                sx={{ color: 'var(--accent-soft) !important', borderColor: 'rgb(var(--accent-rgb) / 0.35) !important',
-                  '&:hover': { borderColor: 'rgb(var(--accent-rgb) / 0.7) !important', background: 'rgb(var(--accent-rgb) / 0.08) !important' }
-                }}>
-                <AutoAwesomeIcon sx={{ fontSize: 18 }} />
+              <IconButton onClick={onAIInsights} className={uiCx(classes.actionButton, ui.iconButton1)} aria-label="AI Budget Insights"
+               >
+                <AutoAwesomeIcon className={ui.autoAwesomeIcon1} />
               </IconButton>
             </Tooltip>
           )}
@@ -255,7 +253,7 @@ export default function TopBar({
                   className={classes.menuItem}
                 >
                   <ListItemIcon className={classes.menuItemIcon}>
-                    {themeMode === 'dark' ? <LightModeOutlinedIcon sx={{ fontSize: 18 }} /> : <DarkModeOutlinedIcon sx={{ fontSize: 18 }} />}
+                    {themeMode === 'dark' ? <LightModeOutlinedIcon className={ui.lightModeOutlinedIcon1} /> : <DarkModeOutlinedIcon className={ui.darkModeOutlinedIcon1} />}
                   </ListItemIcon>
                   <ListItemText
                     primary={themeMode === 'dark' ? 'Light theme' : 'Dark theme'}
@@ -278,9 +276,8 @@ export default function TopBar({
                   />
                 </MenuItem>
 
-                <Typography
+                <Typography className={ui.typography1}
                   variant="caption"
-                  sx={{ display: 'block', textAlign: 'center', color: 'var(--text3)', fontSize: 10, py: '6px' }}
                 >
                   BudgetIQ v{APP_VERSION}
                 </Typography>

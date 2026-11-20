@@ -155,3 +155,93 @@ export const useExpensesByCategoryStyles = makeStyles()((theme) => ({
   },
   menuIcon: { minWidth: '28px', color: 'inherit' }
 }))
+
+// Moved from inline sx/style in ExpensesByCategory.jsx.
+export const useExpensesByCategoryUi = makeStyles()((theme) => ({
+  box1: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+  },
+  button1: {
+    fontSize: 12,
+    color: 'var(--text2)',
+    textTransform: 'none',
+    minWidth: 0,
+  },
+  searchIcon1: {
+    fontSize: 18,
+    color: 'var(--text-faint)',
+  },
+  pushPinIcon1: {
+    fontSize: 15,
+  },
+  box2: {
+    textAlign: 'center',
+    paddingTop: theme.spacing(6),
+    paddingBottom: theme.spacing(6),
+    color: 'var(--text2)',
+    fontSize: 14,
+  },
+  typography1: {
+    fontSize: 11,
+    color: 'var(--text-faint)',
+  },
+  box3: {
+    flex: 1,
+    height: '1px',
+    background: 'rgb(var(--ink-rgb) / 0.06)',
+  },
+  checkbox1: {
+    padding: theme.spacing(0),
+    color: 'var(--text3)',
+    "&.Mui-checked": {
+      color: 'var(--accent)',
+    },
+    "&.MuiCheckbox-indeterminate": {
+      color: 'var(--accent)',
+    },
+  },
+  moreVertIcon1: {
+    fontSize: 16,
+  },
+  box4: {
+    background: 'var(--text2)',
+  },
+  editOutlinedIcon1: {
+    fontSize: 15,
+  },
+  divider1: {
+    borderColor: 'rgb(var(--ink-rgb) / 0.07)',
+    marginTop: '4px',
+    marginBottom: '4px',
+  },
+  arrowUpwardIcon1: {
+    fontSize: 15,
+  },
+  arrowDownwardIcon1: {
+    fontSize: 15,
+  },
+  divider2: {
+    borderColor: 'rgb(var(--ink-rgb) / 0.07)',
+    marginTop: '4px',
+    marginBottom: '4px',
+  },
+  deleteOutlinedIcon1: {
+    fontSize: 15,
+    color: 'var(--danger-soft)',
+  },
+  fixedOn: { background: 'var(--accent)', '&:hover': { background: 'var(--accent-strong)' } },
+  fixedOff: {
+    color: 'var(--accent-soft)', borderColor: 'rgb(var(--accent-rgb) / 0.35)',
+    '&:hover': { borderColor: 'rgb(var(--accent-rgb) / 0.6)', background: 'rgb(var(--accent-rgb) / 0.07)' },
+  },
+  groupHeader: { display: 'flex', alignItems: 'baseline', gap: '10px', marginTop: '22px', marginBottom: '8px', paddingLeft: '4px', paddingRight: '4px' },
+  groupHeaderFirst: { marginTop: 0 },
+  groupLabel: { fontSize: 11, fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--text-muted)' },
+  groupTotal: { fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: 'var(--text2)' },
+  invest: { color: 'var(--purple)' },
+  totalNegative: { color: 'var(--danger-soft)' },
+  totalPositive: { color: 'var(--text)' },
+  totalZero: { color: 'var(--text-faint)' },
+}))

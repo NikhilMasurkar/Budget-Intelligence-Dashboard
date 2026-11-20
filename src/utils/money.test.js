@@ -219,8 +219,8 @@ describe('applyAmountExpression — plain infix from the keypad', () => {
 
 describe('mergeSameItem', () => {
   const rows = [
-    ['t1', '2026', '11', 'food', 'Tea', '40', 'FALSE', ''],
-    ['m1', '2026', '11', 'inv', 'Mutual fund', '5000', 'TRUE', '[{"text":"sip","ts":1}]'],
+    { id: 't1', year: '2026', month: '11', categoryId: 'food', itemName: 'Tea', amount: 40, isFixed: false, note: '' },
+    { id: 'm1', year: '2026', month: '11', categoryId: 'inv', itemName: 'Mutual fund', amount: 5000, isFixed: true, note: '[{"text":"sip","ts":1}]' },
   ]
   const exp = (o) => ({ year: 2026, month: 11, categoryId: 'food', itemName: 'tea ', amount: 20, isFixed: false, note: '', ...o })
 

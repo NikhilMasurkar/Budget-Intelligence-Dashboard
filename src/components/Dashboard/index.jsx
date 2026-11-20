@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { Box, Typography } from '@mui/material'
-import { useStyles } from './styles/Dashboard.styles'
+import { useStyles, useDashboardUi } from './styles/Dashboard.styles'
 import { tokens, useThemeMode } from '../../theme/tokens'
 import MonthFilterControl from './subcomponents/MonthFilterControl'
 import InvestmentsSection from './subcomponents/InvestmentsSection'
@@ -25,6 +25,7 @@ function periodLabel(selMonths, year) {
 }
 
 export default function Dashboard({ expenses, income, allExpenses = [], categories, year, month, selMonths, setSelMonths, onEditCategory }) {
+  const { classes: ui, cx: uiCx } = useDashboardUi()
   useThemeMode() // re-render so chart/score colours follow the theme
   const { classes } = useStyles()
   const [detailModal, setDetailModal] = useState(null)
@@ -127,24 +128,24 @@ export default function Dashboard({ expenses, income, allExpenses = [], categori
       />
 
       {/* Period summary + current month context */}
-      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px 16px', mb: '16px', px: '2px' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Box sx={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
-          <Typography sx={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>
+      <Box className={ui.box1}>
+        <Box className={ui.box2}>
+          <Box className={ui.box3} />
+          <Typography className={ui.typography1}>
             {periodLabel(selMonths, year)}
           </Typography>
-          <Typography sx={{ fontSize: 12, color: 'var(--line)' }}>·</Typography>
-          <Typography sx={{ fontSize: 12, color: 'var(--accent2)', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+          <Typography className={ui.typography2}>·</Typography>
+          <Typography className={ui.typography3}>
             {fmt(selIncome)} earned
           </Typography>
-          <Typography sx={{ fontSize: 12, color: 'var(--line)' }}>·</Typography>
-          <Typography sx={{ fontSize: 12, color: 'var(--danger)', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+          <Typography className={ui.typography4}>·</Typography>
+          <Typography className={ui.typography5}>
             {fmt(selSpend)} spent
           </Typography>
           {selInvest !== 0 && (
             <>
-              <Typography sx={{ fontSize: 12, color: 'var(--line)' }}>·</Typography>
-              <Typography sx={{ fontSize: 12, color: 'var(--purple)', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+              <Typography className={ui.typography6}>·</Typography>
+              <Typography className={ui.typography7}>
                 {fmt(selInvest)} invested
               </Typography>
             </>
@@ -152,14 +153,14 @@ export default function Dashboard({ expenses, income, allExpenses = [], categori
         </Box>
         {parseInt(year) >= curYear && selMonths.length > 1 && (
           <>
-            <Box sx={{ width: '1px', height: 12, background: 'rgb(var(--ink-rgb) / 0.07)', display: { xs: 'none', sm: 'block' } }} />
-            <Typography sx={{ fontSize: 11, color: 'var(--line)' }}>
+            <Box className={ui.box4} />
+            <Typography className={ui.typography8}>
               {displayMonthName} now: {' '}
-              <Box component="span" sx={{ color: 'var(--text2)', fontVariantNumeric: 'tabular-nums' }}>{fmt(curMonthInc)} in</Box>
+              <Box className={ui.box5} component="span">{fmt(curMonthInc)} in</Box>
               {' · '}
-              <Box component="span" sx={{ color: 'var(--text2)', fontVariantNumeric: 'tabular-nums' }}>{fmt(curMonthExp)} out</Box>
+              <Box className={ui.box6} component="span">{fmt(curMonthExp)} out</Box>
               {' · '}
-              <Box component="span" sx={{ color: curMonthSav >= 0 ? 'var(--accent2)' : 'var(--danger)', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{fmt(curMonthSav)}</Box>
+              <Box component="span" className={uiCx(ui.monthSaved, curMonthSav < 0 && ui.monthShort)}>{fmt(curMonthSav)}</Box>
             </Typography>
           </>
         )}
@@ -170,7 +171,6 @@ export default function Dashboard({ expenses, income, allExpenses = [], categori
         holdings={holdings}
         periodTotal={selInvest}
         periodLabel={periodLabel(selMonths, year)}
-        fmt={fmt}
       />
 
 

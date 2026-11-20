@@ -266,3 +266,55 @@ export const useTopBarStyles = makeStyles()((theme) => ({
     fontSize: '20px',
   },
 }))
+
+// Moved from inline sx/style in TopBar.jsx.
+export const useTopBarUi = makeStyles()(() => ({
+  getAppIcon1: {
+    fontSize: 18,
+  },
+  getAppIcon2: {
+    fontSize: 18,
+  },
+  notificationsActiveIcon1: {
+    fontSize: 18,
+  },
+  notificationsOffIcon1: {
+    fontSize: 18,
+  },
+  notificationsNoneIcon1: {
+    fontSize: 18,
+  },
+  iconButton1: {
+    color: 'var(--accent-soft) !important',
+    borderColor: 'rgb(var(--accent-rgb) / 0.35) !important',
+    "&:hover": {
+      borderColor: 'rgb(var(--accent-rgb) / 0.7) !important',
+      background: 'rgb(var(--accent-rgb) / 0.08) !important',
+    },
+  },
+  autoAwesomeIcon1: {
+    fontSize: 18,
+  },
+  lightModeOutlinedIcon1: {
+    fontSize: 18,
+  },
+  darkModeOutlinedIcon1: {
+    fontSize: 18,
+  },
+  typography1: {
+    display: 'block',
+    textAlign: 'center',
+    color: 'var(--text3)',
+    fontSize: 10,
+    paddingTop: '6px',
+    paddingBottom: '6px',
+  },
+  actionOn: {
+    color: 'var(--accent2) !important',
+    borderColor: 'rgb(var(--accent2-rgb) / 0.4) !important',
+  },
+  actionDenied: {
+    opacity: 0.45,
+    cursor: 'default',
+  },
+}))

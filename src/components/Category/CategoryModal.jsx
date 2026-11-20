@@ -13,6 +13,7 @@ import {
 import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined'
 import { useCategoryModalStyles } from './styles/Category.styles'
 import { SAVINGS_TYPE, EXPENSE_TYPE } from '../../utils/money'
+import { useCategoryModalUi } from './styles/CategoryModal.styles'
 
 const BRIGHT_COLORS = [
   '#5b7fff', // Modern Blue
@@ -73,6 +74,7 @@ function getNextUniqueColor(existingCategories = []) {
 }
 
 export default function CategoryModal({ open, initial, categories = [], onSave, onClose }) {
+  const { classes: ui } = useCategoryModalUi()
   const { classes } = useCategoryModalStyles()
   const [form, setForm] = useState({
     id: '',
@@ -127,10 +129,9 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
       className={classes.dialog}
     >
       <Box className={classes.content}>
-        
         {/* Top Icon Badge */}
         <Box className={classes.iconBadge}>
-          <CategoryOutlinedIcon color="primary" sx={{ fontSize: 28 }} />
+          <CategoryOutlinedIcon className={ui.categoryOutlinedIcon1} color="primary" />
         </Box>
 
         {/* Title */}
@@ -153,7 +154,7 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
           />
 
           <FormControl fullWidth size="small" className={classes.fieldStyles}>
-            <InputLabel id="category-type-label" shrink sx={{ color: 'text.secondary' }}>
+            <InputLabel className={ui.inputLabel1} id="category-type-label" shrink>
               Type
             </InputLabel>
             <Select
@@ -163,8 +164,8 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
               label="Type"
               notched
             >
-              <MenuItem value={EXPENSE_TYPE} sx={{ fontSize: 13 }}>Expense</MenuItem>
-              <MenuItem value={SAVINGS_TYPE} sx={{ fontSize: 13 }}>Savings / Investment</MenuItem>
+              <MenuItem className={ui.menuItem1} value={EXPENSE_TYPE}>Expense</MenuItem>
+              <MenuItem className={ui.menuItem2} value={SAVINGS_TYPE}>Savings / Investment</MenuItem>
             </Select>
           </FormControl>
 

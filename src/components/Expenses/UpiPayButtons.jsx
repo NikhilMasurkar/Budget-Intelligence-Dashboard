@@ -1,4 +1,5 @@
 import { Box, Button, Typography } from '@mui/material'
+import { useUpiPayButtonsUi } from './styles/UpiPayButtons.styles'
 
 // "Save & pay": the expense is saved first, then the UPI app opens and you pay
 // there as usual (scan the QR). UPI apps don't report back to a website, so
@@ -28,21 +29,21 @@ export function openUpiApp(app) {
 
 // The row of app buttons; the last app used comes first and is highlighted.
 export default function UpiPayButtons({ caption, disabled, onPay }) {
+  const { classes: ui } = useUpiPayButtonsUi()
   const last = lastUpi()
   return (
-    <Box sx={{ mt: 1.5, textAlign: 'center' }}>
-      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.75 }}>
+    <Box className={ui.box1}>
+      <Typography className={ui.typography1} variant="caption">
         {caption}
       </Typography>
-      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+      <Box className={ui.box2}>
         {[...UPI_APPS].sort((a, b) => (b.id === last) - (a.id === last)).map(app => (
-          <Button
+          <Button className={ui.button1}
             key={app.id}
             size="small"
             variant={app.id === last ? 'contained' : 'outlined'}
             onClick={() => onPay(app)}
             disabled={disabled}
-            sx={{ minHeight: 36, textTransform: 'none', borderRadius: 2 }}
           >
             {app.label}
           </Button>

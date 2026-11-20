@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import { Box, Typography } from '@mui/material'
-import { fmt } from '../../utils/constants'
 import { investmentCategoryIds } from '../../utils/money'
 import { computeYearlySummary, computeHoldingsMatrix, computePosition } from '../../utils/periodStats'
+import { useBalanceSheetUi } from './styles/BalanceSheet.styles'
+import { Grid, Amount, Head } from './Figures'
 
 // ── Balance Sheet ────────────────────────────────────────────────────────────
 // The Dashboard answers "what happened in the year I'm looking at". This answers
@@ -11,7 +12,11 @@ import { computeYearlySummary, computeHoldingsMatrix, computePosition } from '..
 // looking like they should reconcile.
 //
 // Every figure is a sum of rows that were entered. Nothing is projected.
+// Label + amount: no year columns here, so it fits a phone without scrolling.
+const STAND_COLS = 'minmax(0, 1fr) auto'
+
 export default function BalanceSheet({ allExpenses = [], allIncome = [], categories = [] }) {
+  const { classes: ui } = useBalanceSheetUi()
   const investCatIds = useMemo(() => investmentCategoryIds(categories), [categories])
 
   const yearly = useMemo(
@@ -36,40 +41,18 @@ export default function BalanceSheet({ allExpenses = [], allIncome = [], categor
   const heldTotal = held.reduce((s, r) => s + r.balance, 0)
 
   const Card = ({ title, subtitle, children }) => (
-    <Box sx={{
-      background: 'var(--surface2)', border: '1px solid rgb(var(--ink-rgb) / 0.07)',
-      borderRadius: '14px', padding: '18px 20px', mb: '18px', overflowX: 'auto',
-    }}>
-      <Typography sx={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{title}</Typography>
+    <Box className={ui.box1}>
+      <Typography className={ui.typography1}>{title}</Typography>
       {subtitle && (
-        <Typography sx={{ fontSize: 11, color: 'var(--text-faint)', mt: '2px', mb: '10px' }}>{subtitle}</Typography>
+        <Typography className={ui.typography2}>{subtitle}</Typography>
       )}
       {children}
     </Box>
   )
 
-  const Amount = ({ v, color = 'var(--text-soft)', weight = 600, size = 13, dim }) => (
-    <Typography sx={{
-      fontSize: size, fontWeight: weight,
-      color: v === 0 && dim ? 'var(--line)' : color,
-      fontVariantNumeric: 'tabular-nums', textAlign: 'right', whiteSpace: 'nowrap',
-    }}>
-      {v === 0 && dim ? '—' : `${v < 0 ? '−' : ''}${fmt(Math.abs(v))}`}
-    </Typography>
-  )
-
-  const Head = ({ children, align = 'right' }) => (
-    <Typography sx={{
-      fontSize: 10, fontWeight: 700, color: 'var(--line)',
-      letterSpacing: '0.6px', textTransform: 'uppercase', textAlign: align,
-    }}>
-      {children}
-    </Typography>
-  )
-
   if (!yearly.length) {
     return (
-      <Typography align="center" sx={{ p: 5, color: 'var(--text-faint)', fontSize: 13 }}>
+      <Typography className={ui.typography3} align="center">
         Nothing recorded yet — add some income and expenses first.
       </Typography>
     )
@@ -79,20 +62,14 @@ export default function BalanceSheet({ allExpenses = [], allIncome = [], categor
   const holdingCols = `minmax(120px, 1.6fr) repeat(${years.length + 1}, minmax(88px, 1fr))`
   const yearCols    = 'minmax(70px, 0.8fr) repeat(4, minmax(88px, 1fr))'
 
-  const Grid = ({ cols, children, sx }) => (
-    <Box sx={{ display: 'grid', gridTemplateColumns: cols, gap: '10px', alignItems: 'baseline', ...sx }}>
-      {children}
-    </Box>
-  )
-
-  const Rule = () => <Box sx={{ height: '1px', background: 'rgb(var(--ink-rgb) / 0.08)', my: '8px' }} />
+  const Rule = () => <Box className={ui.box2} />
 
   return (
-    <Box sx={{ pb: 3 }}>
-      <Typography sx={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', mb: '4px' }}>
+    <Box className={ui.box3}>
+      <Typography className={ui.typography4}>
         Balance Sheet
       </Typography>
-      <Typography sx={{ fontSize: 12, color: 'var(--text-muted)', mb: '18px' }}>
+      <Typography className={ui.typography5}>
         Every year together — what you built and where it stands today
       </Typography>
 
@@ -100,20 +77,17 @@ export default function BalanceSheet({ allExpenses = [], allIncome = [], categor
         title="Where you stand"
         subtitle="Counts only what you have recorded here — not money you held before you started"
       >
-        <Grid cols={yearCols}>
-          <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'var(--text-soft)' }}>Cash in hand</Typography>
-          <Box /><Box /><Box />
+        <Grid cols={STAND_COLS}>
+          <Typography className={ui.typography6}>Cash in hand</Typography>
           <Amount v={cashInHand} color={cashInHand < 0 ? 'var(--danger)' : 'var(--accent)'} weight={700} size={15} />
         </Grid>
-        <Grid cols={yearCols}>
-          <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'var(--text-soft)' }}>In investments</Typography>
-          <Box /><Box /><Box />
+        <Grid cols={STAND_COLS}>
+          <Typography className={ui.typography7}>In investments</Typography>
           <Amount v={netInvested} color="var(--purple)" weight={700} size={15} />
         </Grid>
         <Rule />
-        <Grid cols={yearCols}>
-          <Typography sx={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>Total kept</Typography>
-          <Box /><Box /><Box />
+        <Grid cols={STAND_COLS}>
+          <Typography className={ui.typography8}>Total kept</Typography>
           <Amount v={allKept} color={allKept < 0 ? 'var(--danger)' : 'var(--accent2)'} weight={800} size={19} />
         </Grid>
       </Card>
@@ -123,15 +97,15 @@ export default function BalanceSheet({ allExpenses = [], allIncome = [], categor
           title="Investments"
           subtitle="What you put in each year, and what is still in there"
         >
-          <Grid cols={holdingCols} sx={{ pb: '8px', borderBottom: '1px solid rgb(var(--ink-rgb) / 0.05)' }}>
+          <Grid className={ui.grid1} cols={holdingCols}>
             <Head align="left">Investment</Head>
             {years.map(y => <Head key={y}>{y}</Head>)}
             <Head>Balance</Head>
           </Grid>
 
           {held.map(h => (
-            <Grid key={h.name} cols={holdingCols} sx={{ py: '9px', borderBottom: '1px solid rgb(var(--ink-rgb) / 0.03)' }}>
-              <Typography sx={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <Grid className={ui.grid2} key={h.name} cols={holdingCols}>
+              <Typography className={ui.typography9}>
                 {h.name}
               </Typography>
               {years.map(y => <Amount key={y} v={h.byYear[y] || 0} color="var(--text2)" weight={500} dim />)}
@@ -143,7 +117,7 @@ export default function BalanceSheet({ allExpenses = [], allIncome = [], categor
             <>
               <Rule />
               <Grid cols={holdingCols}>
-                <Typography sx={{ fontSize: 13, fontWeight: 700, color: 'var(--text-soft)' }}>Still invested</Typography>
+                <Typography className={ui.typography10}>Still invested</Typography>
                 {years.map(y => (
                   <Amount key={y} v={held.reduce((s, h) => s + (h.byYear[y] || 0), 0)} color="var(--text2)" dim />
                 ))}
@@ -156,10 +130,10 @@ export default function BalanceSheet({ allExpenses = [], allIncome = [], categor
             <>
               <Rule />
               {withdrawn.map(h => (
-                <Grid key={h.name} cols={holdingCols} sx={{ py: '9px' }}>
+                <Grid className={ui.grid3} key={h.name} cols={holdingCols}>
                   <Box>
-                    <Typography sx={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600 }}>{h.name}</Typography>
-                    <Typography sx={{ fontSize: 10.5, color: 'var(--text-faint)' }}>
+                    <Typography className={ui.typography11}>{h.name}</Typography>
+                    <Typography className={ui.typography12}>
                       taken out — not linked to an investment
                     </Typography>
                   </Box>
@@ -172,7 +146,7 @@ export default function BalanceSheet({ allExpenses = [], allIncome = [], categor
 
           <Rule />
           <Grid cols={holdingCols}>
-            <Typography sx={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>Total</Typography>
+            <Typography className={ui.typography13}>Total</Typography>
             {years.map(y => <Amount key={y} v={totals.byYear[y] || 0} color="var(--text2)" dim />)}
             <Amount v={totals.balance} color="var(--purple)" weight={800} size={17} />
           </Grid>
@@ -180,7 +154,7 @@ export default function BalanceSheet({ allExpenses = [], allIncome = [], categor
       )}
 
       <Card title="Year by year" subtitle="Investing is money moved between your own pockets, so it is never counted as spending">
-        <Grid cols={yearCols} sx={{ pb: '8px', borderBottom: '1px solid rgb(var(--ink-rgb) / 0.05)' }}>
+        <Grid className={ui.grid4} cols={yearCols}>
           <Head align="left">Year</Head>
           <Head>Earned</Head>
           <Head>Spent</Head>
@@ -189,8 +163,8 @@ export default function BalanceSheet({ allExpenses = [], allIncome = [], categor
         </Grid>
 
         {yearly.map(r => (
-          <Grid key={r.year} cols={yearCols} sx={{ py: '10px', borderBottom: '1px solid rgb(var(--ink-rgb) / 0.03)' }}>
-            <Typography sx={{ fontSize: 13, fontWeight: 700, color: 'var(--text-soft)' }}>{r.year}</Typography>
+          <Grid className={ui.grid5} key={r.year} cols={yearCols}>
+            <Typography className={ui.typography14}>{r.year}</Typography>
             <Amount v={r.earned}   color="var(--accent2)" />
             <Amount v={r.spent}    color="var(--danger)" />
             <Amount v={r.invested} color="var(--purple)" />
@@ -201,7 +175,7 @@ export default function BalanceSheet({ allExpenses = [], allIncome = [], categor
 
         <Rule />
         <Grid cols={yearCols}>
-          <Typography sx={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>All years</Typography>
+          <Typography className={ui.typography15}>All years</Typography>
           <Amount v={yearly.reduce((s, r) => s + r.earned, 0)}   color="var(--accent2)" weight={800} size={14} />
           <Amount v={yearly.reduce((s, r) => s + r.spent, 0)}    color="var(--danger)" weight={800} size={14} />
           <Amount v={yearly.reduce((s, r) => s + r.invested, 0)} color="var(--purple)" weight={800} size={14} />

@@ -16,8 +16,10 @@ import { useAddIncomeModalStyles } from './styles/Income.styles'
 import { MONTHS, SOURCES, fmt } from '../../utils/constants'
 import { applyAmountExpression } from '../../utils/money'
 import AmountKeypad from '../Expenses/AmountKeypad'
+import { useAddIncomeModalUi } from './styles/AddIncomeModal.styles'
 
 export default function AddIncomeModal({ initial, year, month, availableYears = [new Date().getFullYear()], suggestions = [], onSave, onClose }) {
+  const { classes: ui, cx: uiCx } = useAddIncomeModalUi()
   const { classes } = useAddIncomeModalStyles()
   const [form, setForm] = useState({
     id: initial?.id || '',
@@ -77,9 +79,8 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
       className={classes.dialog}
     >
       <Box className={classes.content}>
-        
         <Box className={classes.iconBadge}>
-          <TrendingUpIcon sx={{ fontSize: 28, color: 'var(--income)' }} />
+          <TrendingUpIcon className={ui.trendingUpIcon1} />
         </Box>
 
         <Typography variant="h6" className={classes.title}>
@@ -88,8 +89,8 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
 
         <Box className={classes.formContainer}>
           <Box className={classes.rowGrid}>
-            <FormControl size="small" className={classes.fieldStyles} style={{ flex: 1 }}>
-              <InputLabel id="income-year-label" shrink sx={{ color: 'text.secondary' }}>
+            <FormControl size="small" className={uiCx(classes.fieldStyles, ui.formControl1)}>
+              <InputLabel className={ui.inputLabel1} id="income-year-label" shrink>
                 Year
               </InputLabel>
               <Select
@@ -104,8 +105,8 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
               </Select>
             </FormControl>
 
-            <FormControl size="small" className={classes.fieldStyles} style={{ flex: 1 }}>
-              <InputLabel id="income-month-label" shrink sx={{ color: 'text.secondary' }}>
+            <FormControl size="small" className={uiCx(classes.fieldStyles, ui.formControl2)}>
+              <InputLabel className={ui.inputLabel2} id="income-month-label" shrink>
                 Month
               </InputLabel>
               <Select
@@ -122,7 +123,7 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
           </Box>
 
           <FormControl size="small" fullWidth className={classes.fieldStyles}>
-            <InputLabel id="income-source-label" shrink sx={{ color: 'text.secondary' }}>
+            <InputLabel className={ui.inputLabel3} id="income-source-label" shrink>
               Source
             </InputLabel>
             <Select
@@ -183,7 +184,7 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
             slotProps={{ htmlInput: { inputMode: 'none' } }}
             InputProps={{
               startAdornment: (
-                <InputAdornment position="start" sx={{ '& .MuiTypography-root': { color: 'text.secondary', fontWeight: 600, fontSize: 13 } }}>
+                <InputAdornment className={ui.inputAdornment1} position="start">
                   ₹
                 </InputAdornment>
               ),
@@ -192,18 +193,14 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
           />
 
           {adjusted && (
-            <Box sx={{
-              width: '100%', mt: '-4px',
-              background: 'rgb(var(--income-rgb) / 0.10)', border: '1px solid rgb(var(--income-rgb) / 0.35)',
-              borderRadius: '8px', p: '8px 12px',
-            }}>
-              <Typography sx={{ fontSize: 12, color: 'var(--income-soft)', fontVariantNumeric: 'tabular-nums' }}>
+            <Box className={ui.box1}>
+              <Typography className={ui.typography1}>
                 {expr.label} = <b>{fmt(amt)}</b>
               </Typography>
             </Box>
           )}
           {form.amount.toString().trim() && !expr && (
-            <Typography sx={{ width: '100%', mt: '-4px', fontSize: 11.5, color: 'var(--danger-soft)' }}>
+            <Typography className={ui.typography2}>
               Can't read that — type a number, a sum like 200+150, or +200 to add to the current amount.
             </Typography>
           )}
@@ -231,7 +228,7 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
             className={classes.fieldStyles}
           />
 
-          <Box style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          <Box className={ui.box2}>
             <Typography variant="caption" className={classes.applyLabel}>
               Apply to
             </Typography>

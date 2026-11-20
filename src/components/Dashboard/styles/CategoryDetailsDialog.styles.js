@@ -150,3 +150,18 @@ export const useStyles = makeStyles()((theme) => ({
     paddingRight: '14px'
   }
 }))
+
+// Moved from inline sx/style in CategoryDetailsDialog.jsx.
+export const useCategoryDetailsDialogUi = makeStyles()(() => ({
+  box1: {
+    textAlign: 'right',
+  },
+  tableRow1: {
+    "& th": {
+      borderBottom: '1px solid rgb(var(--ink-rgb) / 0.08)',
+    },
+  },
+  valueNegative: { color: 'var(--danger-soft)' },
+  valuePositive: { color: 'var(--text)' },
+  valueZero: { color: 'var(--text2)' },
+}))

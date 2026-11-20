@@ -7,6 +7,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import ChatBubbleOutlinedIcon from '@mui/icons-material/ChatBubbleOutlined'
 import DeleteIcon from '@mui/icons-material/Delete'
 import { parseComments } from '../../utils/comments'
+import { useExpenseCommentsModalUi } from './styles/ExpenseCommentsModal.styles'
 
 // Re-exported for existing importers; the implementation lives in utils/comments.
 export { parseComments }
@@ -20,6 +21,7 @@ function fmtTs(ts) {
 }
 
 export default function ExpenseCommentsModal({ expense, onClose, onSave, saving, canEdit = true, readOnlyNote = '🔒 This year is locked — comments are read-only' }) {
+  const { classes: ui, cx: uiCx } = useExpenseCommentsModalUi()
   const [text, setText] = useState('')
   const [confirmIdx, setConfirmIdx] = useState(null)   // comment awaiting a second tap to delete
   const comments = parseComments(expense?.note)
@@ -65,77 +67,55 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving,
         }
       }}
     >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1, pt: 2, fontSize: 15, fontWeight: 700 }}>
-        <ChatBubbleOutlinedIcon sx={{ fontSize: 18, color: 'var(--accent)', flexShrink: 0 }} />
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', lineHeight: 1.2 }}>Comments</Typography>
-          <Typography sx={{ fontSize: 11, color: 'var(--text2)', mt: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <DialogTitle className={ui.dialogTitle1}>
+        <ChatBubbleOutlinedIcon className={ui.chatBubbleOutlinedIcon1} />
+        <Box className={ui.box1}>
+          <Typography className={ui.typography1}>Comments</Typography>
+          <Typography className={ui.typography2}>
             {expense?.itemName}
           </Typography>
         </Box>
-        <IconButton size="small" onClick={onClose} disabled={saving} sx={{ color: 'var(--text2)', flexShrink: 0 }}>
-          <CloseIcon sx={{ fontSize: 18 }} />
+        <IconButton className={ui.iconButton1} size="small" onClick={onClose} disabled={saving}>
+          <CloseIcon className={ui.closeIcon1} />
         </IconButton>
       </DialogTitle>
 
-      <Divider sx={{ borderColor: 'rgb(var(--ink-rgb) / 0.08)' }} />
+      <Divider className={ui.divider1} />
 
-      <DialogContent ref={listRef} sx={{ px: 2, py: 1.5, overflowY: 'auto', minHeight: 100, maxHeight: 320 }}>
+      <DialogContent className={ui.dialogContent1} ref={listRef}>
         {comments.length === 0 ? (
-          <Typography sx={{ fontSize: 13, color: 'var(--text-faint)', fontStyle: 'italic', textAlign: 'center', py: 4 }}>
+          <Typography className={ui.typography3}>
             {canEdit ? 'No comments yet — add a note below' : 'No comments'}
           </Typography>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box className={ui.box2}>
             {comments.map((c, i) => (
-              <Box key={c.ts || `legacy-${i}`} sx={{
-                background: 'rgb(var(--ink-rgb) / 0.03)',
-                border: '1px solid rgb(var(--ink-rgb) / 0.06)',
-                borderRadius: '10px',
-                padding: '10px 12px',
-                position: 'relative',
-                '&:hover .comment-delete': { opacity: 1 }
-              }}>
-                <Typography sx={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, wordBreak: 'break-word', whiteSpace: 'pre-wrap', pr: canEdit ? '36px' : 0 }}>
+              <Box className={ui.box3} key={c.ts || `legacy-${i}`}>
+                <Typography className={uiCx(ui.commentText, canEdit && ui.commentTextEditable)}>
                   {c.text}
                 </Typography>
-                <Typography sx={{ fontSize: 10, color: 'var(--text-faint)', mt: '4px' }}>
+                <Typography className={ui.typography4}>
                   {fmtTs(c.ts)}
                 </Typography>
                 {canEdit && (confirmIdx === i ? (
-                  <Button
+                  <Button className={ui.button1}
                     size="small"
                     onClick={() => handleDelete(i)}
                     onBlur={() => setConfirmIdx(null)}
                     autoFocus
                     disabled={saving}
-                    sx={{
-                      position: 'absolute', top: 6, right: 6, minWidth: 0, px: '8px', py: '2px',
-                      fontSize: 11, fontWeight: 700, textTransform: 'none', borderRadius: '6px',
-                      color: '#fff', background: 'var(--danger-strong)', '&:hover': { background: 'var(--danger-strong)' }
-                    }}
                   >
                     Delete?
                   </Button>
                 ) : (
                   <IconButton
-                    className="comment-delete"
+                    className={uiCx("comment-delete", ui.iconButton2)}
                     size="small"
                     aria-label="Delete comment"
                     onClick={() => handleDelete(i)}
                     disabled={saving}
-                    sx={{
-                      position: 'absolute', top: 4, right: 4,
-                      // Hover-reveal on desktop; always shown on touch screens,
-                      // which have no hover and could never find it otherwise.
-                      opacity: 0, '@media (hover: none)': { opacity: 1 },
-                      transition: 'opacity 0.15s',
-                      color: 'var(--text-faint)',
-                      '&:hover': { color: 'var(--danger-strong)', background: 'rgb(var(--danger-strong-rgb) / 0.1)' },
-                      p: '6px'
-                    }}
                   >
-                    <DeleteIcon sx={{ fontSize: 16 }} />
+                    <DeleteIcon className={ui.deleteIcon1} />
                   </IconButton>
                 ))}
               </Box>
@@ -144,15 +124,15 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving,
         )}
       </DialogContent>
 
-      <Divider sx={{ borderColor: 'rgb(var(--ink-rgb) / 0.08)' }} />
+      <Divider className={ui.divider2} />
 
       {!canEdit ? (
-        <Typography sx={{ px: 2, py: 1.5, fontSize: 12, color: 'var(--text-faint)', textAlign: 'center' }}>
+        <Typography className={ui.typography5}>
           {readOnlyNote}
         </Typography>
       ) : (
-      <Box sx={{ px: 2, py: 1.5, display: 'flex', gap: 1, alignItems: 'flex-end' }}>
-        <TextField
+      <Box className={ui.box4}>
+        <TextField className={ui.textField1}
           // Straight to typing when there is nothing to read yet; otherwise
           // don't throw a phone keyboard over the thread.
           autoFocus={comments.length === 0}
@@ -165,29 +145,11 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving,
           size="small"
           fullWidth
           disabled={saving}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              background: 'rgb(var(--ink-rgb) / 0.04)',
-              fontSize: 13,
-              color: 'var(--text)',
-              '& fieldset': { borderColor: 'rgb(var(--ink-rgb) / 0.12)' },
-              '&:hover fieldset': { borderColor: 'rgb(var(--ink-rgb) / 0.2)' },
-              '&.Mui-focused fieldset': { borderColor: 'var(--accent)' }
-            },
-            '& .MuiOutlinedInput-input': { color: 'var(--text)' },
-            '& .MuiOutlinedInput-input::placeholder': { color: 'var(--text-faint)' }
-          }}
         />
-        <Button
+        <Button className={ui.button2}
           variant="contained"
           onClick={handleAdd}
           disabled={saving || !text.trim()}
-          sx={{
-            minWidth: 56, fontSize: 12, fontWeight: 700, textTransform: 'none',
-            borderRadius: '8px', px: 2, height: 36, flexShrink: 0,
-            background: 'var(--accent)', '&:hover': { background: 'var(--accent-strong)' },
-            '&.Mui-disabled': { background: 'rgb(var(--accent-rgb) / 0.3)', color: 'rgb(var(--ink-rgb) / 0.3)' }
-          }}
         >
           {saving ? '…' : 'Add'}
         </Button>

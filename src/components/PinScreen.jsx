@@ -7,13 +7,9 @@ import {
   verifyBiometric,
   clearBiometric,
 } from '../api/biometric'
-import {
-  hashPin,
-  clearPinResetOtpFS,
-  resetPinFS,
-} from '../api/firestoreSettings'
-import { auth } from '../firebase'
-import { usePinScreenStyles } from './styles/PinScreen.styles'
+import { resetPinFS } from '../api/firestoreSettings'
+import PinReset from './PinReset'
+import { usePinScreenStyles, usePinScreenUi } from './styles/PinScreen.styles'
 import { PIN_LENGTH, FingerprintIcon, NumPad, PinDots, LogoBox } from './PinScreenParts'
 
 // Turn a WebAuthn DOMException into something a user can act on.
@@ -33,14 +29,13 @@ function bioErrorMessage(e) {
   }
 }
 
-const OTP_LENGTH = 6
-
 // ── Main component ───────────────────────────────────────────
 export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock, onSetPin }) {
+  const { classes: ui, cx: uiCx } = usePinScreenUi()
   const { classes, cx } = usePinScreenStyles()
   const isSetup = mode === 'setup'
 
-  // screen: 'pin' | 'biometric' | 'biometric-enable' | 'forgot' | 'otp' | 'reset'
+  // screen: 'pin' | 'biometric' | 'biometric-enable' | 'forgot' | 'reset'
   const [screen, setScreen]           = useState('pin')
   const [step, setStep]               = useState('enter')   // 'enter' | 'confirm'
   const [pin, setPin]                 = useState('')
@@ -56,13 +51,6 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
   // it was forced after every correct PIN, which nagged on every single unlock.
   const [wantBio, setWantBio]         = useState(false)
   const pendingSuccessRef             = useRef(null)
-
-  // ── Forgot PIN state ─────────────────────────────────────────
-  const [otp, setOtp]                 = useState('')
-  const [otpMeta, setOtpMeta]         = useState(null)  // { otpHash, expiresAt, email }
-  const [otpSending, setOtpSending]   = useState(false)
-  const [otpError, setOtpError]       = useState('')
-  const [countdown, setCountdown]     = useState(0)     // seconds remaining
 
   const current    = step === 'confirm' ? confirmPin : pin
   const setCurrent = step === 'confirm' ? setConfirmPin : setPin
@@ -86,19 +74,6 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
     if (current.length === PIN_LENGTH) submitPin(current)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- submit exactly when the PIN reaches full length
   }, [current])
-
-  // OTP countdown timer
-  useEffect(() => {
-    if (screen !== 'otp') return
-    const id = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000)
-    return () => clearInterval(id)
-  }, [screen])
-
-  // Auto-submit when OTP is complete
-  useEffect(() => {
-    if (screen === 'otp' && otp.length === OTP_LENGTH) handleVerifyOtp(otp)
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- submit exactly when the OTP is complete
-  }, [otp, screen])
 
   async function triggerBiometric() {
     if (!sheetId || bioStatus === 'scanning') return
@@ -179,73 +154,6 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
     }
   }
 
-  // ── Forgot PIN — send OTP ─────────────────────────────────────
-  async function handleSendOtp() {
-    setOtpSending(true)
-    setOtpError('')
-    try {
-      const idToken = await auth.currentUser?.getIdToken()
-      if (!idToken) throw new Error('Not signed in')
-
-      const res = await fetch('/api/send-otp', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${idToken}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      // Parse JSON safely — on localhost the edge function doesn't run and
-      // Vite returns an HTML 404, which blows up res.json().
-      const text = await res.text()
-      let data
-      try { data = JSON.parse(text) } catch {
-        throw new Error(
-          res.status === 404
-            ? 'OTP service unavailable locally — deploy to Netlify and set RESEND_API_KEY to use this feature.'
-            : 'Unexpected response from server'
-        )
-      }
-      if (!res.ok) throw new Error(data.error || 'Failed to send code')
-
-      // Deliberately NOT persisted. Verification compares against this
-      // in-memory response, and no getter for the stored copy ever existed — so
-      // writing it only left a reset-code hash sitting in Firestore forever
-      // whenever someone opened Forgot PIN and backed out (the clear below runs
-      // on success only).
-      setOtpMeta(data)
-      setCountdown(Math.floor((data.expiresAt - Date.now()) / 1000))
-      setOtp('')
-      setScreen('otp')
-    } catch (e) {
-      setOtpError(e.message)
-    } finally {
-      setOtpSending(false)
-    }
-  }
-
-  // ── Forgot PIN — verify OTP ───────────────────────────────────
-  async function handleVerifyOtp(enteredOtp) {
-    if (!otpMeta) return
-    if (Date.now() > otpMeta.expiresAt) {
-      triggerError('Code expired — tap Resend for a new one')
-      setOtp(''); return
-    }
-    const hash = await hashPin(enteredOtp)
-    if (hash !== otpMeta.otpHash) {
-      triggerError('Incorrect code — try again')
-      setOtp(''); return
-    }
-    // Clears any hash left behind by an older build that did persist one.
-    await clearPinResetOtpFS(sheetId)
-    setOtp('')
-    setStep('enter')
-    setPin('')
-    setConfirmPin('')
-    setError('')
-    setScreen('reset')
-  }
-
   function triggerError(msg) {
     setError(msg); setShake(true)
     setTimeout(() => setShake(false), 450)
@@ -271,95 +179,14 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
     pendingSuccessRef.current?.()
   }
 
-  // ── Render: forgot PIN ──────────────────────────────────────
+  // ── Render: forgot PIN (email code) ─────────────────────────
   if (screen === 'forgot') {
-    const email    = auth.currentUser?.email || ''
-    const masked   = email.includes('@')
-      ? email[0] + '****@' + email.split('@')[1]
-      : email
     return (
-      <Box className={classes.wrapper}>
-        <Card className={classes.pinCard} elevation={0}>
-          <LogoBox />
-          <Typography className={classes.title}>Reset PIN</Typography>
-          <Typography className={classes.subtitle} sx={{ marginBottom: '24px' }}>
-            We'll send a 6-digit code to
-          </Typography>
-          <Box className={classes.emailBox}>
-            {masked}
-          </Box>
-          {otpError && (
-            <Typography sx={{ fontSize: 12, color: 'var(--danger)', marginBottom: '12px', textAlign: 'center' }}>
-              {otpError}
-            </Typography>
-          )}
-          {otpSending ? (
-            <Box sx={{ padding: '12px 0' }}><CircularProgress size={26} style={{ color: 'var(--accent)' }} /></Box>
-          ) : (
-            <Button onClick={handleSendOtp} className={classes.primaryBtn}>
-              Send code
-            </Button>
-          )}
-          <Button onClick={() => setScreen('pin')} className={classes.ghostBtn}>
-            Back to PIN
-          </Button>
-        </Card>
-      </Box>
-    )
-  }
-
-  // ── Render: OTP entry ────────────────────────────────────────
-  if (screen === 'otp') {
-    const mm = String(Math.floor(countdown / 60)).padStart(2, '0')
-    const ss = String(countdown % 60).padStart(2, '0')
-    const expired = countdown === 0
-    return (
-      <Box className={classes.wrapper}>
-        <Card className={classes.pinCard} elevation={0}>
-          <LogoBox />
-          <Typography className={classes.title}>Enter code</Typography>
-          <Typography className={classes.subtitle} sx={{ marginBottom: '8px' }}>
-            Check your email for the 6-digit code
-          </Typography>
-          {otpMeta?.email && (
-            <Typography sx={{ fontSize: 12, color: 'var(--accent)', marginBottom: '20px' }}>
-              {otpMeta.email}
-            </Typography>
-          )}
-
-          <PinDots count={otp.length} shake={shake} length={OTP_LENGTH} />
-
-          <Typography sx={{ margin: '0 0 20px', fontSize: 12, color: 'var(--danger)', minHeight: 16, textAlign: 'center', opacity: error ? 1 : 0, transition: 'opacity 0.2s' }}>
-            {error || ' '}
-          </Typography>
-
-          {loading ? (
-            <Box sx={{ padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
-              <CircularProgress size={28} style={{ color: 'var(--accent)' }} />
-            </Box>
-          ) : (
-            <>
-              <NumPad
-                onDigit={d => otp.length < OTP_LENGTH && setOtp(v => v + d)}
-                onDelete={() => setOtp(v => v.slice(0, -1))}
-                disabled={otp.length >= OTP_LENGTH || expired}
-              />
-              <Box sx={{ marginTop: '20px', display: 'flex', gap: '16px', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography sx={{ fontSize: 12, color: expired ? 'var(--danger)' : 'var(--text-muted)' }}>
-                  {expired ? 'Code expired' : `Expires in ${mm}:${ss}`}
-                </Typography>
-                <Button
-                  onClick={() => { setOtp(''); setScreen('forgot') }}
-                  className={classes.ghostBtn}
-                  style={{ fontSize: 12 }}
-                >
-                  Resend
-                </Button>
-              </Box>
-            </>
-          )}
-        </Card>
-      </Box>
+      <PinReset
+        sheetId={sheetId}
+        onBack={() => setScreen('pin')}
+        onVerified={() => { setStep('enter'); setPin(''); setConfirmPin(''); setError(''); setScreen('reset') }}
+      />
     )
   }
 
@@ -369,15 +196,15 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
       <Box className={classes.wrapper}>
         <Card className={classes.pinCard} elevation={0}>
           <LogoBox />
-          <Box sx={{ fontSize: 52, margin: '4px 0 8px' }}>
+          <Box className={ui.box1}>
             <FingerprintIcon size={56} color="var(--accent)" />
           </Box>
           <Typography className={classes.title}>Enable fingerprint?</Typography>
-          <Typography className={classes.subtitle} sx={{ marginBottom: '32px' }}>
+          <Typography className={uiCx(classes.subtitle, ui.typography1)}>
             Use fingerprint or Face ID on this device instead of your PIN next time.
           </Typography>
           {loading ? (
-            <Box sx={{ padding: '16px 0' }}><CircularProgress size={28} style={{ color: 'var(--accent)' }} /></Box>
+            <Box className={ui.box2}><CircularProgress className={ui.circularProgress1} size={28} /></Box>
           ) : (
             <>
               <Button onClick={handleEnableBiometric} className={classes.primaryBtn}>
@@ -402,7 +229,7 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
         <Card className={classes.pinCard} elevation={0}>
           <LogoBox />
           <Typography className={classes.title}>Welcome back{userName ? `, ${userName}` : ''}!</Typography>
-          <Typography className={classes.subtitle} sx={{ marginBottom: '32px' }}>
+          <Typography className={uiCx(classes.subtitle, ui.typography2)}>
             {isError
               ? (bioError || 'Fingerprint not recognised.')
               : 'Tap the fingerprint below to unlock.'}
@@ -412,12 +239,8 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
           <Button
             onClick={triggerBiometric}
             disabled={isScanning}
-            className={cx(classes.fingerprintBtn, isScanning && classes.pulsingFingerprint)}
-            sx={{
-              border: `2px solid ${isError ? 'var(--danger)' : isScanning ? 'var(--accent)' : 'rgb(var(--accent-rgb) / 0.35)'}`,
-              background: isScanning ? 'rgb(var(--accent-rgb) / 0.1)' : 'rgb(var(--ink-rgb) / 0.03)',
-              cursor: isScanning ? 'default' : 'pointer',
-            }}
+            className={cx(classes.fingerprintBtn, isScanning ? classes.fingerprintScanning : classes.fingerprintIdle,
+              isError && classes.fingerprintError, isScanning && classes.pulsingFingerprint)}
             disableRipple
           >
             <FingerprintIcon
@@ -427,7 +250,7 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
             />
           </Button>
 
-          <Typography sx={{ fontSize: 12, color: isError ? 'var(--danger)' : 'var(--text-muted)', marginBottom: '28px', minHeight: 16, textAlign: 'center' }}>
+          <Typography className={cx(classes.statusText, isError && classes.textDanger)}>
             {isScanning ? 'Scanning…' : isError ? (bioError || 'Try again or use your PIN') : 'Tap to authenticate'}
           </Typography>
 
@@ -457,17 +280,17 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
       <Card className={classes.pinCard} elevation={0}>
         <LogoBox />
         <Typography className={classes.title}>{title}</Typography>
-        <Typography className={classes.subtitle} sx={{ marginBottom: '28px' }}>{subtitle}</Typography>
+        <Typography className={uiCx(classes.subtitle, ui.typography3)}>{subtitle}</Typography>
 
         <PinDots count={current.length} shake={shake} />
 
-        <Typography sx={{ margin: '0 0 20px', fontSize: 12, color: 'var(--danger)', minHeight: 16, textAlign: 'center', opacity: error ? 1 : 0, transition: 'opacity 0.2s' }}>
+        <Typography className={cx(classes.errorLine, error && classes.errorLineShown)}>
           {error || ' '}
         </Typography>
 
         {loading ? (
-          <Box sx={{ padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
-            <CircularProgress size={28} style={{ color: 'var(--accent)' }} />
+          <Box className={ui.box3}>
+            <CircularProgress className={ui.circularProgress2} size={28} />
           </Box>
         ) : (
           <NumPad
@@ -483,20 +306,15 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
           <FormControlLabel
             className={classes.bioOptIn}
             control={
-              <Checkbox
+              <Checkbox className={ui.checkbox1}
                 checked={wantBio}
                 onChange={e => setWantBio(e.target.checked)}
                 disableRipple
                 size="small"
-                sx={{
-                  color: 'rgb(var(--ink-rgb) / 0.25)',
-                  padding: '4px 6px 4px 0',
-                  '&.Mui-checked': { color: 'var(--accent)' },
-                }}
               />
             }
             label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Box className={ui.box4}>
                 <FingerprintIcon size={14} color={wantBio ? 'var(--accent)' : 'var(--text-muted)'} />
                 <span>Enable fingerprint / Face ID</span>
               </Box>
@@ -510,17 +328,17 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
             {hasCred && biometricAvail && (
               <Button onClick={() => setScreen('biometric')} className={classes.ghostBtn}>
                 <FingerprintIcon size={16} color="var(--accent)" />
-                <span style={{ marginLeft: 6 }}>Use fingerprint</span>
+                <span className={ui.span1}>Use fingerprint</span>
               </Button>
             )}
-            <Button onClick={() => { setOtpError(''); setScreen('forgot') }} className={classes.ghostBtn} sx={{ color: 'var(--line)', fontSize: 12 }}>
+            <Button onClick={() => setScreen('forgot')} className={uiCx(classes.ghostBtn, ui.button1)}>
               Forgot PIN?
             </Button>
           </Box>
         )}
 
         {isReset && (
-          <Button onClick={() => setScreen('pin')} className={classes.ghostBtn} sx={{ marginTop: '16px', color: 'var(--line)', fontSize: 12 }}>
+          <Button onClick={() => setScreen('pin')} className={uiCx(classes.ghostBtn, ui.button2)}>
             Cancel reset
           </Button>
         )}

@@ -21,11 +21,11 @@ import { appendComment } from '../../utils/comments'
 import AmountKeypad from './AmountKeypad'
 import UpiPayButtons, { canPayByUpi, openUpiApp } from './UpiPayButtons'
 
-const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN')
-
-const WITHDRAW_ALL = '__all__'
+import InvestmentFields, { WITHDRAW_ALL, inr } from './InvestmentFields'
+import { useAddExpenseModalUi } from './styles/AddExpenseModal.styles'
 
 export default function AddExpenseModal({ initial, categories, year, month, availableYears = [new Date().getFullYear()], holdings = [], suggestions = [], expenses = [], onSave, onClose }) {
+  const { classes: ui, cx: uiCx } = useAddExpenseModalUi()
   const { classes } = useAddExpenseModalStyles()
   // An existing item picked from the chips (weekly Petrol): the form then adds
   // to it instead of creating a new row. Stands in for `initial` while set.
@@ -41,7 +41,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
     // The amount field always shows a positive number; direction (deposit vs
     // withdraw) is tracked separately and re-applied as a sign on save.
     amount: initialAmt ? String(Math.abs(+initialAmt)) : '',
-    isFixed: initial?.isFixed === 'TRUE' || false,
+    isFixed: initial?.isFixed === true,
     note: initial?.note || '',
   })
 
@@ -79,7 +79,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
   const pick = (e) => {
     setPicked(e)
     setResolvedExpr(null)
-    setForm(f => ({ ...f, id: e.id, itemName: e.itemName, amount: '+', isFixed: e.isFixed === 'TRUE' || e.isFixed === true, note: e.note || '' }))
+    setForm(f => ({ ...f, id: e.id, itemName: e.itemName, amount: '+', isFixed: e.isFixed === true, note: e.note || '' }))
   }
   const unpick = () => {
     if (!picked) return
@@ -218,7 +218,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
 
         {/* Top Icon Badge */}
         <Box className={classes.iconBadge}>
-          <ReceiptLongOutlinedIcon color="error" sx={{ fontSize: 28 }} />
+          <ReceiptLongOutlinedIcon className={ui.receiptLongOutlinedIcon1} color="error" />
         </Box>
 
         {/* Title */}
@@ -232,8 +232,8 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
         <Box className={classes.formContainer}>
           {/* Year & Month Grid */}
           <Box className={classes.rowGrid}>
-            <FormControl size="small" className={classes.fieldStyles} style={{ flex: 1 }}>
-              <InputLabel id="expense-year-label" shrink sx={{ color: 'text.secondary' }}>
+            <FormControl size="small" className={uiCx(classes.fieldStyles, ui.formControl1)}>
+              <InputLabel className={ui.inputLabel1} id="expense-year-label" shrink>
                 Year
               </InputLabel>
               <Select
@@ -248,8 +248,8 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
               </Select>
             </FormControl>
 
-            <FormControl size="small" className={classes.fieldStyles} style={{ flex: 1 }}>
-              <InputLabel id="expense-month-label" shrink sx={{ color: 'text.secondary' }}>
+            <FormControl size="small" className={uiCx(classes.fieldStyles, ui.formControl2)}>
+              <InputLabel className={ui.inputLabel2} id="expense-month-label" shrink>
                 Month
               </InputLabel>
               <Select
@@ -267,7 +267,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
 
           {/* Category Select */}
           <FormControl size="small" fullWidth className={classes.fieldStyles}>
-            <InputLabel id="expense-category-label" shrink sx={{ color: 'text.secondary' }}>
+            <InputLabel className={ui.inputLabel3} id="expense-category-label" shrink>
               Category
             </InputLabel>
             <Select
@@ -286,7 +286,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
           {/* Already this month in the chosen category: pick one to add to it. */}
           {!isWithdraw && existingItems.length > 0 && (
             <FormControl size="small" fullWidth className={classes.fieldStyles}>
-              <InputLabel id="expense-item-label" shrink sx={{ color: 'text.secondary' }}>
+              <InputLabel className={ui.inputLabel4} id="expense-item-label" shrink>
                 Item
               </InputLabel>
               <Select
@@ -307,91 +307,13 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             </FormControl>
           )}
 
-          {/* Deposit / Withdraw toggle — only for savings / investment categories */}
           {isSavings && (
-            <Box style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-              <Typography variant="caption" className={classes.applyLabel}>
-                Transaction type
-              </Typography>
-              <Box className={classes.applyButtonContainer}>
-                {[
-                  { value: 'deposit', label: '➕ Deposit' },
-                  { value: 'withdraw', label: '➖ Withdraw' },
-                ].map(opt => (
-                  <Button
-                    key={opt.value}
-                    variant={txnDir === opt.value ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={() => {
-                      setTxnDir(opt.value)
-                      if (opt.value === 'withdraw') setApplyMode('single')
-                    }}
-                    disabled={saving}
-                    className={txnDir === opt.value ? classes.applyButtonActive : classes.applyButtonInactive}
-                    sx={txnDir === opt.value && opt.value === 'withdraw' ? {
-                      background: 'var(--danger) !important',
-                      borderColor: 'var(--danger) !important',
-                      '&:hover': { background: 'var(--danger-strong) !important' },
-                    } : undefined}
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </Box>
-              <Typography sx={{ fontSize: 11, color: 'var(--text2)', mt: '6px' }}>
-                {isWithdraw
-                  ? 'Reduces this investment’s balance; the money returns to your spendable cash.'
-                  : 'Adds money into this investment / savings pot.'}
-              </Typography>
-            </Box>
-          )}
-
-          {/* Where the money comes out of — replaces free-text naming, which is
-              what allowed an unattributed "Wintdraw" row to exist at all. */}
-          {isWithdraw && (
-            <FormControl size="small" fullWidth className={classes.fieldStyles}>
-              <InputLabel id="withdraw-from-label" shrink sx={{ color: 'text.secondary' }}>
-                Withdraw from
-              </InputLabel>
-              <Select
-                native
-                labelId="withdraw-from-label"
-                value={withdrawFrom}
-                onChange={e => setWithdrawFrom(e.target.value)}
-                label="Withdraw from"
-                notched
-              >
-                <option value="">-- Select investment --</option>
-                {available.map(h => (
-                  <option key={h.name} value={h.name}>
-                    {h.name} ({inr(h.balance)} available)
-                  </option>
-                ))}
-                {available.length > 1 && (
-                  <option value={WITHDRAW_ALL}>All investments (split by size)</option>
-                )}
-              </Select>
-            </FormControl>
-          )}
-
-          {/* Shows exactly what will be written before it is written. */}
-          {splitAll && parts.length > 0 && (
-            <Box sx={{
-              width: '100%', background: 'rgb(var(--ink-rgb) / 0.03)',
-              border: '1px solid rgb(var(--ink-rgb) / 0.07)', borderRadius: '8px', p: '10px 12px',
-            }}>
-              <Typography sx={{ fontSize: 11, color: 'var(--text2)', mb: '6px' }}>
-                Will be taken out as:
-              </Typography>
-              {parts.map(p => (
-                <Box key={p.name} sx={{ display: 'flex', justifyContent: 'space-between', py: '2px' }}>
-                  <Typography sx={{ fontSize: 12, color: 'var(--text-soft)' }}>{p.name}</Typography>
-                  <Typography sx={{ fontSize: 12, color: 'var(--danger)', fontVariantNumeric: 'tabular-nums' }}>
-                    −{inr(p.amount)}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
+            <InvestmentFields
+              txnDir={txnDir} saving={saving} isWithdraw={isWithdraw}
+              onDir={v => { setTxnDir(v); if (v === 'withdraw') setApplyMode('single') }}
+              withdrawFrom={withdrawFrom} setWithdrawFrom={setWithdrawFrom}
+              available={available} parts={splitAll ? parts : []}
+            />
           )}
 
           {/* Item Name — a withdrawal takes its name from the dropdown above */}
@@ -440,7 +362,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             // the system keyboard still covered the on-screen pad.
             slotProps={{ htmlInput: { inputMode: 'none' } }}
             InputProps={{
-              startAdornment: <InputAdornment position="start" sx={{ '& .MuiTypography-root': { color: 'text.secondary', fontWeight: 600, fontSize: 13 } }}>₹</InputAdornment>,
+              startAdornment: <InputAdornment className={ui.inputAdornment1} position="start">₹</InputAdornment>,
             }}
             className={classes.fieldStyles}
           />
@@ -448,18 +370,14 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
           {/* Show the resolved sum before it is saved, so an expression is never
               a guess. Also flags input the parser could not read at all. */}
           {expr?.label && (
-            <Box sx={{
-              width: '100%', mt: '-4px',
-              background: 'rgb(var(--accent-rgb) / 0.08)', border: '1px solid rgb(var(--accent-rgb) / 0.3)',
-              borderRadius: '8px', p: '8px 12px',
-            }}>
-              <Typography sx={{ fontSize: 12, color: 'var(--accent-soft)', fontVariantNumeric: 'tabular-nums' }}>
+            <Box className={ui.box1}>
+              <Typography className={ui.typography1}>
                 {expr.label} = <b>{inr(amt)}</b>
               </Typography>
             </Box>
           )}
           {form.amount.trim() && !expr && (
-            <Typography sx={{ width: '100%', mt: '-4px', fontSize: 11.5, color: 'var(--danger-soft)' }}>
+            <Typography className={ui.typography2}>
               Can't read that — type a number, a sum like 200+150, or +200 to add to the current amount.
             </Typography>
           )}
@@ -498,49 +416,38 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
 
           {/* Fixed / Recurring toggle — not shown for one-off withdrawals */}
           {!isWithdraw && (
-            <Box sx={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '8px 12px', borderRadius: '8px',
-              background: form.isFixed ? 'rgb(var(--accent-rgb) / 0.08)' : 'rgb(var(--ink-rgb) / 0.03)',
-              border: `1px solid ${form.isFixed ? 'rgb(var(--accent-rgb) / 0.3)' : 'rgb(var(--ink-rgb) / 0.07)'}`,
-              transition: 'all 0.2s'
-            }}>
+            <Box className={uiCx(ui.fixedBox, form.isFixed && ui.fixedBoxOn)}>
               <Box>
-                <Typography sx={{ fontSize: 13, fontWeight: 600, color: form.isFixed ? 'var(--accent-soft)' : 'var(--text2)' }}>
+                <Typography className={uiCx(ui.fixedLabel, form.isFixed && ui.fixedLabelOn)}>
                   📌 Fixed / Recurring
                 </Typography>
-                <Typography sx={{ fontSize: 11, color: 'var(--text2)', mt: '2px' }}>
+                <Typography className={ui.typography3}>
                   Auto-copied to next month at start
                 </Typography>
               </Box>
-              <Switch
+              <Switch className={ui.switch1}
                 checked={form.isFixed}
                 onChange={e => set('isFixed', e.target.checked)}
                 size="small"
-                sx={{
-                  '& .MuiSwitch-switchBase.Mui-checked': { color: 'var(--accent)' },
-                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: 'var(--accent)' }
-                }}
               />
             </Box>
           )}
 
           {!isWithdraw && (
-            <Box style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <Box className={ui.box2}>
               {/* Rarely used, so tucked away — but a non-default choice stays
                   named on the toggle so a save never fans out invisibly. */}
-              <Button
+              <Button className={ui.button1}
                 variant="text"
                 size="small"
                 onClick={() => setMoreOpen(o => !o)}
                 aria-expanded={moreOpen}
-                sx={{ alignSelf: 'flex-start', textTransform: 'none', color: 'var(--text2)', fontSize: 12, px: '4px', minWidth: 0 }}
               >
                 {moreOpen ? '▾' : '▸'} More options
                 {applyMode !== 'single' && ` · ${applyOptions.find(o => o.value === applyMode).label}`}
               </Button>
               <Collapse in={moreOpen}>
-                <Typography variant="caption" component="div" className={classes.applyLabel} sx={{ mt: '6px' }}>
+                <Typography variant="caption" component="div" className={uiCx(classes.applyLabel, ui.typography4)}>
                   Apply to
                 </Typography>
                 <Box className={classes.applyButtonContainer}>
@@ -568,11 +475,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             variant="contained"
             onClick={() => handleSave()}
             disabled={saving || !valid}
-            className={classes.saveButton}
-            sx={overdrawn ? {
-              background: 'var(--danger) !important',
-              '&:hover': { background: 'var(--danger-strong) !important' },
-            } : undefined}
+            className={uiCx(classes.saveButton, overdrawn && ui.saveOverdrawn)}
           >
             {saving
               ? (form.id ? 'Updating...' : (isWithdraw ? 'Withdrawing...' : 'Adding...'))

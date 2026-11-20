@@ -13,33 +13,27 @@ import {
 // one never rewrites the others — and two devices editing different expenses
 // in the same month both keep their change.
 //
-// The rest of the app speaks in ROWS (see api/store.js); this file converts at
-// the boundary:
-//   expense row: [id, year, month, categoryId, itemName, amount, isFixed, note, updatedAt]
-//   income row:  [id, year, month, source, amount, date]
+// Items handed to the app (year and month as strings, as the screens compare):
+//   expense: { id, year, month, categoryId, itemName, amount, isFixed, note, updatedAt }
+//   income:  { id, year, month, source, amount, date }
 
 const monthsCol = (sid) => collection(db, 'sheets', sid, 'months')
 const monthId = (y, m) => `${String(+y || 0).padStart(4, '0')}-${String(+m || 0).padStart(2, '0')}`
 const monthRef = (sid, y, m) => doc(db, 'sheets', sid, 'months', monthId(y, m))
 
-const toAmount = (v) => {
+export const toAmount = (v) => {
   const n = Number(String(v ?? '').replace(/,/g, ''))
   return Number.isFinite(n) ? n : 0
 }
 
-const expEntry = (r) => ({
-  categoryId: r[3] ?? '', itemName: r[4] ?? '', amount: toAmount(r[5]),
-  isFixed: r[6] === true || r[6] === 'TRUE', note: r[7] ?? '', updatedAt: r[8] ?? '',
-})
-const expRow = (id, y, m, e) => [id, String(y), String(m), e.categoryId, e.itemName, e.amount,
-  e.isFixed ? 'TRUE' : 'FALSE', e.note || '', e.updatedAt || '']
-
-const incEntry = (r) => ({ source: r[3] ?? '', amount: toAmount(r[4]), date: r[5] ?? '' })
-const incRow = (id, y, m, e) => [id, String(y), String(m), e.source, e.amount, e.date || '']
-
-const KINDS = {
-  expenses: { entry: expEntry, row: expRow },
-  income: { entry: incEntry, row: incRow },
+// What is stored for each item (everything except id/year/month, which the
+// map key and the month document already say).
+const ENTRY = {
+  expenses: (x) => ({
+    categoryId: x.categoryId ?? '', itemName: x.itemName ?? '', amount: toAmount(x.amount),
+    isFixed: x.isFixed === true || x.isFixed === 'TRUE', note: x.note ?? '', updatedAt: x.updatedAt ?? '',
+  }),
+  income: (x) => ({ source: x.source ?? '', amount: toAmount(x.amount), date: x.date ?? '' }),
 }
 
 // Writes go to Firestore's local cache at once and reach the server when they
@@ -52,11 +46,11 @@ export function settle(promise, ms = 8000) {
   return Promise.race([promise, new Promise(r => setTimeout(r, ms))])
 }
 
-// The row each read handed out → the state it was read from. writeAll diffs
+// The item each read handed out → the state it was read from. writeItems diffs
 // against THAT read, not whatever was read last, so a save that started
 // before some other change can't delete or undo it.
 const readFrom = new WeakMap()
-const lastRead = {}   // kind → most recent read, for a list emptied of every row it had
+const lastRead = {}   // kind → most recent read, for a list emptied of every item it had
 
 async function readMonths(sid, { server = false } = {}) {
   const offline = typeof navigator !== 'undefined' && navigator.onLine === false
@@ -65,51 +59,51 @@ async function readMonths(sid, { server = false } = {}) {
       : getDocs(monthsCol(sid))
 }
 
-export async function readRows(sid, kind, opts) {
+export async function readItems(sid, kind, opts) {
   const snap = await readMonths(sid, opts)
   const base = new Map()        // id → { mid, json }
-  const rows = []
+  const items = []
   snap.docs.forEach(d => {
     const { year, month } = d.data()
     Object.entries(d.data()[kind] || {}).forEach(([id, e]) => {
-      const row = KINDS[kind].row(id, year, month, e)
-      base.set(id, { mid: d.id, json: JSON.stringify(KINDS[kind].entry(row)) })
-      rows.push(row)
+      const item = { id, year: String(year), month: String(month), ...ENTRY[kind](e) }
+      base.set(id, { mid: d.id, json: JSON.stringify(ENTRY[kind](item)) })
+      items.push(item)
     })
   })
-  rows.forEach(r => readFrom.set(r, base))
+  items.forEach(x => readFrom.set(x, base))
   lastRead[kind] = base
-  return rows
+  return items
 }
 
-// Persist `rows` as the complete new list: only entries that differ from the
+const setOp = (sid, kind, x) => b => b.set(monthRef(sid, x.year, x.month),
+  { year: +x.year || 0, month: +x.month || 0, [kind]: { [String(x.id)]: ENTRY[kind](x) } }, { merge: true })
+const dropOp = (sid, kind, mid, id) => b =>
+  b.update(doc(db, 'sheets', sid, 'months', mid), new FieldPath(kind, String(id)), deleteField())
+
+// Persist `items` as the complete new list: only items that differ from the
 // read they came from are written, and only ids that read had are deleted.
-export async function writeRows(sid, kind, rows) {
-  const base = rows.map(r => readFrom.get(r)).find(Boolean) || (rows.length ? new Map() : lastRead[kind] || new Map())
+export async function writeItems(sid, kind, items) {
+  const base = items.map(x => readFrom.get(x)).find(Boolean) || (items.length ? new Map() : lastRead[kind] || new Map())
   const ops = []
   const seen = new Set()
-  rows.forEach(r => {
-    const id = String(r[0] || '')
+  items.forEach(x => {
+    const id = String(x.id || '')
     if (!id) return
     seen.add(id)
-    const entry = KINDS[kind].entry(r)
-    const mid = monthId(r[1], r[2])
+    const mid = monthId(x.year, x.month)
     const was = base.get(id)
-    if (was && was.mid === mid && was.json === JSON.stringify(entry)) return
-    ops.push(b => b.set(monthRef(sid, r[1], r[2]), { year: +r[1] || 0, month: +r[2] || 0, [kind]: { [id]: entry } }, { merge: true }))
-    // Moved to another month: drop it from the old one.
-    if (was && was.mid !== mid) ops.push(b => b.update(doc(db, 'sheets', sid, 'months', was.mid), new FieldPath(kind, id), deleteField()))
+    if (was && was.mid === mid && was.json === JSON.stringify(ENTRY[kind](x))) return
+    ops.push(setOp(sid, kind, x))
+    if (was && was.mid !== mid) ops.push(dropOp(sid, kind, was.mid, id))   // moved month
   })
-  base.forEach((was, id) => {
-    if (!seen.has(id)) ops.push(b => b.update(doc(db, 'sheets', sid, 'months', was.mid), new FieldPath(kind, id), deleteField()))
-  })
+  base.forEach((was, id) => { if (!seen.has(id)) ops.push(dropOp(sid, kind, was.mid, id)) })
   await commit(ops)
 }
 
-// Add or replace entries without deleting anything.
-export async function upsertRows(sid, kind, rows) {
-  await commit(rows.filter(r => r[0]).map(r => b =>
-    b.set(monthRef(sid, r[1], r[2]), { year: +r[1] || 0, month: +r[2] || 0, [kind]: { [String(r[0])]: KINDS[kind].entry(r) } }, { merge: true })))
+// Add or replace items without deleting anything.
+export async function upsertItems(sid, kind, items) {
+  await commit(items.filter(x => x.id).map(x => setOp(sid, kind, x)))
 }
 
 // Firestore caps a batch at 500 writes.

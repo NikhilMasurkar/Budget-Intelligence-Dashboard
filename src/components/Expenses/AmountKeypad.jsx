@@ -1,5 +1,6 @@
 import { Box, Button, Typography } from '@mui/material'
 import BackspaceOutlinedIcon from '@mui/icons-material/BackspaceOutlined'
+import { useAmountKeypadUi } from './styles/AmountKeypad.styles'
 
 const OPERATORS = { '/': '÷', '*': '×', '-': '−', '+': '+' }
 
@@ -25,6 +26,7 @@ export function nextAmountInput(value, ch) {
 }
 
 export default function AmountKeypad({ value, onChange, onDone, onEquals, resultLabel }) {
+  const { classes: ui, cx } = useAmountKeypadUi()
   const press = (ch) => {
     const next = nextAmountInput(value, ch)
     if (next !== null) onChange(next)
@@ -35,44 +37,21 @@ export default function AmountKeypad({ value, onChange, onDone, onEquals, result
       onClick={onClick}
       disableRipple
       aria-label={ariaLabel || (typeof label === 'string' ? label : undefined)}
-      sx={{
-        gridColumn: wide ? 'span 2' : undefined,
-        minWidth: 0, height: 44, borderRadius: '10px', fontSize: 17, fontWeight: 700,
-        textTransform: 'none', lineHeight: 1,
-        color: variant === 'op' ? 'var(--accent-soft)' : variant === 'go' ? 'var(--bg)' : 'var(--text)',
-        background:
-          variant === 'go' ? 'var(--accent)'
-            : variant === 'op' ? 'rgb(var(--accent-rgb) / 0.10)'
-              : 'rgb(var(--ink-rgb) / 0.05)',
-        border: '1px solid rgb(var(--ink-rgb) / 0.07)',
-        '&:hover': {
-          background:
-            variant === 'go' ? 'var(--accent-strong)'
-              : variant === 'op' ? 'rgb(var(--accent-rgb) / 0.18)'
-                : 'rgb(var(--ink-rgb) / 0.09)',
-        },
-      }}
+      className={cx(ui.key, wide && ui.keyWide, variant === 'op' && ui.keyOp, variant === 'go' && ui.keyGo)}
     >
       {label}
     </Button>
   )
 
   return (
-    <Box sx={{
-      width: '100%', background: 'var(--surface2)',
-      border: '1px solid rgb(var(--ink-rgb) / 0.08)', borderRadius: '12px',
-      p: '10px', mt: '-4px',
-    }}>
+    <Box className={ui.box1}>
       {resultLabel && (
-        <Typography sx={{
-          fontSize: 12, color: 'var(--accent-soft)', textAlign: 'right',
-          fontVariantNumeric: 'tabular-nums', px: '4px', pb: '8px',
-        }}>
+        <Typography className={ui.typography1}>
           {resultLabel}
         </Typography>
       )}
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '7px' }}>
+      <Box className={ui.box2}>
         {['1', '2', '3'].map(d => <Key key={d} label={d} onClick={() => press(d)} />)}
         <Key label="×" variant="op" onClick={() => press('*')} />
 
@@ -80,7 +59,7 @@ export default function AmountKeypad({ value, onChange, onDone, onEquals, result
         <Key label="÷" variant="op" onClick={() => press('/')} />
 
         {['7', '8', '9'].map(d => <Key key={d} label={d} onClick={() => press(d)} />)}
-        <Key label={<BackspaceOutlinedIcon sx={{ fontSize: 19 }} />} ariaLabel="Backspace"
+        <Key label={<BackspaceOutlinedIcon className={ui.backspaceOutlinedIcon1} />} ariaLabel="Backspace"
           onClick={() => onChange(String(value || '').slice(0, -1))} />
 
         <Key label="." onClick={() => press('.')} />

@@ -11,20 +11,20 @@ export const CATEGORIES = [
 
 export const EXPENSES = [
   { id: 'e1', year: '2026', month: '9', categoryId: 'c_rent', itemName: 'Rent',
-    amount: '15000', isFixed: 'TRUE', note: '', updatedAt: 'U1' },
+    amount: '15000', isFixed: true, note: '', updatedAt: 'U1' },
   { id: 'e2', year: '2026', month: '9', categoryId: 'c_food', itemName: 'Groceries',
-    amount: '4200.55', isFixed: 'FALSE', note: '[{"text":"weekly shop","ts":1}]', updatedAt: 'U2' },
+    amount: '4200.55', isFixed: false, note: '[{"text":"weekly shop","ts":1}]', updatedAt: 'U2' },
   { id: 'e3', year: '2026', month: '9', categoryId: 'c_inv', itemName: 'Mutual fund',
-    amount: '5000', isFixed: 'FALSE', note: '', updatedAt: 'U3' },
+    amount: '5000', isFixed: false, note: '', updatedAt: 'U3' },
   // A withdrawal — negative row in a savings category.
   { id: 'e4', year: '2026', month: '9', categoryId: 'c_inv', itemName: 'Gold saving',
-    amount: '-2000', isFixed: 'FALSE', note: '', updatedAt: 'U4' },
+    amount: '-2000', isFixed: false, note: '', updatedAt: 'U4' },
   // An earlier year, so running balances have something to carry forward.
   { id: 'e5', year: '2025', month: '6', categoryId: 'c_inv', itemName: 'Gold saving',
-    amount: '24323', isFixed: 'FALSE', note: '', updatedAt: 'U5' },
+    amount: '24323', isFixed: false, note: '', updatedAt: 'U5' },
   // A row whose category no longer exists — renders under "Uncategorized".
   { id: 'e6', year: '2026', month: '9', categoryId: 'c_deleted', itemName: 'Orphan',
-    amount: '100', isFixed: 'FALSE', note: '', updatedAt: 'U6' },
+    amount: '100', isFixed: false, note: '', updatedAt: 'U6' },
 ]
 
 export const INCOME = [

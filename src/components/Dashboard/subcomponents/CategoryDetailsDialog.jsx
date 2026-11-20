@@ -12,10 +12,13 @@ import {
   Paper
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import { useStyles } from '../styles/CategoryDetailsDialog.styles'
+import { useStyles, useCategoryDetailsDialogUi } from '../styles/CategoryDetailsDialog.styles'
+import { useColorStyles } from '../../../styles/colorStyles'
 
 export default function CategoryDetailsDialog({ detailModal, onClose, selMonths, fmt, MONTHS }) {
+  const { classes: ui, cx } = useCategoryDetailsDialogUi()
   const { classes } = useStyles()
+  const { classes: tint } = useColorStyles(detailModal?.color)
 
   if (!detailModal) return null
 
@@ -45,8 +48,7 @@ export default function CategoryDetailsDialog({ detailModal, onClose, selMonths,
           <Box>
             <Typography
               variant="caption"
-              className={classes.categoryLabel}
-              style={{ color: detailModal.color }}
+              className={cx(classes.categoryLabel, tint.text)}
             >
               Category Details
             </Typography>
@@ -67,13 +69,12 @@ export default function CategoryDetailsDialog({ detailModal, onClose, selMonths,
             </Typography>
             <Typography
               variant="h6"
-              className={classes.bannerValueTotal}
-              style={{ color: detailModal.color }}
+              className={cx(classes.bannerValueTotal, tint.text)}
             >
               {fmt(detailModal.total)}
             </Typography>
           </Box>
-          <Box style={{ textAlign: 'right' }}>
+          <Box className={ui.box1}>
             <Typography variant="caption" className={classes.bannerLabel}>
               Period
             </Typography>
@@ -87,7 +88,7 @@ export default function CategoryDetailsDialog({ detailModal, onClose, selMonths,
         <TableContainer component={Paper} className={classes.tableContainer}>
           <Table stickyHeader size="small" className={classes.table}>
             <TableHead>
-              <TableRow sx={{ '& th': { borderBottom: '1px solid rgb(var(--ink-rgb) / 0.08)' } }}>
+              <TableRow className={ui.tableRow1}>
                 <TableCell className={classes.thCell}>
                   Month
                 </TableCell>
@@ -123,10 +124,7 @@ export default function CategoryDetailsDialog({ detailModal, onClose, selMonths,
                         <TableCell
                           key={name}
                           align="right"
-                          className={classes.valueCell}
-                          style={{
-                            color: val < 0 ? 'var(--danger-soft)' : val > 0 ? 'var(--text)' : 'var(--text2)'
-                          }}
+                          className={cx(classes.valueCell, val < 0 ? ui.valueNegative : val > 0 ? ui.valuePositive : ui.valueZero)}
                         >
                           {val !== 0 ? fmt(val) : '—'}
                         </TableCell>
@@ -136,8 +134,7 @@ export default function CategoryDetailsDialog({ detailModal, onClose, selMonths,
                     {/* Month Total value */}
                     <TableCell
                       align="right"
-                      className={classes.monthTotalCell}
-                      style={{ color: detailModal.color }}
+                      className={cx(classes.monthTotalCell, tint.text)}
                     >
                       {fmt(monthTotal)}
                     </TableCell>

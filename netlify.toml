@@ -3,6 +3,14 @@
   command = "npm run build"
   functions = "netlify/functions"
 
+[functions."backup-weekly"]
+  schedule = "30 3 * * 0"
+
+[[redirects]]
+  from = "/api/backup-now"
+  to = "/.netlify/functions/backup-now"
+  status = 200
+
 [[redirects]]
   from = "/api/send-push"
   to = "/.netlify/functions/send-push"

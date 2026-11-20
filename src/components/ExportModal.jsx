@@ -10,6 +10,7 @@ import {
 } from '@mui/material'
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined'
 import { makeStyles } from 'tss-react/mui'
+import { useExportModalUi } from './styles/ExportModal.styles'
 
 const useStyles = makeStyles()((theme) => ({
   dialog: {
@@ -158,6 +159,7 @@ const useStyles = makeStyles()((theme) => ({
 }))
 
 export default function ExportModal({ categories, onClose }) {
+  const { classes: ui } = useExportModalUi()
   const { classes, cx } = useStyles()
   const currentYear = new Date().getFullYear()
   const [selectedYears, setSelectedYears] = useState([])
@@ -170,7 +172,6 @@ export default function ExportModal({ categories, onClose }) {
     async function loadYears() {
       try {
         const [exps, inc] = await Promise.all([fetchExpenses(), fetchIncome()])
-        
         // Ignore unparseable years — a bad row would otherwise put a literal
         // "NaN" in the year list and export an empty section for it.
         const years = new Set([currentYear])
@@ -239,7 +240,6 @@ export default function ExportModal({ categories, onClose }) {
       className={classes.dialog}
     >
       <Box className={classes.container}>
-        
         {/* Top Icon Badge */}
         <Box className={cx(classes.iconContainer, classes.iconContainerLocal)}>
           <FileDownloadOutlinedIcon color="secondary" className={classes.icon} />
@@ -264,17 +264,8 @@ export default function ExportModal({ categories, onClose }) {
               A PDF report of every year is ready. Untick any year you want to leave out.
             </Typography>
 
-            <Typography
+            <Typography className={ui.typography1}
               variant="subtitle2"
-              sx={{
-                fontWeight: 700,
-                mb: 1.5,
-                alignSelf: 'flex-start',
-                color: 'text.secondary',
-                fontSize: '11px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}
             >
               Select Year(s)
             </Typography>
@@ -325,7 +316,7 @@ export default function ExportModal({ categories, onClose }) {
                 Cancel
               </Button>
             </Box>
-            <Button size="small" onClick={handleBackup} disabled={busy || loading} sx={{ mt: 1.5, color: 'text.secondary', textTransform: 'none' }}>
+            <Button className={ui.button1} size="small" onClick={handleBackup} disabled={busy || loading}>
               Full backup of all years (.json)
             </Button>
           </>

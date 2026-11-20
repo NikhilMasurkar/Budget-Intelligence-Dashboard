@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { tokens, useThemeMode } from '../../../theme/tokens'
+import { useThemeMode } from '../../../theme/tokens'
 import {
   Box, Typography, CircularProgress,
   Dialog, DialogContent, IconButton, TextField
@@ -12,6 +12,7 @@ import {
   getAIInsights, calcInstantScore,
   getChatResponseStream, buildFinancialContext, AI_ENABLED
 } from '../../../api/gemini'
+import { useAIInsightsSectionUi } from '../styles/AIInsightsSection.styles'
 
 const CACHE_PREFIX = 'budgetiq_ai_v7_'
 const MONTH_NAMES  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -57,24 +58,25 @@ function makeCacheKey(year, selMonths, expenses, income, categories = []) {
   return `${CACHE_PREFIX}${year}_${mk}_${hashRows(expRows)}_${hashRows(incRows)}_${hashRows(catRows)}`
 }
 
+// `tone` names a tone class in the stylesheet (toneAccent2, toneWarn, …).
 const TYPE = {
-  alert:    { icon: '🚨', color: 'var(--danger-soft)', border: 'rgb(var(--danger-soft-rgb) / 0.25)', bg: 'rgb(var(--danger-soft-rgb) / 0.05)' },
-  warning:  { icon: '⚠️', color: 'var(--warn)', border: 'rgb(var(--warn-rgb) / 0.25)',  bg: 'rgb(var(--warn-rgb) / 0.05)'  },
-  tip:      { icon: '💡', color: 'var(--accent-soft)', border: 'rgb(var(--accent-rgb) / 0.25)',  bg: 'rgb(var(--accent-rgb) / 0.05)'  },
-  positive: { icon: '✅', color: 'var(--accent2)', border: 'rgb(var(--accent2-rgb) / 0.25)',  bg: 'rgb(var(--accent2-rgb) / 0.05)'  },
+  alert:    { icon: '🚨', tone: 'toneDangerSoft' },
+  warning:  { icon: '⚠️', tone: 'toneWarn' },
+  tip:      { icon: '💡', tone: 'toneAccentSoft' },
+  positive: { icon: '✅', tone: 'toneAccent2' },
 }
 const PRIORITY = {
-  high:   { label: 'HIGH PRIORITY', color: 'var(--danger-soft)', bg: 'rgb(var(--danger-soft-rgb) / 0.12)' },
-  medium: { label: 'MEDIUM',        color: 'var(--warn)', bg: 'rgb(var(--warn-rgb) / 0.12)'  },
-  low:    { label: 'GOOD TO KNOW',  color: 'var(--accent-soft)', bg: 'rgb(var(--accent-rgb) / 0.12)'  },
+  high:   { label: 'HIGH PRIORITY', tone: 'toneDangerSoft' },
+  medium: { label: 'MEDIUM',        tone: 'toneWarn' },
+  low:    { label: 'GOOD TO KNOW',  tone: 'toneAccentSoft' },
 }
-const NUM_COLOR = { red: 'var(--danger-soft)', green: 'var(--accent2)', amber: 'var(--warn)', neutral: 'var(--text-soft)' }
-const SCORE_COLOR = s => s >= 7 ? tokens.accent2 : s >= 5 ? tokens.warn : tokens.dangerSoft
+const NUM_TONE = { red: 'toneDangerSoft', green: 'toneAccent2', amber: 'toneWarn', neutral: 'toneTextSoft' }
+const SCORE_TONE = s => s >= 7 ? 'toneAccent2' : s >= 5 ? 'toneWarn' : 'toneDangerSoft'
 const SCORE_LABEL = s => s >= 8 ? 'Great' : s >= 6 ? 'Good' : s >= 4 ? 'Okay' : 'Needs work'
 const EMPLOYMENT_CONFIG = {
-  salaried:   { label: 'Salaried',   icon: '💼',    get color() { return tokens.accent2 } },
-  freelancer: { label: 'Freelancer', icon: '🧑‍💻', get color() { return tokens.warn } },
-  general:    { label: 'Individual', icon: '👤',    get color() { return tokens.text2 } },
+  salaried:   { label: 'Salaried',   icon: '💼',    tone: 'toneAccent2' },
+  freelancer: { label: 'Freelancer', icon: '🧑‍💻', tone: 'toneWarn' },
+  general:    { label: 'Individual', icon: '👤',    tone: 'toneText2' },
 }
 const QUICK_QUESTIONS = [
   'Where am I overspending?',
@@ -85,53 +87,43 @@ const QUICK_QUESTIONS = [
 
 // ── Score hero shared between loading + done states ───────────────────────────
 function ScoreHero({ score, summary, employment, isEstimate }) {
+  const { classes: ui, cx } = useAIInsightsSectionUi()
   const emp = employment ? EMPLOYMENT_CONFIG[employment] || EMPLOYMENT_CONFIG.general : null
   return (
-    <Box sx={{
-      padding: '20px 20px 18px', display: 'flex', gap: '16px', alignItems: 'center',
-      borderBottom: '1px solid rgb(var(--ink-rgb) / 0.05)'
-    }}>
-      <Box sx={{
-        width: 72, height: 72, flexShrink: 0, borderRadius: '50%',
-        border: `3px solid ${SCORE_COLOR(score)}`,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        background: `${SCORE_COLOR(score)}12`
-      }}>
-        <Typography sx={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: SCORE_COLOR(score) }}>
+    <Box className={ui.box1}>
+      <Box className={cx(ui.scoreRing, ui[SCORE_TONE(score)])}>
+        <Typography className={ui.scoreNum}>
           {score}
         </Typography>
-        <Typography sx={{ fontSize: 9, color: SCORE_COLOR(score), opacity: 0.8 }}>
+        <Typography className={ui.scoreLabel}>
           {SCORE_LABEL(score)}
         </Typography>
       </Box>
 
-      <Box sx={{ flex: 1 }}>
+      <Box className={ui.box2}>
         {isEstimate ? (
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '5px', mb: '6px',
-            background: 'rgb(var(--warn-rgb) / 0.1)', border: '1px solid rgb(var(--warn-rgb) / 0.2)',
-            borderRadius: '5px', padding: '2px 8px' }}>
-            <Typography sx={{ fontSize: 10, fontWeight: 700, color: 'var(--warn)', letterSpacing: '0.3px' }}>
+          <Box className={ui.box3}>
+            <Typography className={ui.typography1}>
               ⚡ Quick estimate
             </Typography>
           </Box>
         ) : emp ? (
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '5px', mb: '6px',
-            background: `${emp.color}14`, border: `1px solid ${emp.color}30`,
-            borderRadius: '5px', padding: '2px 8px' }}>
-            <span style={{ fontSize: 11 }}>{emp.icon}</span>
-            <Typography sx={{ fontSize: 10, fontWeight: 700, color: emp.color, letterSpacing: '0.3px' }}>
+          <Box className={cx(ui.empBadge, ui[emp.tone])}>
+            <span className={ui.span1}>{emp.icon}</span>
+            <Typography className={ui.empLabel}>
               {emp.label}
             </Typography>
           </Box>
         ) : null}
 
-        <Typography sx={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.6 }}>{summary}</Typography>
+        <Typography className={ui.typography2}>{summary}</Typography>
       </Box>
     </Box>
   )
 }
 
 export default function AIInsightsSection({ open, onClose, expenses, income, categories, year, selMonths, userName }) {
+  const { classes: ui, cx } = useAIInsightsSectionUi()
   useThemeMode() // re-render so chart/score colours follow the theme
   const [state,    setState]    = useState('idle')
   const [result,   setResult]   = useState(null)
@@ -277,49 +269,36 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
         borderRadius: '18px', boxShadow: '0 32px 80px rgba(0,0,0,0.7)', maxHeight: '92vh',
       }
     }}>
-      <DialogContent sx={{ padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <DialogContent className={ui.dialogContent1}>
 
         {/* ── Header ── */}
-        <Box sx={{
-          display: 'flex', alignItems: 'center', gap: '10px',
-          padding: '16px 18px 14px', flexShrink: 0,
-          borderBottom: '1px solid rgb(var(--ink-rgb) / 0.06)'
-        }}>
-          <AutoAwesomeIcon sx={{ fontSize: 16, color: 'var(--accent-soft)' }} />
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>AI Budget Analysis</Typography>
-            <Typography sx={{ fontSize: 10, color: 'var(--text3)', mt: '1px' }}>
+        <Box className={ui.box4}>
+          <AutoAwesomeIcon className={ui.autoAwesomeIcon1} />
+          <Box className={ui.box5}>
+            <Typography className={ui.typography3}>AI Budget Analysis</Typography>
+            <Typography className={ui.typography4}>
               {periodLabel}{result?._model ? ` · ${result._model}` : ''}
             </Typography>
           </Box>
           {activeTab === 'analysis' && (
-            <IconButton size="small" onClick={() => runAnalysis(true)} disabled={state === 'loading'}
-              sx={{ color: 'var(--text-faint)', '&:hover': { color: 'var(--text-soft)' }, width: 28, height: 28 }}>
+            <IconButton className={ui.iconButton1} size="small" onClick={() => runAnalysis(true)} disabled={state === 'loading'}
+             >
               {state === 'loading'
-                ? <CircularProgress size={12} sx={{ color: 'var(--accent-soft)' }} />
-                : <RefreshIcon sx={{ fontSize: 14 }} />}
+                ? <CircularProgress className={ui.circularProgress1} size={12} />
+                : <RefreshIcon className={ui.refreshIcon1} />}
             </IconButton>
           )}
-          <IconButton size="small" onClick={onClose}
-            sx={{ color: 'var(--text-faint)', '&:hover': { color: 'var(--text-soft)' }, width: 28, height: 28 }}>
-            <CloseIcon sx={{ fontSize: 14 }} />
+          <IconButton className={ui.iconButton2} size="small" onClick={onClose}
+           >
+            <CloseIcon className={ui.closeIcon1} />
           </IconButton>
         </Box>
 
         {/* ── Tabs ── */}
-        <Box sx={{
-          display: 'flex', gap: '6px', px: 2, py: 1.2, flexShrink: 0,
-          borderBottom: '1px solid rgb(var(--ink-rgb) / 0.06)'
-        }}>
+        <Box className={ui.box6}>
           {[{ key: 'analysis', label: '📊 Analysis' }, { key: 'chat', label: '💬 Ask AI' }].map(t => (
-            <Box key={t.key} onClick={() => setActiveTab(t.key)} sx={{
-              padding: '4px 14px', borderRadius: '20px', cursor: 'pointer',
-              fontSize: 12, fontWeight: 600, userSelect: 'none',
-              background: activeTab === t.key ? 'rgb(var(--accent-soft-rgb) / 0.15)' : 'transparent',
-              color: activeTab === t.key ? 'var(--accent-soft)' : 'var(--text-faint)',
-              border: `1px solid ${activeTab === t.key ? 'rgb(var(--accent-soft-rgb) / 0.3)' : 'transparent'}`,
-              transition: 'all 0.15s', '&:hover': { color: 'var(--text-soft)' }
-            }}>
+            <Box key={t.key} onClick={() => setActiveTab(t.key)}
+              className={cx(ui.tab, activeTab === t.key && ui.tabActive)}>
               {t.label}
             </Box>
           ))}
@@ -329,7 +308,7 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
             ANALYSIS TAB
         ═══════════════════════════════════════ */}
         {activeTab === 'analysis' && (
-          <Box sx={{ overflowY: 'auto', flex: 1 }}>
+          <Box className={ui.box7}>
 
             {/* Loading — show instant score + skeleton cards */}
             {state === 'loading' && (
@@ -343,22 +322,14 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
                   />
                 )}
                 {/* Skeleton insight cards */}
-                <Box sx={{ p: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', mb: '2px' }}>
-                    <CircularProgress size={12} sx={{ color: 'var(--accent-soft)' }} />
-                    <Typography sx={{ fontSize: 11, color: 'var(--text-faint)' }}>AI building detailed insights…</Typography>
+                <Box className={ui.box8}>
+                  <Box className={ui.box9}>
+                    <CircularProgress className={ui.circularProgress2} size={12} />
+                    <Typography className={ui.typography5}>AI building detailed insights…</Typography>
                   </Box>
 
-                  {[0.9, 0.6, 0.45].map((op, i) => (
-                    <Box key={i} sx={{
-                      height: 88, borderRadius: '12px', background: 'var(--bg)',
-                      border: '1px solid rgb(var(--ink-rgb) / 0.04)',
-                      '@keyframes biqPulse': {
-                        '0%,100%': { opacity: op * 0.6 },
-                        '50%': { opacity: op }
-                      },
-                      animation: `biqPulse 2s ease ${i * 0.35}s infinite`
-                    }} />
+                  {[0, 1, 2].map(i => (
+                    <Box key={i} className={cx(ui.skeleton, ui[`skeleton${i}`])} />
                   ))}
                 </Box>
               </Box>
@@ -366,14 +337,11 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
 
             {/* Error */}
             {state === 'error' && (
-              <Box sx={{ p: '20px' }}>
-                <Box sx={{
-                  background: 'rgb(var(--danger-soft-rgb) / 0.07)', border: '1px solid rgb(var(--danger-soft-rgb) / 0.2)',
-                  borderRadius: '10px', p: '14px 16px'
-                }}>
-                  <Typography sx={{ fontSize: 13, color: 'var(--danger-soft)', mb: '8px' }}>⚠️ {errorMsg}</Typography>
-                  <Typography onClick={() => runAnalysis(true)}
-                    sx={{ fontSize: 12, color: 'var(--accent-soft)', cursor: 'pointer', textDecoration: 'underline' }}>
+              <Box className={ui.box10}>
+                <Box className={ui.box11}>
+                  <Typography className={ui.typography6}>⚠️ {errorMsg}</Typography>
+                  <Typography className={ui.typography7} onClick={() => runAnalysis(true)}
+                   >
                     Retry
                   </Typography>
                 </Box>
@@ -389,41 +357,41 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
                   employment={result._employment}
                   isEstimate={false}
                 />
-                <Box sx={{ p: '14px 14px 12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <Box className={ui.box12}>
                   {(result.insights || []).map((ins, i) => {
                     const t   = TYPE[ins.type]        || TYPE.tip
                     const pri = PRIORITY[ins.priority] || PRIORITY.low
                     return (
-                      <Box key={i} sx={{ border: `1px solid ${t.border}`, borderRadius: '12px', overflow: 'hidden', background: 'var(--bg)' }}>
-                        <Box sx={{ background: t.bg, p: '11px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-                            <span style={{ fontSize: 15, flexShrink: 0 }}>{t.icon}</span>
-                            <Typography sx={{ fontSize: 13, fontWeight: 700, color: t.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <Box key={i} className={cx(ui.insightCard, ui[t.tone])}>
+                        <Box className={ui.insightHead}>
+                          <Box className={ui.box13}>
+                            <span className={ui.span2}>{t.icon}</span>
+                            <Typography className={ui.insightTitle}>
                               {ins.title}
                             </Typography>
                           </Box>
                           {ins.priority && (
-                            <Box sx={{ background: pri.bg, borderRadius: '4px', p: '2px 7px', flexShrink: 0 }}>
-                              <Typography sx={{ fontSize: 9, fontWeight: 800, color: pri.color, letterSpacing: '0.5px' }}>
+                            <Box className={cx(ui.priorityBadge, ui[pri.tone])}>
+                              <Typography className={ui.priorityText}>
                                 {pri.label}
                               </Typography>
                             </Box>
                           )}
                         </Box>
                         {ins.numbers?.length > 0 && (
-                          <Box sx={{ p: '10px 14px', background: 'rgba(0,0,0,0.2)', borderTop: `1px solid ${t.border}`, borderBottom: '1px solid rgb(var(--ink-rgb) / 0.04)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <Box className={ui.insightNumbers}>
                             {ins.numbers.map((n, j) => (
-                              <Box key={j} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Typography sx={{ fontSize: 12, color: 'var(--text-muted)' }}>{n.label}</Typography>
-                                <Typography sx={{ fontSize: 13, fontWeight: 700, color: NUM_COLOR[n.color] || NUM_COLOR.neutral, fontVariantNumeric: 'tabular-nums' }}>
+                              <Box className={ui.box14} key={j}>
+                                <Typography className={ui.typography8}>{n.label}</Typography>
+                                <Typography className={cx(ui.numberValue, ui[NUM_TONE[n.color] || NUM_TONE.neutral])}>
                                   {n.value}
                                 </Typography>
                               </Box>
                             ))}
                           </Box>
                         )}
-                        <Box sx={{ p: '10px 14px' }}>
-                          <Typography sx={{ fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.65 }}>{ins.action}</Typography>
+                        <Box className={ui.box15}>
+                          <Typography className={ui.typography9}>{ins.action}</Typography>
                         </Box>
                       </Box>
                     )
@@ -433,29 +401,22 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
             )}
           </Box>
         )}
-        
         {activeTab === 'chat' && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+          <Box className={ui.box16}>
 
             {/* Messages */}
-            <Box sx={{ overflowY: 'auto', flex: 1, p: '14px 14px 8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <Box className={ui.box17}>
 
               {/* Empty state */}
               {chatMessages.length === 0 && !chatLoading && (
-                <Box sx={{ pt: 1 }}>
-                  <Typography sx={{ fontSize: 13, color: 'var(--text-faint)', textAlign: 'center', mb: 2.5 }}>
+                <Box className={ui.box18}>
+                  <Typography className={ui.typography10}>
                     Ask me anything about your{' '}
-                    <span style={{ color: 'var(--text2)' }}>{periodLabel}</span> finances
+                    <span className={ui.span3}>{periodLabel}</span> finances
                   </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+                  <Box className={ui.box19}>
                     {QUICK_QUESTIONS.map(q => (
-                      <Box key={q} onClick={() => handleSendChat(q)} sx={{
-                        p: '7px 13px', borderRadius: '10px', cursor: 'pointer',
-                        border: '1px solid rgb(var(--accent-soft-rgb) / 0.18)',
-                        background: 'rgb(var(--accent-soft-rgb) / 0.04)',
-                        fontSize: 12, color: 'var(--text2)', transition: 'all 0.15s',
-                        '&:hover': { background: 'rgb(var(--accent-soft-rgb) / 0.1)', color: 'var(--text-soft)', borderColor: 'rgb(var(--accent-soft-rgb) / 0.35)' }
-                      }}>
+                      <Box className={ui.box20} key={q} onClick={() => handleSendChat(q)}>
                         {q}
                       </Box>
                     ))}
@@ -466,26 +427,21 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
               {/* Message bubbles */}
               {chatMessages.map((msg, i) =>
                 msg.role === 'user' ? (
-                  <Box key={i} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <Box sx={{ maxWidth: '82%', p: '10px 14px', borderRadius: '16px 16px 4px 16px', background: 'var(--accent-deep)', border: '1px solid rgb(var(--accent-rgb) / 0.22)' }}>
-                      <Typography sx={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6 }}>{msg.text}</Typography>
+                  <Box className={ui.box21} key={i}>
+                    <Box className={ui.box22}>
+                      <Typography className={ui.typography11}>{msg.text}</Typography>
                     </Box>
                   </Box>
                 ) : (
-                  <Box key={i} sx={{ display: 'flex', alignItems: 'flex-end', gap: '7px' }}>
-                    <Box sx={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, mb: '2px', background: 'rgb(var(--accent-soft-rgb) / 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <AutoAwesomeIcon sx={{ fontSize: 11, color: 'var(--accent-soft)' }} />
+                  <Box className={ui.box23} key={i}>
+                    <Box className={ui.box24}>
+                      <AutoAwesomeIcon className={ui.autoAwesomeIcon2} />
                     </Box>
-                    <Box sx={{ maxWidth: '82%', p: '10px 14px', borderRadius: '16px 16px 16px 4px', background: 'var(--surface2)', border: '1px solid rgb(var(--ink-rgb) / 0.06)' }}>
-                      <Typography sx={{ fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                    <Box className={ui.box25}>
+                      <Typography className={ui.typography12}>
                         {msg.text}
                         {msg.streaming && (
-                          <Box component="span" sx={{
-                            display: 'inline-block', width: '2px', height: '1em',
-                            background: 'var(--accent-soft)', ml: '2px', verticalAlign: 'text-bottom',
-                            '@keyframes biqCursor': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0 } },
-                            animation: 'biqCursor 0.8s step-end infinite'
-                          }} />
+                          <Box className={ui.box26} component="span" />
                         )}
                       </Typography>
                     </Box>
@@ -497,36 +453,21 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
             </Box>
 
             {/* Input */}
-            <Box sx={{ flexShrink: 0, p: '10px 14px 12px', borderTop: '1px solid rgb(var(--ink-rgb) / 0.06)' }}>
-              <Box sx={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-                <TextField
+            <Box className={ui.box27}>
+              <Box className={ui.box28}>
+                <TextField className={ui.textField1}
                   fullWidth multiline maxRows={3}
                   value={chatInput}
                   onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendChat() } }}
                   placeholder="Ask about your spending…"
                   variant="outlined" size="small"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '12px', fontSize: 13, color: 'var(--text-soft)', background: 'var(--surface2)',
-                      '& fieldset': { borderColor: 'rgb(var(--ink-rgb) / 0.09)' },
-                      '&:hover fieldset': { borderColor: 'rgb(var(--accent-soft-rgb) / 0.3)' },
-                      '&.Mui-focused fieldset': { borderColor: 'rgb(var(--accent-soft-rgb) / 0.5)', borderWidth: 1 },
-                    },
-                    '& .MuiInputBase-input::placeholder': { color: 'var(--text3)', opacity: 1 }
-                  }}
                 />
                 <IconButton
                   onClick={() => handleSendChat()}
                   disabled={!chatInput.trim() || chatLoading}
-                  sx={{
-                    background: chatInput.trim() && !chatLoading ? 'var(--accent-strong)' : 'rgb(var(--ink-rgb) / 0.04)',
-                    color: chatInput.trim() && !chatLoading ? '#fff' : 'var(--text3)',
-                    borderRadius: '12px', width: 36, height: 36, flexShrink: 0, transition: 'all 0.2s',
-                    '&:hover': { background: chatInput.trim() && !chatLoading ? 'var(--accent-strong)' : 'rgb(var(--ink-rgb) / 0.06)' },
-                    '&.Mui-disabled': { color: 'var(--text3) !important', background: 'rgb(var(--ink-rgb) / 0.04) !important' }
-                  }}>
-                  <SendIcon sx={{ fontSize: 16 }} />
+                  className={cx(ui.send, chatInput.trim() && !chatLoading && ui.sendReady)}>
+                  <SendIcon className={ui.sendIcon1} />
                 </IconButton>
               </Box>
             </Box>

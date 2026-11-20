@@ -16,22 +16,12 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import SearchIcon from '@mui/icons-material/Search'
 import { MONTHS, fmt } from '../../utils/constants'
 import { isInvestmentCategory } from '../../utils/money'
-import { useExpensesByCategoryStyles } from './styles/ExpensesByCategory.styles'
+import { useExpensesByCategoryStyles, useExpensesByCategoryUi } from './styles/ExpensesByCategory.styles'
 import ExpenseCommentsModal from './ExpenseCommentsModal'
 import ExpenseRow from './ExpenseRow'
+import { CategoryBudgetText, MonthSummaryBar, BulkActionBar } from './ExpenseBars'
 import { useGlobalStyles } from '../../styles/globalStyles'
-
-// Compact budget-vs-actual text shown in a category header when a budget is set.
-function CategoryBudgetText({ actual, budget }) {
-  const pct = budget > 0 ? Math.round((actual / budget) * 100) : 0
-  const over = actual > budget
-  const color = over ? 'var(--danger-soft)' : pct > 80 ? 'var(--warn)' : 'var(--text2)'
-  return (
-    <Typography sx={{ fontSize: 11, color, fontWeight: 600, pl: '20px' }}>
-      Budget {fmt(actual)} / {fmt(budget)} · {pct}%{over ? ' · over' : ''}
-    </Typography>
-  )
-}
+import ColorDot from '../ColorDot'
 
 export default memo(function ExpensesByCategory({
   expenses, income = [], categories, year, month, availableYears,
@@ -43,6 +33,7 @@ export default memo(function ExpensesByCategory({
   onSaveComment,
   canEdit,
 }) {
+  const { classes: ui, cx: uiCx } = useExpensesByCategoryUi()
   const { classes, cx } = useExpensesByCategoryStyles()
   const { classes: g } = useGlobalStyles()
   const canChange = canEdit
@@ -53,7 +44,6 @@ export default memo(function ExpensesByCategory({
   const [commentSaving, setCommentSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [fixedOnly, setFixedOnly] = useState(false)
-  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
 
   // Keep a ref to selectedIds so callbacks that toggle selection don't need
   // selectedIds as a dep (avoiding new function refs on every selection change).
@@ -96,7 +86,7 @@ export default memo(function ExpensesByCategory({
   const filterActive = !!q || fixedOnly
   const matches = (e) =>
     (!q || String(e.itemName || '').toLowerCase().includes(q)) &&
-    (!fixedOnly || e.isFixed === 'TRUE')
+    (!fixedOnly || e.isFixed === true)
 
   // ── Money-story summary ────────────────────────────────────────────────────
   const monthIncomeTotal = useMemo(() =>
@@ -124,9 +114,6 @@ export default memo(function ExpensesByCategory({
   const investCats = useMemo(() => categories.filter(c => isInvestmentCategory(c)), [categories])
 
   const itemCount = monthExps.length
-  const remaining = monthIncomeTotal - realSpend - invested
-  const outflow = realSpend + invested
-  const spentPct = monthIncomeTotal > 0 ? Math.min(100, Math.round((outflow / monthIncomeTotal) * 100)) : 0
 
   // ── Multi-select for bulk actions ──────────────────────────────────────────
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
@@ -138,8 +125,6 @@ export default memo(function ExpensesByCategory({
   // Selection is per-period — clear it when the year/month changes so stale
   // ids from another month don't linger.
   useEffect(() => { onSelectionChange?.([]) }, [year, month]) // eslint-disable-line react-hooks/exhaustive-deps
-  // Reset the inline delete-confirm whenever the selection changes.
-  useEffect(() => { setBulkDeleteConfirm(false) }, [selectedIds])
 
   // Stable toggle — reads selectedIds via ref so this callback never needs to
   // change when the selection array changes (avoiding row re-renders on every tick).
@@ -216,10 +201,10 @@ export default memo(function ExpensesByCategory({
         <MonthStepper year={year} month={month} availableYears={availableYears}
           onYearChange={onYearChange} onMonthChange={onMonthChange} />
         <Box className={classes.flexFiller} />
-        <Box sx={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <Button size="small" variant="text"
+        <Box className={ui.box1}>
+          <Button className={ui.button1} size="small" variant="text"
             onClick={expanded.size > 0 ? collapseAll : expandAll}
-            sx={{ fontSize: 12, color: 'var(--text2)', textTransform: 'none', minWidth: 0 }}>
+           >
             {expanded.size > 0 ? 'Collapse all' : 'Expand all'}
           </Button>
           {canEdit && (
@@ -237,39 +222,8 @@ export default memo(function ExpensesByCategory({
 
       {/* ── Money-story summary bar ── */}
       {itemCount > 0 && (
-        <Box className={classes.totalBar}>
-          <Box className={classes.statBlock}>
-            <Typography className={classes.statLabel}>{MONTHS[month - 1]} Income</Typography>
-            <Typography className={classes.statValue} sx={{ color: 'var(--accent2)' }}>{fmt(monthIncomeTotal)}</Typography>
-          </Box>
-          <Box className={classes.statBlock}>
-            <Typography className={classes.statLabel}>Spent</Typography>
-            <Typography className={classes.statValue} sx={{ color: 'var(--danger-soft)' }}>{fmt(realSpend)}</Typography>
-          </Box>
-          {invested !== 0 && (
-            <Box className={classes.statBlock}>
-              <Typography className={classes.statLabel}>Invested</Typography>
-              <Typography className={classes.statValue} sx={{ color: 'var(--purple)' }}>{fmt(invested)}</Typography>
-            </Box>
-          )}
-          <Box className={classes.statBlock}>
-            <Typography className={classes.statLabel}>{remaining >= 0 ? 'Remaining' : 'Short by'}</Typography>
-            <Typography className={classes.statValue} sx={{ color: remaining >= 0 ? 'var(--accent-soft)' : 'var(--danger-soft)' }}>
-              {fmt(Math.abs(remaining))}
-            </Typography>
-          </Box>
-          <Box sx={{ flex: 1, minWidth: 120 }}>
-            <Box sx={{ height: 6, borderRadius: 3, background: 'rgb(var(--ink-rgb) / 0.08)', overflow: 'hidden' }}>
-              <Box sx={{
-                width: `${spentPct}%`, height: '100%', transition: 'width 0.3s',
-                background: spentPct >= 100 ? 'var(--danger-soft)' : spentPct > 80 ? 'var(--warn)' : 'var(--accent)'
-              }} />
-            </Box>
-            <Typography sx={{ fontSize: 10, color: 'var(--text2)', mt: '4px' }}>
-              {monthIncomeTotal > 0 ? `${spentPct}% of income used · ${itemCount} item${itemCount !== 1 ? 's' : ''}` : `${itemCount} item${itemCount !== 1 ? 's' : ''}`}
-            </Typography>
-          </Box>
-        </Box>
+        <MonthSummaryBar monthLabel={MONTHS[month - 1]} income={monthIncomeTotal}
+          realSpend={realSpend} invested={invested} itemCount={itemCount} />
       )}
 
       {/* ── Search + filter bar ── */}
@@ -282,20 +236,14 @@ export default memo(function ExpensesByCategory({
             onChange={e => setSearch(e.target.value)}
             size="small"
             InputProps={{
-              startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: 'var(--text-faint)' }} /></InputAdornment>
+              startAdornment: <InputAdornment position="start"><SearchIcon className={ui.searchIcon1} /></InputAdornment>
             }}
           />
           <Button
             variant={fixedOnly ? 'contained' : 'outlined'}
-            startIcon={<PushPinIcon sx={{ fontSize: 15 }} />}
+            startIcon={<PushPinIcon className={ui.pushPinIcon1} />}
             onClick={() => setFixedOnly(v => !v)}
-            className={classes.fixedToggleBtn}
-            sx={fixedOnly ? {
-              background: 'var(--accent)', '&:hover': { background: 'var(--accent-strong)' }
-            } : {
-              color: 'var(--accent-soft)', borderColor: 'rgb(var(--accent-rgb) / 0.35)',
-              '&:hover': { borderColor: 'rgb(var(--accent-rgb) / 0.6)', background: 'rgb(var(--accent-rgb) / 0.07)' }
-            }}
+            className={uiCx(classes.fixedToggleBtn, fixedOnly ? ui.fixedOn : ui.fixedOff)}
           >
             Fixed only
           </Button>
@@ -304,83 +252,13 @@ export default memo(function ExpensesByCategory({
 
       {/* ── Bulk action bar ── */}
       {canChange && selectedExpenses.length > 0 && (
-        <Box sx={{
-          display: 'flex', alignItems: 'center', gap: '10px',
-          padding: '10px 14px', marginBottom: '10px', flexWrap: 'wrap',
-          background: 'rgb(var(--accent-rgb) / 0.1)',
-          border: '1px solid rgb(var(--accent-rgb) / 0.35)',
-          borderRadius: '10px', position: 'sticky', top: 8, zIndex: 5,
-          backdropFilter: 'blur(6px)'
-        }}>
-          <Typography sx={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-soft)' }}>
-            {selectedExpenses.length} selected
-          </Typography>
-          <Box sx={{ flex: 1 }} />
-          {bulkDeleteConfirm ? (
-            <>
-              <Typography sx={{ fontSize: 12, color: 'var(--danger-soft)' }}>
-                Delete {selectedExpenses.length}?
-              </Typography>
-              <Button
-                size="small" variant="contained"
-                onClick={() => { onBulkDelete(selectedExpenses); setBulkDeleteConfirm(false) }}
-                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', background: 'var(--danger)', '&:hover': { background: 'var(--danger-strong)' } }}
-              >
-                Yes, delete
-              </Button>
-              <Button
-                size="small" variant="text"
-                onClick={() => setBulkDeleteConfirm(false)}
-                sx={{ fontSize: 12, color: 'var(--text2)', textTransform: 'none', minWidth: 0 }}
-              >
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                size="small" variant="contained" startIcon={<PushPinIcon sx={{ fontSize: 15 }} />}
-                onClick={() => onBulkPin(selectedExpenses, true)}
-                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', background: 'var(--accent)', '&:hover': { background: 'var(--accent-strong)' } }}
-              >
-                Pin
-              </Button>
-              <Button
-                size="small" variant="outlined"
-                onClick={() => onBulkPin(selectedExpenses, false)}
-                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', color: 'var(--accent-soft)', borderColor: 'rgb(var(--accent-rgb) / 0.4)', '&:hover': { borderColor: 'rgb(var(--accent-rgb) / 0.7)', background: 'rgb(var(--accent-rgb) / 0.08)' } }}
-              >
-                Unpin
-              </Button>
-              <Button
-                size="small" variant="outlined"
-                onClick={() => onCopyToNextMonth(selectedExpenses.map(e => e.id))}
-                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', color: 'var(--text-soft)', borderColor: 'rgb(var(--ink-rgb) / 0.15)', '&:hover': { borderColor: 'rgb(var(--ink-rgb) / 0.3)', background: 'rgb(var(--ink-rgb) / 0.04)' } }}
-              >
-                📋 Copy to next month
-              </Button>
-              <Button
-                size="small" variant="outlined" startIcon={<DeleteOutlinedIcon sx={{ fontSize: 15 }} />}
-                onClick={() => setBulkDeleteConfirm(true)}
-                sx={{ fontSize: 12, fontWeight: 700, textTransform: 'none', borderRadius: '7px', color: 'var(--danger-soft)', borderColor: 'rgb(var(--danger-rgb) / 0.4)', '&:hover': { borderColor: 'rgb(var(--danger-rgb) / 0.7)', background: 'rgb(var(--danger-rgb) / 0.08)' } }}
-              >
-                Delete
-              </Button>
-              <Button
-                size="small" variant="text"
-                onClick={() => onSelectionChange([])}
-                sx={{ fontSize: 12, color: 'var(--text2)', textTransform: 'none', minWidth: 0 }}
-              >
-                Clear
-              </Button>
-            </>
-          )}
-        </Box>
+        <BulkActionBar selected={selectedExpenses} onPin={onBulkPin} onCopy={onCopyToNextMonth}
+          onDelete={onBulkDelete} onClear={() => onSelectionChange([])} />
       )}
 
       {/* ── Category Sections ── */}
       {categories.length === 0 && (
-        <Box sx={{ textAlign: 'center', py: 6, color: 'var(--text2)', fontSize: 14 }}>
+        <Box className={ui.box2}>
           No categories yet. Click "+ Category" to add one.
         </Box>
       )}
@@ -390,27 +268,17 @@ export default memo(function ExpensesByCategory({
         { key: 'invest', label: 'Investments & Savings', cats: investCats, total: invested },
       ].map(group => group.cats.length === 0 ? null : (
         <Box key={group.key}>
-          <Box sx={{
-            display: 'flex', alignItems: 'baseline', gap: '10px',
-            mt: group.key === 'spend' ? 0 : '22px', mb: '8px', px: '4px',
-          }}>
-            <Typography sx={{
-              fontSize: 11, fontWeight: 800, letterSpacing: '0.8px',
-              textTransform: 'uppercase',
-              color: group.key === 'invest' ? 'var(--purple)' : 'var(--text-muted)',
-            }}>
+          <Box className={uiCx(ui.groupHeader, group.key === 'spend' && ui.groupHeaderFirst)}>
+            <Typography className={uiCx(ui.groupLabel, group.key === 'invest' && ui.invest)}>
               {group.label}
             </Typography>
             {group.key === 'invest' && (deposits > 0 || withdrawals > 0) && (
-              <Typography sx={{ fontSize: 11, color: 'var(--text-faint)' }}>
+              <Typography className={ui.typography1}>
                 put in {fmt(deposits)} · took out {fmt(withdrawals)}
               </Typography>
             )}
-            <Box sx={{ flex: 1, height: '1px', background: 'rgb(var(--ink-rgb) / 0.06)' }} />
-            <Typography sx={{
-              fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
-              color: group.key === 'invest' ? 'var(--purple)' : 'var(--text2)',
-            }}>
+            <Box className={ui.box3} />
+            <Typography className={uiCx(ui.groupTotal, group.key === 'invest' && ui.invest)}>
               {fmt(group.total)}
             </Typography>
           </Box>
@@ -447,26 +315,21 @@ export default memo(function ExpensesByCategory({
                     }
                     {canChange && catExpsFull.length > 0 && (
                       <Tooltip title={catAllSelected ? 'Deselect all' : 'Select all in category'} arrow>
-                        <Checkbox
+                        <Checkbox className={ui.checkbox1}
                           size="small"
                           checked={catAllSelected}
                           indeterminate={catSomeSelected && !catAllSelected}
                           onClick={e => e.stopPropagation()}
                           onChange={e => toggleCategoryAll(catExpsFull, e.target.checked)}
-                          sx={{
-                            p: 0, color: 'var(--text3)',
-                            '&.Mui-checked': { color: 'var(--accent)' },
-                            '&.MuiCheckbox-indeterminate': { color: 'var(--accent)' }
-                          }}
                         />
                       </Tooltip>
                     )}
-                    <Box className={classes.colorDot} style={{ background: cat.color || 'var(--accent)' }} />
+                    <ColorDot className={classes.colorDot} color={cat.color || 'var(--accent)'} />
                     <Typography className={classes.catName}>{cat.name}</Typography>
                     {catExpsFull.length > 0 && (
                       <Typography className={classes.catMeta}>{catExpsFull.length} item{catExpsFull.length !== 1 ? 's' : ''}</Typography>
                     )}
-                    <Typography className={classes.catTotal} style={{ color: catTotalFull < 0 ? 'var(--danger-soft)' : catTotalFull > 0 ? 'var(--text)' : 'var(--text-faint)' }}>
+                    <Typography className={uiCx(classes.catTotal, catTotalFull < 0 ? ui.totalNegative : catTotalFull > 0 ? ui.totalPositive : ui.totalZero)}>
                       {catTotalFull !== 0 ? fmt(catTotalFull) : '—'}
                     </Typography>
 
@@ -482,7 +345,7 @@ export default memo(function ExpensesByCategory({
 
                     {canChange && (
                       <IconButton size="small" className={classes.menuBtn} aria-label="Category options" onClick={e => openMenu(e, cat)}>
-                        <MoreVertIcon sx={{ fontSize: 16 }} />
+                        <MoreVertIcon className={ui.moreVertIcon1} />
                       </IconButton>
                     )}
                   </Box>
@@ -543,7 +406,7 @@ export default memo(function ExpensesByCategory({
                   ? <ExpandLessIcon className={classes.expandIcon} />
                   : <ExpandMoreIcon className={classes.expandIcon} />
                 }
-                <Box className={classes.colorDot} style={{ background: 'var(--text2)' }} />
+                <Box className={uiCx(classes.colorDot, ui.box4)} />
                 <Typography className={classes.catName}>Uncategorized</Typography>
                 <Typography className={classes.catMeta}>{uncategorized.length} item{uncategorized.length !== 1 ? 's' : ''}</Typography>
                 <Typography className={classes.catTotal}>{fmt(uncatTotal)}</Typography>
@@ -602,10 +465,10 @@ export default memo(function ExpensesByCategory({
         {canChange && [
           <MenuItem key="edit" className={classes.menuItem}
             onClick={() => { onEditCategory(menuCat); closeMenu() }}>
-            <ListItemIcon className={classes.menuIcon}><EditOutlinedIcon sx={{ fontSize: 15 }} /></ListItemIcon>
+            <ListItemIcon className={classes.menuIcon}><EditOutlinedIcon className={ui.editOutlinedIcon1} /></ListItemIcon>
             Edit Category
           </MenuItem>,
-          <Divider key="d1" sx={{ borderColor: 'rgb(var(--ink-rgb) / 0.07)', my: '4px' }} />,
+          <Divider className={ui.divider1} key="d1" />,
           <MenuItem key="copy" className={classes.menuItem}
             onClick={handleCopyCat}
             disabled={!(monthByCat.get(menuCat?.id) || []).length}>
@@ -615,19 +478,19 @@ export default memo(function ExpensesByCategory({
           <MenuItem key="up" className={classes.menuItem}
             disabled={categories.findIndex(c => c.id === menuCat?.id) === 0}
             onClick={handleMoveUp}>
-            <ListItemIcon className={classes.menuIcon}><ArrowUpwardIcon sx={{ fontSize: 15 }} /></ListItemIcon>
+            <ListItemIcon className={classes.menuIcon}><ArrowUpwardIcon className={ui.arrowUpwardIcon1} /></ListItemIcon>
             Move Up
           </MenuItem>,
           <MenuItem key="down" className={classes.menuItem}
             disabled={categories.findIndex(c => c.id === menuCat?.id) === categories.length - 1}
             onClick={handleMoveDown}>
-            <ListItemIcon className={classes.menuIcon}><ArrowDownwardIcon sx={{ fontSize: 15 }} /></ListItemIcon>
+            <ListItemIcon className={classes.menuIcon}><ArrowDownwardIcon className={ui.arrowDownwardIcon1} /></ListItemIcon>
             Move Down
           </MenuItem>,
-          <Divider key="d2" sx={{ borderColor: 'rgb(var(--ink-rgb) / 0.07)', my: '4px' }} />,
+          <Divider className={ui.divider2} key="d2" />,
           <MenuItem key="delete" className={classes.menuItemDanger}
             onClick={() => { onDeleteCategory(menuCat); closeMenu() }}>
-            <ListItemIcon className={classes.menuIcon}><DeleteOutlinedIcon sx={{ fontSize: 15, color: 'var(--danger-soft)' }} /></ListItemIcon>
+            <ListItemIcon className={classes.menuIcon}><DeleteOutlinedIcon className={ui.deleteOutlinedIcon1} /></ListItemIcon>
             Delete Category
           </MenuItem>
         ]}

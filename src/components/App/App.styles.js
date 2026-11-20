@@ -70,5 +70,52 @@ export const useStyles = makeStyles()(() => ({
     color: 'var(--warn)',
     width: '100%',
     boxSizing: 'border-box'
+  },
+  bannerIcon: {
+    marginRight: '8px',
+    fontSize: '16px'
+  },
+  bannerText: {
+    fontWeight: 500
+  },
+  loadingText: {
+    padding: '40px',
+    textAlign: 'center',
+    color: 'var(--text2)'
+  },
+  // react-hot-toast sets its colours inline, so these must win over that.
+  toast: {
+    background: 'var(--bg) !important',
+    color: 'var(--text) !important',
+    border: '1px solid rgb(var(--ink-rgb) / 0.13)'
+  },
+  txnTabs: {
+    display: 'flex',
+    gap: '3px',
+    background: 'rgb(var(--ink-rgb) / 0.04)',
+    borderRadius: '10px',
+    padding: '3px',
+    marginBottom: '16px',
+    width: 'fit-content'
+  },
+  txnTab: {
+    borderRadius: '8px',
+    padding: '5px 14px',
+    fontSize: '13px',
+    fontWeight: 600,
+    textTransform: 'none',
+    minWidth: 0,
+    color: 'var(--text-muted)',
+    background: 'transparent',
+    '&:hover': {
+      background: 'rgb(var(--ink-rgb) / 0.05)'
+    }
+  },
+  txnTabActive: {
+    color: '#fff',
+    background: 'var(--accent)',
+    '&:hover': {
+      background: 'var(--accent)'
+    }
   }
 }))
