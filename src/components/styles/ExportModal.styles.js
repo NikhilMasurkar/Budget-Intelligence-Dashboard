@@ -2,7 +2,7 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for ExportModal.jsx.
 export const useExportModalUi = makeStyles()((theme) => ({
-  typography1: {
+  yearsLabel: {
     fontWeight: 700,
     marginBottom: theme.spacing(1.5),
     alignSelf: 'flex-start',
@@ -11,7 +11,7 @@ export const useExportModalUi = makeStyles()((theme) => ({
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
-  button1: {
+  backupButton: {
     marginTop: theme.spacing(1.5),
     color: theme.palette.text.secondary,
     textTransform: 'none',

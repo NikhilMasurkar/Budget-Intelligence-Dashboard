@@ -11,6 +11,7 @@ import {
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined'
 import { makeStyles } from 'tss-react/mui'
 import { useExportModalUi } from './styles/ExportModal.styles'
+import RestoreBackup from './RestoreBackup'
 
 const useStyles = makeStyles()((theme) => ({
   dialog: {
@@ -158,7 +159,7 @@ const useStyles = makeStyles()((theme) => ({
   },
 }))
 
-export default function ExportModal({ categories, onClose }) {
+export default function ExportModal({ categories, onClose, onRestored }) {
   const { classes: ui } = useExportModalUi()
   const { classes, cx } = useStyles()
   const currentYear = new Date().getFullYear()
@@ -264,7 +265,7 @@ export default function ExportModal({ categories, onClose }) {
               A PDF report of every year is ready. Untick any year you want to leave out.
             </Typography>
 
-            <Typography className={ui.typography1}
+            <Typography className={ui.yearsLabel}
               variant="subtitle2"
             >
               Select Year(s)
@@ -316,9 +317,11 @@ export default function ExportModal({ categories, onClose }) {
                 Cancel
               </Button>
             </Box>
-            <Button className={ui.button1} size="small" onClick={handleBackup} disabled={busy || loading}>
+            <Button className={ui.backupButton} size="small" onClick={handleBackup} disabled={busy || loading}>
               Full backup of all years (.json)
             </Button>
+            <RestoreBackup disabled={busy || loading} onBeforeRestore={handleBackup}
+              onRestored={() => { onRestored(); onClose() }} />
           </>
         )}
       </Box>

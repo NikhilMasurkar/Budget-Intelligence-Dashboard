@@ -2,7 +2,7 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for ExpenseCommentsModal.jsx.
 export const useExpenseCommentsModalUi = makeStyles()((theme) => ({
-  dialogTitle1: {
+  header: {
     display: 'flex',
     alignItems: 'center',
     gap: theme.spacing(1),
@@ -11,22 +11,22 @@ export const useExpenseCommentsModalUi = makeStyles()((theme) => ({
     fontSize: 15,
     fontWeight: 700,
   },
-  chatBubbleOutlinedIcon1: {
+  headerIcon: {
     fontSize: 18,
     color: 'var(--accent)',
     flexShrink: 0,
   },
-  box1: {
+  headerText: {
     flex: 1,
     minWidth: 0,
   },
-  typography1: {
+  headerTitle: {
     fontSize: 15,
     fontWeight: 700,
     color: 'var(--text)',
     lineHeight: 1.2,
   },
-  typography2: {
+  headerItemName: {
     fontSize: 11,
     color: 'var(--text2)',
     marginTop: '2px',
@@ -34,17 +34,17 @@ export const useExpenseCommentsModalUi = makeStyles()((theme) => ({
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
-  iconButton1: {
+  closeButton: {
     color: 'var(--text2)',
     flexShrink: 0,
   },
-  closeIcon1: {
+  closeIcon: {
     fontSize: 18,
   },
-  divider1: {
+  headerDivider: {
     borderColor: 'rgb(var(--ink-rgb) / 0.08)',
   },
-  dialogContent1: {
+  content: {
     paddingLeft: theme.spacing(2),
     paddingRight: theme.spacing(2),
     paddingTop: theme.spacing(1.5),
@@ -53,7 +53,7 @@ export const useExpenseCommentsModalUi = makeStyles()((theme) => ({
     minHeight: 100,
     maxHeight: 320,
   },
-  typography3: {
+  emptyText: {
     fontSize: 13,
     color: 'var(--text-faint)',
     fontStyle: 'italic',
@@ -61,12 +61,12 @@ export const useExpenseCommentsModalUi = makeStyles()((theme) => ({
     paddingTop: theme.spacing(4),
     paddingBottom: theme.spacing(4),
   },
-  box2: {
+  commentList: {
     display: 'flex',
     flexDirection: 'column',
     gap: theme.spacing(1),
   },
-  box3: {
+  comment: {
     background: 'rgb(var(--ink-rgb) / 0.03)',
     border: '1px solid rgb(var(--ink-rgb) / 0.06)',
     borderRadius: '10px',
@@ -76,12 +76,12 @@ export const useExpenseCommentsModalUi = makeStyles()((theme) => ({
       opacity: 1,
     },
   },
-  typography4: {
+  commentTime: {
     fontSize: 10,
     color: 'var(--text-faint)',
     marginTop: '4px',
   },
-  button1: {
+  confirmDeleteButton: {
     position: 'absolute',
     top: 6,
     right: 6,
@@ -100,7 +100,7 @@ export const useExpenseCommentsModalUi = makeStyles()((theme) => ({
       background: 'var(--danger-strong)',
     },
   },
-  iconButton2: {
+  deleteButton: {
     position: 'absolute',
     top: 4,
     right: 4,
@@ -116,13 +116,13 @@ export const useExpenseCommentsModalUi = makeStyles()((theme) => ({
     },
     padding: '6px',
   },
-  deleteIcon1: {
+  deleteIcon: {
     fontSize: 16,
   },
-  divider2: {
+  footerDivider: {
     borderColor: 'rgb(var(--ink-rgb) / 0.08)',
   },
-  typography5: {
+  readOnlyNote: {
     paddingLeft: theme.spacing(2),
     paddingRight: theme.spacing(2),
     paddingTop: theme.spacing(1.5),
@@ -131,7 +131,7 @@ export const useExpenseCommentsModalUi = makeStyles()((theme) => ({
     color: 'var(--text-faint)',
     textAlign: 'center',
   },
-  box4: {
+  composer: {
     paddingLeft: theme.spacing(2),
     paddingRight: theme.spacing(2),
     paddingTop: theme.spacing(1.5),
@@ -140,7 +140,7 @@ export const useExpenseCommentsModalUi = makeStyles()((theme) => ({
     gap: theme.spacing(1),
     alignItems: 'flex-end',
   },
-  textField1: {
+  composerInput: {
     "& .MuiOutlinedInput-root": {
       background: 'rgb(var(--ink-rgb) / 0.04)',
       fontSize: 13,
@@ -162,7 +162,7 @@ export const useExpenseCommentsModalUi = makeStyles()((theme) => ({
       color: 'var(--text-faint)',
     },
   },
-  button2: {
+  addButton: {
     minWidth: 56,
     fontSize: 12,
     fontWeight: 700,

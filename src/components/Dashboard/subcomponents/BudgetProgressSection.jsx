@@ -64,17 +64,17 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
       : `BUDGET/${selMonths.length} MO`
 
   return (
-    <Box className={ui.box1}>
-      <Box className={ui.box2}>
-        <Typography className={ui.typography1}>
+    <Box className={ui.section}>
+      <Box className={ui.header}>
+        <Typography className={ui.title}>
           Budget Overview
         </Typography>
-        <Typography className={ui.typography2}>
+        <Typography className={ui.subtitle}>
           {selMonths.length} month{selMonths.length > 1 ? 's' : ''} · tap a row for full breakdown
         </Typography>
       </Box>
 
-      <Box className={ui.box3}>
+      <Box className={ui.table}>
 
         {/* Column headers */}
         <Box className={cx(ui.tableGrid, ui.headRow)}>
@@ -107,16 +107,16 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
               className={cx(ui.tableGrid, ui.row, i === catData.length - 1 && ui.rowLast)}
             >
               {/* Category dot + name */}
-              <Box className={ui.box4}>
+              <Box className={ui.categoryCell}>
                 <CategoryDot color={cat.color} />
-                <Typography className={ui.typography3}>
+                <Typography className={ui.categoryName}>
                   {cat.catName}
                 </Typography>
               </Box>
 
               {/* Share bar + % — desktop only */}
-              <Box className={ui.box5}>
-                <ShareBar color={cat.color} width={shareBarW} pct={sharePct} trackClass={ui.box6} />
+              <Box className={ui.shareCell}>
+                <ShareBar color={cat.color} width={shareBarW} pct={sharePct} trackClass={ui.shareTrack} />
               </Box>
 
               {/* Total spent */}
@@ -125,36 +125,36 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
               </Typography>
 
               {/* Budget column — desktop only */}
-              <Box className={ui.box7}>
+              <Box className={ui.budgetCell}>
                 {budgetLimit > 0 ? (
-                  <Typography className={ui.typography4}>
+                  <Typography className={ui.budgetAmount}>
                     {fmt(budgetLimit)}
                   </Typography>
                 ) : onEditCategory ? (
-                  <Typography className={ui.typography5}
+                  <Typography className={ui.setBudget}
                     onClick={e => { e.stopPropagation(); onEditCategory(categories.find(c => c.id === cat.id) || cat) }}
                   >
                     + Set budget
                   </Typography>
                 ) : (
-                  <Typography className={ui.typography6}>—</Typography>
+                  <Typography className={ui.noBudget}>—</Typography>
                 )}
               </Box>
 
               {/* Status — desktop full text, mobile badge */}
-              <Box className={ui.box8}>
+              <Box className={ui.statusCell}>
                 {budgetLimit > 0 ? (
                   isOver ? (
-                    <Typography className={ui.typography7}>
-                      ↑ {fmt(cat.total - budgetLimit)} <Box className={ui.box9} component="span">over</Box>
+                    <Typography className={ui.overText}>
+                      ↑ {fmt(cat.total - budgetLimit)} <Box className={ui.overWord} component="span">over</Box>
                     </Typography>
                   ) : (
                     <Typography className={cx(ui.left, isWarn && ui.leftWarn)}>
-                      {fmt(budgetLimit - cat.total)} <Box className={ui.box10} component="span">left</Box>
+                      {fmt(budgetLimit - cat.total)} <Box className={ui.leftWord} component="span">left</Box>
                     </Typography>
                   )
                 ) : (
-                  <Typography className={ui.typography8}>—</Typography>
+                  <Typography className={ui.noStatus}>—</Typography>
                 )}
               </Box>
             </Box>
@@ -164,14 +164,14 @@ export default function BudgetProgressSection({ categories, expenses, selMonths,
         {/* Total row */}
         {catData.length > 1 && (
           <Box className={cx(ui.tableGrid, ui.totalRow)}>
-            <Typography className={ui.typography9}>
+            <Typography className={ui.totalLabel}>
               Total
             </Typography>
-            <Box className={ui.box11} />
-            <Typography className={ui.typography10}>
+            <Box className={ui.totalShareGap} />
+            <Typography className={ui.totalAmount}>
               {fmt(selSpend)}
             </Typography>
-            <Box className={ui.box12} />
+            <Box className={ui.totalBudgetGap} />
             <Box />
           </Box>
         )}

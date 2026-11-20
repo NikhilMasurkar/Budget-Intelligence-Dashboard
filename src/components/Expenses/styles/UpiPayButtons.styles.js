@@ -2,22 +2,22 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for UpiPayButtons.jsx.
 export const useUpiPayButtonsUi = makeStyles()((theme) => ({
-  box1: {
+  upiBlock: {
     marginTop: theme.spacing(1.5),
     textAlign: 'center',
   },
-  typography1: {
+  caption: {
     color: theme.palette.text.secondary,
     display: 'block',
     marginBottom: theme.spacing(0.75),
   },
-  box2: {
+  appList: {
     display: 'flex',
     gap: theme.spacing(1),
     justifyContent: 'center',
     flexWrap: 'wrap',
   },
-  button1: {
+  appButton: {
     minHeight: 36,
     textTransform: 'none',
     borderRadius: theme.shape.borderRadius * 2,

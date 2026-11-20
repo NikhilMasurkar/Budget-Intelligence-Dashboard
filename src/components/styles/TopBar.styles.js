@@ -269,22 +269,22 @@ export const useTopBarStyles = makeStyles()((theme) => ({
 
 // Moved from inline sx/style in TopBar.jsx.
 export const useTopBarUi = makeStyles()(() => ({
-  getAppIcon1: {
+  installIcon: {
     fontSize: 18,
   },
-  getAppIcon2: {
+  installIosIcon: {
     fontSize: 18,
   },
-  notificationsActiveIcon1: {
+  reminderOnIcon: {
     fontSize: 18,
   },
-  notificationsOffIcon1: {
+  reminderBlockedIcon: {
     fontSize: 18,
   },
-  notificationsNoneIcon1: {
+  reminderOffIcon: {
     fontSize: 18,
   },
-  iconButton1: {
+  aiButton: {
     color: 'var(--accent-soft) !important',
     borderColor: 'rgb(var(--accent-rgb) / 0.35) !important',
     "&:hover": {
@@ -292,16 +292,16 @@ export const useTopBarUi = makeStyles()(() => ({
       background: 'rgb(var(--accent-rgb) / 0.08) !important',
     },
   },
-  autoAwesomeIcon1: {
+  aiIcon: {
     fontSize: 18,
   },
-  lightModeOutlinedIcon1: {
+  lightModeIcon: {
     fontSize: 18,
   },
-  darkModeOutlinedIcon1: {
+  darkModeIcon: {
     fontSize: 18,
   },
-  typography1: {
+  versionText: {
     display: 'block',
     textAlign: 'center',
     color: 'var(--text3)',

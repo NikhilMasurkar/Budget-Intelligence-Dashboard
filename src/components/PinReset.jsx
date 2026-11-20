@@ -86,17 +86,17 @@ export default function PinReset({ sheetId, onBack, onVerified }) {
         <Card className={classes.pinCard} elevation={0}>
           <LogoBox />
           <Typography className={classes.title}>Reset PIN</Typography>
-          <Typography className={uiCx(classes.subtitle, ui.typography1)}>
+          <Typography className={uiCx(classes.subtitle, ui.sendIntro)}>
             We'll send a 6-digit code to
           </Typography>
           <Box className={classes.emailBox}>{masked}</Box>
           {sendError && (
-            <Typography className={ui.typography2}>
+            <Typography className={ui.sendError}>
               {sendError}
             </Typography>
           )}
           {sending ? (
-            <Box className={ui.box1}><CircularProgress className={ui.circularProgress1} size={26} /></Box>
+            <Box className={ui.sendSpinnerBox}><CircularProgress className={ui.sendSpinner} size={26} /></Box>
           ) : (
             <Button onClick={send} className={classes.primaryBtn}>Send code</Button>
           )}
@@ -114,11 +114,11 @@ export default function PinReset({ sheetId, onBack, onVerified }) {
       <Card className={classes.pinCard} elevation={0}>
         <LogoBox />
         <Typography className={classes.title}>Enter code</Typography>
-        <Typography className={uiCx(classes.subtitle, ui.typography3)}>
+        <Typography className={uiCx(classes.subtitle, ui.codeSubtitle)}>
           Check your email for the 6-digit code
         </Typography>
         {otpMeta?.email && (
-          <Typography className={ui.typography4}>{otpMeta.email}</Typography>
+          <Typography className={ui.codeEmail}>{otpMeta.email}</Typography>
         )}
         <PinDots count={otp.length} shake={shake} length={OTP_LENGTH} />
         <Typography className={cx(classes.errorLine, error && classes.errorLineShown)}>
@@ -129,11 +129,11 @@ export default function PinReset({ sheetId, onBack, onVerified }) {
           onDelete={() => setOtp(v => v.slice(0, -1))}
           disabled={otp.length >= OTP_LENGTH || expired}
         />
-        <Box className={ui.box2}>
+        <Box className={ui.codeFooter}>
           <Typography className={cx(classes.expiryText, expired && classes.textDanger)}>
             {expired ? 'Code expired' : `Expires in ${mm}:${ss}`}
           </Typography>
-          <Button onClick={() => { setOtp(''); setStep('send') }} className={uiCx(classes.ghostBtn, ui.button1)}>
+          <Button onClick={() => { setOtp(''); setStep('send') }} className={uiCx(classes.ghostBtn, ui.resendButton)}>
             Resend
           </Button>
         </Box>

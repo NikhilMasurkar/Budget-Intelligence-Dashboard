@@ -38,11 +38,11 @@ export function MonthSummaryBar({ monthLabel, income, realSpend, invested, itemC
       {stat('Spent', realSpend, 'spent')}
       {invested !== 0 && stat('Invested', invested, 'invested')}
       {stat(remaining >= 0 ? 'Remaining' : 'Short by', Math.abs(remaining), remaining >= 0 ? 'remaining' : 'spent')}
-      <Box className={ui.box1}>
-        <Box className={ui.box2}>
+      <Box className={ui.usage}>
+        <Box className={ui.usageTrack}>
           <Box className={cx(ui.fill, width.width, spentPct >= 100 ? ui.fillFull : spentPct > 80 && ui.fillWarn)} />
         </Box>
-        <Typography className={ui.typography1}>
+        <Typography className={ui.usageText}>
           {income > 0 ? `${spentPct}% of income used · ${items}` : items}
         </Typography>
       </Box>
@@ -56,26 +56,26 @@ export function BulkActionBar({ selected, onPin, onCopy, onDelete, onClear }) {
   const [confirm, setConfirm] = useState(false)
   useEffect(() => { setConfirm(false) }, [selected])
   return (
-    <Box className={ui.box3}>
-      <Typography className={ui.typography2}>
+    <Box className={ui.bulkBar}>
+      <Typography className={ui.bulkCount}>
         {selected.length} selected
       </Typography>
-      <Box className={ui.box4} />
+      <Box className={ui.bulkSpacer} />
       {confirm ? (
         <>
-          <Typography className={ui.typography3}>Delete {selected.length}?</Typography>
+          <Typography className={ui.deleteQuestion}>Delete {selected.length}?</Typography>
           <Button size="small" variant="contained" onClick={() => { onDelete(selected); setConfirm(false) }}
             className={cx(ui.bulkBtn, ui.bulkDanger)}>
             Yes, delete
           </Button>
-          <Button className={ui.button1} size="small" variant="text" onClick={() => setConfirm(false)}
+          <Button className={ui.bulkCancel} size="small" variant="text" onClick={() => setConfirm(false)}
            >
             Cancel
           </Button>
         </>
       ) : (
         <>
-          <Button size="small" variant="contained" startIcon={<PushPinIcon className={ui.pushPinIcon1} />}
+          <Button size="small" variant="contained" startIcon={<PushPinIcon className={ui.pinIcon} />}
             onClick={() => onPin(selected, true)}
             className={cx(ui.bulkBtn, ui.bulkPrimary)}>
             Pin
@@ -88,12 +88,12 @@ export function BulkActionBar({ selected, onPin, onCopy, onDelete, onClear }) {
             className={cx(ui.bulkBtn, ui.bulkPlainOutline)}>
             📋 Copy to next month
           </Button>
-          <Button size="small" variant="outlined" startIcon={<DeleteOutlinedIcon className={ui.deleteOutlinedIcon1} />}
+          <Button size="small" variant="outlined" startIcon={<DeleteOutlinedIcon className={ui.deleteIcon} />}
             onClick={() => setConfirm(true)}
             className={cx(ui.bulkBtn, ui.bulkDangerOutline)}>
             Delete
           </Button>
-          <Button className={ui.button2} size="small" variant="text" onClick={onClear}
+          <Button className={ui.bulkClear} size="small" variant="text" onClick={onClear}
            >
             Clear
           </Button>

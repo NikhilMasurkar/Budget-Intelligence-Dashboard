@@ -11,23 +11,23 @@ export default function InvestmentsSection({ holdings, periodTotal, periodLabel 
   const balanceTotal = holdings.reduce((s, h) => s + h.balance, 0)
 
   return (
-    <Box className={ui.box1}>
-      <Typography className={ui.typography1}>
+    <Box className={ui.card}>
+      <Typography className={ui.title}>
         Investments
       </Typography>
-      <Typography className={ui.typography2}>
+      <Typography className={ui.subtitle}>
         Balance includes earlier years — a pot can go down this period and still hold money
       </Typography>
 
-      <Grid cols={COLS} className={ui.grid1}>
+      <Grid cols={COLS} className={ui.head}>
         <Head align="left">Investment</Head>
         <Head>{periodLabel || 'This period'}</Head>
         <Head>Balance</Head>
       </Grid>
 
       {holdings.map(h => (
-        <Grid cols={COLS} className={ui.grid2} key={h.name}>
-          <Typography className={ui.typography3}>
+        <Grid cols={COLS} className={ui.row} key={h.name}>
+          <Typography className={ui.name}>
             {h.name}
           </Typography>
           <Amount
@@ -41,8 +41,8 @@ export default function InvestmentsSection({ holdings, periodTotal, periodLabel 
         </Grid>
       ))}
 
-      <Grid cols={COLS} className={ui.grid3}>
-        <Typography className={ui.typography4}>Total</Typography>
+      <Grid cols={COLS} className={ui.totalRow}>
+        <Typography className={ui.totalLabel}>Total</Typography>
         <Amount
           v={periodTotal}
           color={periodTotal > 0 ? 'var(--accent2)' : periodTotal < 0 ? 'var(--warn)' : 'var(--line)'}

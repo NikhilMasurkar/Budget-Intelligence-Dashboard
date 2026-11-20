@@ -96,6 +96,21 @@ describe('BalanceSheet', () => {
       <BalanceSheet allExpenses={closed} allIncome={INCOME} categories={CATEGORIES} />
     )).not.toThrow()
   })
+
+  it('stacks the tables on a phone, with the same figures', () => {
+    const wide = render(<BalanceSheet allExpenses={EXPENSES} allIncome={INCOME} categories={CATEGORIES} />)
+    const wideText = wide.container.textContent
+    cleanup()
+    vi.stubGlobal('matchMedia', q => ({
+      matches: true, media: q, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {},
+    }))
+    render(<BalanceSheet allExpenses={EXPENSES} allIncome={INCOME} categories={CATEGORIES} />)
+    vi.unstubAllGlobals()
+    expect(screen.getAllByText('Cash left').length).toBeGreaterThan(1)   // a label per year block
+    expect(screen.getByText('All years')).toBeTruthy()
+    // every rupee figure on the wide layout also appears on the phone layout
+    for (const amt of wideText.match(/−?₹[\d,]+/g)) expect(document.body.textContent).toContain(amt)
+  })
 })
 
 describe('screens and banners', () => {

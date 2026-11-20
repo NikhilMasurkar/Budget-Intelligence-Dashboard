@@ -158,41 +158,41 @@ export const useExpensesByCategoryStyles = makeStyles()((theme) => ({
 
 // Moved from inline sx/style in ExpensesByCategory.jsx.
 export const useExpensesByCategoryUi = makeStyles()((theme) => ({
-  box1: {
+  headerActions: {
     display: 'flex',
     gap: '8px',
     alignItems: 'center',
   },
-  button1: {
+  expandToggle: {
     fontSize: 12,
     color: 'var(--text2)',
     textTransform: 'none',
     minWidth: 0,
   },
-  searchIcon1: {
+  searchIcon: {
     fontSize: 18,
     color: 'var(--text-faint)',
   },
-  pushPinIcon1: {
+  pinIcon: {
     fontSize: 15,
   },
-  box2: {
+  emptyText: {
     textAlign: 'center',
     paddingTop: theme.spacing(6),
     paddingBottom: theme.spacing(6),
     color: 'var(--text2)',
     fontSize: 14,
   },
-  typography1: {
+  investFlow: {
     fontSize: 11,
     color: 'var(--text-faint)',
   },
-  box3: {
+  groupRule: {
     flex: 1,
     height: '1px',
     background: 'rgb(var(--ink-rgb) / 0.06)',
   },
-  checkbox1: {
+  categoryCheckbox: {
     padding: theme.spacing(0),
     color: 'var(--text3)',
     "&.Mui-checked": {
@@ -202,32 +202,32 @@ export const useExpensesByCategoryUi = makeStyles()((theme) => ({
       color: 'var(--accent)',
     },
   },
-  moreVertIcon1: {
+  moreIcon: {
     fontSize: 16,
   },
-  box4: {
+  uncategorizedDot: {
     background: 'var(--text2)',
   },
-  editOutlinedIcon1: {
+  editIcon: {
     fontSize: 15,
   },
-  divider1: {
+  menuDivider: {
     borderColor: 'rgb(var(--ink-rgb) / 0.07)',
     marginTop: '4px',
     marginBottom: '4px',
   },
-  arrowUpwardIcon1: {
+  upIcon: {
     fontSize: 15,
   },
-  arrowDownwardIcon1: {
+  downIcon: {
     fontSize: 15,
   },
-  divider2: {
+  menuDividerLower: {
     borderColor: 'rgb(var(--ink-rgb) / 0.07)',
     marginTop: '4px',
     marginBottom: '4px',
   },
-  deleteOutlinedIcon1: {
+  deleteIcon: {
     fontSize: 15,
     color: 'var(--danger-soft)',
   },

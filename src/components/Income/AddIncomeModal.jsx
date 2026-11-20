@@ -80,7 +80,7 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
     >
       <Box className={classes.content}>
         <Box className={classes.iconBadge}>
-          <TrendingUpIcon className={ui.trendingUpIcon1} />
+          <TrendingUpIcon className={ui.headerIcon} />
         </Box>
 
         <Typography variant="h6" className={classes.title}>
@@ -89,8 +89,8 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
 
         <Box className={classes.formContainer}>
           <Box className={classes.rowGrid}>
-            <FormControl size="small" className={uiCx(classes.fieldStyles, ui.formControl1)}>
-              <InputLabel className={ui.inputLabel1} id="income-year-label" shrink>
+            <FormControl size="small" className={uiCx(classes.fieldStyles, ui.halfField)}>
+              <InputLabel className={ui.yearLabel} id="income-year-label" shrink>
                 Year
               </InputLabel>
               <Select
@@ -105,8 +105,8 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
               </Select>
             </FormControl>
 
-            <FormControl size="small" className={uiCx(classes.fieldStyles, ui.formControl2)}>
-              <InputLabel className={ui.inputLabel2} id="income-month-label" shrink>
+            <FormControl size="small" className={uiCx(classes.fieldStyles, ui.halfField)}>
+              <InputLabel className={ui.monthLabel} id="income-month-label" shrink>
                 Month
               </InputLabel>
               <Select
@@ -123,7 +123,7 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
           </Box>
 
           <FormControl size="small" fullWidth className={classes.fieldStyles}>
-            <InputLabel className={ui.inputLabel3} id="income-source-label" shrink>
+            <InputLabel className={ui.sourceLabel} id="income-source-label" shrink>
               Source
             </InputLabel>
             <Select
@@ -184,7 +184,7 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
             slotProps={{ htmlInput: { inputMode: 'none' } }}
             InputProps={{
               startAdornment: (
-                <InputAdornment className={ui.inputAdornment1} position="start">
+                <InputAdornment className={ui.rupeeAdornment} position="start">
                   ₹
                 </InputAdornment>
               ),
@@ -193,14 +193,14 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
           />
 
           {adjusted && (
-            <Box className={ui.box1}>
-              <Typography className={ui.typography1}>
+            <Box className={ui.sumPreview}>
+              <Typography className={ui.sumPreviewText}>
                 {expr.label} = <b>{fmt(amt)}</b>
               </Typography>
             </Box>
           )}
           {form.amount.toString().trim() && !expr && (
-            <Typography className={ui.typography2}>
+            <Typography className={ui.amountError}>
               Can't read that — type a number, a sum like 200+150, or +200 to add to the current amount.
             </Typography>
           )}
@@ -228,7 +228,7 @@ export default function AddIncomeModal({ initial, year, month, availableYears = 
             className={classes.fieldStyles}
           />
 
-          <Box className={ui.box2}>
+          <Box className={ui.applyGroup}>
             <Typography variant="caption" className={classes.applyLabel}>
               Apply to
             </Typography>

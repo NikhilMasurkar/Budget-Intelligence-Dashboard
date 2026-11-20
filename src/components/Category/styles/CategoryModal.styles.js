@@ -2,16 +2,16 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for CategoryModal.jsx.
 export const useCategoryModalUi = makeStyles()((theme) => ({
-  categoryOutlinedIcon1: {
+  headerIcon: {
     fontSize: 28,
   },
-  inputLabel1: {
+  typeLabel: {
     color: theme.palette.text.secondary,
   },
-  menuItem1: {
+  expenseOption: {
     fontSize: 13,
   },
-  menuItem2: {
+  savingsOption: {
     fontSize: 13,
   },
 }))

@@ -2,17 +2,17 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for AIInsightsSection.jsx.
 export const useAIInsightsSectionUi = makeStyles()((theme) => ({
-  box1: {
+  scoreHero: {
     padding: '20px 20px 18px',
     display: 'flex',
     gap: '16px',
     alignItems: 'center',
     borderBottom: '1px solid rgb(var(--ink-rgb) / 0.05)',
   },
-  box2: {
+  scoreText: {
     flex: 1,
   },
-  box3: {
+  estimateBadge: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '5px',
@@ -22,27 +22,27 @@ export const useAIInsightsSectionUi = makeStyles()((theme) => ({
     borderRadius: '5px',
     padding: '2px 8px',
   },
-  typography1: {
+  estimateText: {
     fontSize: 10,
     fontWeight: 700,
     color: 'var(--warn)',
     letterSpacing: '0.3px',
   },
-  span1: {
+  empIcon: {
     fontSize: 11,
   },
-  typography2: {
+  summary: {
     fontSize: 14,
     color: 'var(--text-soft)',
     lineHeight: 1.6,
   },
-  dialogContent1: {
+  content: {
     padding: theme.spacing(0),
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
   },
-  box4: {
+  header: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
@@ -50,24 +50,24 @@ export const useAIInsightsSectionUi = makeStyles()((theme) => ({
     flexShrink: 0,
     borderBottom: '1px solid rgb(var(--ink-rgb) / 0.06)',
   },
-  autoAwesomeIcon1: {
+  headerIcon: {
     fontSize: 16,
     color: 'var(--accent-soft)',
   },
-  box5: {
+  headerText: {
     flex: 1,
   },
-  typography3: {
+  title: {
     fontWeight: 700,
     fontSize: 14,
     color: 'var(--text)',
   },
-  typography4: {
+  period: {
     fontSize: 10,
     color: 'var(--text3)',
     marginTop: '1px',
   },
-  iconButton1: {
+  refreshButton: {
     color: 'var(--text-faint)',
     "&:hover": {
       color: 'var(--text-soft)',
@@ -75,13 +75,13 @@ export const useAIInsightsSectionUi = makeStyles()((theme) => ({
     width: 28,
     height: 28,
   },
-  circularProgress1: {
+  refreshSpinner: {
     color: 'var(--accent-soft)',
   },
-  refreshIcon1: {
+  refreshIcon: {
     fontSize: 14,
   },
-  iconButton2: {
+  closeButton: {
     color: 'var(--text-faint)',
     "&:hover": {
       color: 'var(--text-soft)',
@@ -89,10 +89,10 @@ export const useAIInsightsSectionUi = makeStyles()((theme) => ({
     width: 28,
     height: 28,
   },
-  closeIcon1: {
+  closeIcon: {
     fontSize: 14,
   },
-  box6: {
+  tabs: {
     display: 'flex',
     gap: '6px',
     paddingLeft: theme.spacing(2),
@@ -102,90 +102,90 @@ export const useAIInsightsSectionUi = makeStyles()((theme) => ({
     flexShrink: 0,
     borderBottom: '1px solid rgb(var(--ink-rgb) / 0.06)',
   },
-  box7: {
+  analysis: {
     overflowY: 'auto',
     flex: 1,
   },
-  box8: {
+  skeletonList: {
     padding: '12px 14px',
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
   },
-  box9: {
+  loadingRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
     marginBottom: '2px',
   },
-  circularProgress2: {
+  loadingSpinner: {
     color: 'var(--accent-soft)',
   },
-  typography5: {
+  loadingText: {
     fontSize: 11,
     color: 'var(--text-faint)',
   },
-  box10: {
+  errorArea: {
     padding: '20px',
   },
-  box11: {
+  errorBox: {
     background: 'rgb(var(--danger-soft-rgb) / 0.07)',
     border: '1px solid rgb(var(--danger-soft-rgb) / 0.2)',
     borderRadius: '10px',
     padding: '14px 16px',
   },
-  typography6: {
+  errorText: {
     fontSize: 13,
     color: 'var(--danger-soft)',
     marginBottom: '8px',
   },
-  typography7: {
+  retryLink: {
     fontSize: 12,
     color: 'var(--accent-soft)',
     cursor: 'pointer',
     textDecoration: 'underline',
   },
-  box12: {
+  insightList: {
     padding: '14px 14px 12px',
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
   },
-  box13: {
+  insightTitleRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
     flex: 1,
     minWidth: 0,
   },
-  span2: {
+  insightIcon: {
     fontSize: 15,
     flexShrink: 0,
   },
-  box14: {
+  numberRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  typography8: {
+  numberLabel: {
     fontSize: 12,
     color: 'var(--text-muted)',
   },
-  box15: {
+  insightActionBox: {
     padding: '10px 14px',
   },
-  typography9: {
+  insightAction: {
     fontSize: 13,
     color: 'var(--text-soft)',
     lineHeight: 1.65,
   },
-  box16: {
+  chat: {
     display: 'flex',
     flexDirection: 'column',
     flex: 1,
     overflow: 'hidden',
   },
-  box17: {
+  messages: {
     overflowY: 'auto',
     flex: 1,
     padding: '14px 14px 8px',
@@ -193,25 +193,25 @@ export const useAIInsightsSectionUi = makeStyles()((theme) => ({
     flexDirection: 'column',
     gap: '10px',
   },
-  box18: {
+  emptyChat: {
     paddingTop: theme.spacing(1),
   },
-  typography10: {
+  chatIntro: {
     fontSize: 13,
     color: 'var(--text-faint)',
     textAlign: 'center',
     marginBottom: theme.spacing(2.5),
   },
-  span3: {
+  chatPeriod: {
     color: 'var(--text2)',
   },
-  box19: {
+  quickQuestions: {
     display: 'flex',
     flexWrap: 'wrap',
     gap: '8px',
     justifyContent: 'center',
   },
-  box20: {
+  quickQuestion: {
     padding: '7px 13px',
     borderRadius: '10px',
     cursor: 'pointer',
@@ -226,28 +226,28 @@ export const useAIInsightsSectionUi = makeStyles()((theme) => ({
       borderColor: 'rgb(var(--accent-soft-rgb) / 0.35)',
     },
   },
-  box21: {
+  userRow: {
     display: 'flex',
     justifyContent: 'flex-end',
   },
-  box22: {
+  userBubble: {
     maxWidth: '82%',
     padding: '10px 14px',
     borderRadius: '16px 16px 4px 16px',
     background: 'var(--accent-deep)',
     border: '1px solid rgb(var(--accent-rgb) / 0.22)',
   },
-  typography11: {
+  userText: {
     fontSize: 13,
     color: 'var(--text)',
     lineHeight: 1.6,
   },
-  box23: {
+  aiRow: {
     display: 'flex',
     alignItems: 'flex-end',
     gap: '7px',
   },
-  box24: {
+  aiAvatar: {
     width: 22,
     height: 22,
     borderRadius: '50%',
@@ -258,24 +258,24 @@ export const useAIInsightsSectionUi = makeStyles()((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  autoAwesomeIcon2: {
+  aiAvatarIcon: {
     fontSize: 11,
     color: 'var(--accent-soft)',
   },
-  box25: {
+  aiBubble: {
     maxWidth: '82%',
     padding: '10px 14px',
     borderRadius: '16px 16px 16px 4px',
     background: 'var(--surface2)',
     border: '1px solid rgb(var(--ink-rgb) / 0.06)',
   },
-  typography12: {
+  aiText: {
     fontSize: 13,
     color: 'var(--text-soft)',
     lineHeight: 1.65,
     whiteSpace: 'pre-wrap',
   },
-  box26: {
+  cursor: {
     display: 'inline-block',
     width: '2px',
     height: '1em',
@@ -292,17 +292,17 @@ export const useAIInsightsSectionUi = makeStyles()((theme) => ({
     },
     animation: 'biqCursor 0.8s step-end infinite',
   },
-  box27: {
+  inputBar: {
     flexShrink: 0,
     padding: '10px 14px 12px',
     borderTop: '1px solid rgb(var(--ink-rgb) / 0.06)',
   },
-  box28: {
+  inputRow: {
     display: 'flex',
     gap: '8px',
     alignItems: 'flex-end',
   },
-  textField1: {
+  chatInput: {
     "& .MuiOutlinedInput-root": {
       borderRadius: '12px',
       fontSize: 13,
@@ -324,7 +324,7 @@ export const useAIInsightsSectionUi = makeStyles()((theme) => ({
       opacity: 1,
     },
   },
-  sendIcon1: {
+  sendIcon: {
     fontSize: 16,
   },
   // Tones: set --tone / --tone-rgb, which the pieces below read.

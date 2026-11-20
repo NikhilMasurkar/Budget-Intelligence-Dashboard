@@ -2,7 +2,7 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for AmountKeypad.jsx.
 export const useAmountKeypadUi = makeStyles()(() => ({
-  box1: {
+  resultBar: {
     width: '100%',
     background: 'var(--surface2)',
     border: '1px solid rgb(var(--ink-rgb) / 0.08)',
@@ -10,7 +10,7 @@ export const useAmountKeypadUi = makeStyles()(() => ({
     padding: '10px',
     marginTop: '-4px',
   },
-  typography1: {
+  resultText: {
     fontSize: 12,
     color: 'var(--accent-soft)',
     textAlign: 'right',
@@ -19,12 +19,12 @@ export const useAmountKeypadUi = makeStyles()(() => ({
     paddingRight: '4px',
     paddingBottom: '8px',
   },
-  box2: {
+  keys: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
     gap: '7px',
   },
-  backspaceOutlinedIcon1: {
+  backspaceIcon: {
     fontSize: 19,
   },
   key: {

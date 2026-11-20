@@ -12,7 +12,7 @@ export default function InvestmentFields({ txnDir, onDir, saving, isWithdraw, wi
   const { classes } = useAddExpenseModalStyles()
   return (
     <>
-      <Box className={ui.box1}>
+      <Box className={ui.directionField}>
         <Typography variant="caption" className={classes.applyLabel}>
           Transaction type
         </Typography>
@@ -35,7 +35,7 @@ export default function InvestmentFields({ txnDir, onDir, saving, isWithdraw, wi
             </Button>
           ))}
         </Box>
-        <Typography className={ui.typography1}>
+        <Typography className={ui.directionHint}>
           {isWithdraw
             ? 'Reduces this investment’s balance; the money returns to your spendable cash.'
             : 'Adds money into this investment / savings pot.'}
@@ -46,7 +46,7 @@ export default function InvestmentFields({ txnDir, onDir, saving, isWithdraw, wi
         what allowed an unattributed "Wintdraw" row to exist at all. */}
     {isWithdraw && (
       <FormControl size="small" fullWidth className={classes.fieldStyles}>
-        <InputLabel className={ui.inputLabel1} id="withdraw-from-label" shrink>
+        <InputLabel className={ui.withdrawFromLabel} id="withdraw-from-label" shrink>
           Withdraw from
         </InputLabel>
         <Select
@@ -72,14 +72,14 @@ export default function InvestmentFields({ txnDir, onDir, saving, isWithdraw, wi
 
     {/* Shows exactly what will be written before it is written. */}
     {parts.length > 0 && (
-      <Box className={ui.box2}>
-        <Typography className={ui.typography2}>
+      <Box className={ui.partsPreview}>
+        <Typography className={ui.partsTitle}>
           Will be taken out as:
         </Typography>
         {parts.map(p => (
-          <Box className={ui.box3} key={p.name}>
-            <Typography className={ui.typography3}>{p.name}</Typography>
-            <Typography className={ui.typography4}>
+          <Box className={ui.partRow} key={p.name}>
+            <Typography className={ui.partName}>{p.name}</Typography>
+            <Typography className={ui.partAmount}>
               −{inr(p.amount)}
             </Typography>
           </Box>

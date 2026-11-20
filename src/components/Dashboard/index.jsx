@@ -128,24 +128,24 @@ export default function Dashboard({ expenses, income, allExpenses = [], categori
       />
 
       {/* Period summary + current month context */}
-      <Box className={ui.box1}>
-        <Box className={ui.box2}>
-          <Box className={ui.box3} />
-          <Typography className={ui.typography1}>
+      <Box className={ui.periodSummary}>
+        <Box className={ui.periodLine}>
+          <Box className={ui.periodDot} />
+          <Typography className={ui.periodLabel}>
             {periodLabel(selMonths, year)}
           </Typography>
-          <Typography className={ui.typography2}>·</Typography>
-          <Typography className={ui.typography3}>
+          <Typography className={ui.separator}>·</Typography>
+          <Typography className={ui.earned}>
             {fmt(selIncome)} earned
           </Typography>
-          <Typography className={ui.typography4}>·</Typography>
-          <Typography className={ui.typography5}>
+          <Typography className={ui.separator}>·</Typography>
+          <Typography className={ui.spent}>
             {fmt(selSpend)} spent
           </Typography>
           {selInvest !== 0 && (
             <>
-              <Typography className={ui.typography6}>·</Typography>
-              <Typography className={ui.typography7}>
+              <Typography className={ui.separator}>·</Typography>
+              <Typography className={ui.invested}>
                 {fmt(selInvest)} invested
               </Typography>
             </>
@@ -153,12 +153,12 @@ export default function Dashboard({ expenses, income, allExpenses = [], categori
         </Box>
         {parseInt(year) >= curYear && selMonths.length > 1 && (
           <>
-            <Box className={ui.box4} />
-            <Typography className={ui.typography8}>
+            <Box className={ui.summaryDivider} />
+            <Typography className={ui.monthNow}>
               {displayMonthName} now: {' '}
-              <Box className={ui.box5} component="span">{fmt(curMonthInc)} in</Box>
+              <Box className={ui.monthIn} component="span">{fmt(curMonthInc)} in</Box>
               {' · '}
-              <Box className={ui.box6} component="span">{fmt(curMonthExp)} out</Box>
+              <Box className={ui.monthOut} component="span">{fmt(curMonthExp)} out</Box>
               {' · '}
               <Box component="span" className={uiCx(ui.monthSaved, curMonthSav < 0 && ui.monthShort)}>{fmt(curMonthSav)}</Box>
             </Typography>

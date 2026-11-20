@@ -131,7 +131,7 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
       <Box className={classes.content}>
         {/* Top Icon Badge */}
         <Box className={classes.iconBadge}>
-          <CategoryOutlinedIcon className={ui.categoryOutlinedIcon1} color="primary" />
+          <CategoryOutlinedIcon className={ui.headerIcon} color="primary" />
         </Box>
 
         {/* Title */}
@@ -154,7 +154,7 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
           />
 
           <FormControl fullWidth size="small" className={classes.fieldStyles}>
-            <InputLabel className={ui.inputLabel1} id="category-type-label" shrink>
+            <InputLabel className={ui.typeLabel} id="category-type-label" shrink>
               Type
             </InputLabel>
             <Select
@@ -164,8 +164,8 @@ export default function CategoryModal({ open, initial, categories = [], onSave, 
               label="Type"
               notched
             >
-              <MenuItem className={ui.menuItem1} value={EXPENSE_TYPE}>Expense</MenuItem>
-              <MenuItem className={ui.menuItem2} value={SAVINGS_TYPE}>Savings / Investment</MenuItem>
+              <MenuItem className={ui.expenseOption} value={EXPENSE_TYPE}>Expense</MenuItem>
+              <MenuItem className={ui.savingsOption} value={SAVINGS_TYPE}>Savings / Investment</MenuItem>
             </Select>
           </FormControl>
 

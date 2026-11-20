@@ -46,7 +46,7 @@ export default function AppModals({ app }) {
       {modal === 'export' && (
         <ErrorBoundary>
           <Suspense fallback={null}>
-            <ExportModal categories={categories} onClose={closeModal} />
+            <ExportModal categories={categories} onClose={closeModal} onRestored={app.loadAll} />
           </Suspense>
         </ErrorBoundary>
       )}

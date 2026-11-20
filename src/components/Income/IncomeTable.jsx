@@ -10,13 +10,13 @@ export default function IncomeTable({ income, onEdit, onDelete, canEdit }) {
   const total = income.reduce((s, i) => s + (+i.amount || 0), 0)
 
   return (
-    <Box className={ui.box1}>
+    <Box className={ui.page}>
       {/* Summary header */}
-      <Box className={ui.box2}>
-        <TrendingUpIcon className={ui.trendingUpIcon1} />
-        <Typography className={ui.typography1}>
+      <Box className={ui.summary}>
+        <TrendingUpIcon className={ui.summaryIcon} />
+        <Typography className={ui.summaryText}>
           {income.length} {income.length === 1 ? 'entry' : 'entries'} · Total{' '}
-          <Box className={ui.box3} component="span">
+          <Box className={ui.summaryTotal} component="span">
             {fmt(total)}
           </Box>
         </Typography>
@@ -24,38 +24,38 @@ export default function IncomeTable({ income, onEdit, onDelete, canEdit }) {
 
       {/* Card list */}
       {income.length === 0 ? (
-        <Box className={ui.box4}>
+        <Box className={ui.emptyText}>
           No income entries yet. Add one!
         </Box>
       ) : (
-        <Box className={ui.box5}>
+        <Box className={ui.rows}>
           {income.map(i => (
             <Box key={i.id} className={ui.incomeRow}>
-              <Box className={ui.box6}>
-                <Typography className={ui.typography2}>
+              <Box className={ui.rowText}>
+                <Typography className={ui.source}>
                   {i.source}
                 </Typography>
                 {i.date && (
-                  <Typography className={ui.typography3}>
+                  <Typography className={ui.date}>
                     {new Date(i.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </Typography>
                 )}
               </Box>
-              <Typography className={ui.typography4}>
+              <Typography className={ui.amount}>
                 {fmt(i.amount)}
               </Typography>
               {canEdit && (
                 <>
                   <Tooltip title="Edit" arrow>
-                    <IconButton className={ui.iconButton1} size="small" onClick={() => onEdit(i)}
+                    <IconButton className={ui.editButton} size="small" onClick={() => onEdit(i)}
                      >
-                      <EditOutlinedIcon className={ui.editOutlinedIcon1} />
+                      <EditOutlinedIcon className={ui.editIcon} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Delete" arrow>
-                    <IconButton className={ui.iconButton2} size="small" onClick={() => onDelete(i)}
+                    <IconButton className={ui.deleteButton} size="small" onClick={() => onDelete(i)}
                      >
-                      <DeleteOutlinedIcon className={ui.deleteOutlinedIcon1} />
+                      <DeleteOutlinedIcon className={ui.deleteIcon} />
                     </IconButton>
                   </Tooltip>
                 </>

@@ -201,8 +201,8 @@ export default memo(function ExpensesByCategory({
         <MonthStepper year={year} month={month} availableYears={availableYears}
           onYearChange={onYearChange} onMonthChange={onMonthChange} />
         <Box className={classes.flexFiller} />
-        <Box className={ui.box1}>
-          <Button className={ui.button1} size="small" variant="text"
+        <Box className={ui.headerActions}>
+          <Button className={ui.expandToggle} size="small" variant="text"
             onClick={expanded.size > 0 ? collapseAll : expandAll}
            >
             {expanded.size > 0 ? 'Collapse all' : 'Expand all'}
@@ -236,12 +236,12 @@ export default memo(function ExpensesByCategory({
             onChange={e => setSearch(e.target.value)}
             size="small"
             InputProps={{
-              startAdornment: <InputAdornment position="start"><SearchIcon className={ui.searchIcon1} /></InputAdornment>
+              startAdornment: <InputAdornment position="start"><SearchIcon className={ui.searchIcon} /></InputAdornment>
             }}
           />
           <Button
             variant={fixedOnly ? 'contained' : 'outlined'}
-            startIcon={<PushPinIcon className={ui.pushPinIcon1} />}
+            startIcon={<PushPinIcon className={ui.pinIcon} />}
             onClick={() => setFixedOnly(v => !v)}
             className={uiCx(classes.fixedToggleBtn, fixedOnly ? ui.fixedOn : ui.fixedOff)}
           >
@@ -258,7 +258,7 @@ export default memo(function ExpensesByCategory({
 
       {/* ── Category Sections ── */}
       {categories.length === 0 && (
-        <Box className={ui.box2}>
+        <Box className={ui.emptyText}>
           No categories yet. Click "+ Category" to add one.
         </Box>
       )}
@@ -273,11 +273,11 @@ export default memo(function ExpensesByCategory({
               {group.label}
             </Typography>
             {group.key === 'invest' && (deposits > 0 || withdrawals > 0) && (
-              <Typography className={ui.typography1}>
+              <Typography className={ui.investFlow}>
                 put in {fmt(deposits)} · took out {fmt(withdrawals)}
               </Typography>
             )}
-            <Box className={ui.box3} />
+            <Box className={ui.groupRule} />
             <Typography className={uiCx(ui.groupTotal, group.key === 'invest' && ui.invest)}>
               {fmt(group.total)}
             </Typography>
@@ -315,7 +315,7 @@ export default memo(function ExpensesByCategory({
                     }
                     {canChange && catExpsFull.length > 0 && (
                       <Tooltip title={catAllSelected ? 'Deselect all' : 'Select all in category'} arrow>
-                        <Checkbox className={ui.checkbox1}
+                        <Checkbox className={ui.categoryCheckbox}
                           size="small"
                           checked={catAllSelected}
                           indeterminate={catSomeSelected && !catAllSelected}
@@ -345,7 +345,7 @@ export default memo(function ExpensesByCategory({
 
                     {canChange && (
                       <IconButton size="small" className={classes.menuBtn} aria-label="Category options" onClick={e => openMenu(e, cat)}>
-                        <MoreVertIcon className={ui.moreVertIcon1} />
+                        <MoreVertIcon className={ui.moreIcon} />
                       </IconButton>
                     )}
                   </Box>
@@ -406,7 +406,7 @@ export default memo(function ExpensesByCategory({
                   ? <ExpandLessIcon className={classes.expandIcon} />
                   : <ExpandMoreIcon className={classes.expandIcon} />
                 }
-                <Box className={uiCx(classes.colorDot, ui.box4)} />
+                <Box className={uiCx(classes.colorDot, ui.uncategorizedDot)} />
                 <Typography className={classes.catName}>Uncategorized</Typography>
                 <Typography className={classes.catMeta}>{uncategorized.length} item{uncategorized.length !== 1 ? 's' : ''}</Typography>
                 <Typography className={classes.catTotal}>{fmt(uncatTotal)}</Typography>
@@ -465,10 +465,10 @@ export default memo(function ExpensesByCategory({
         {canChange && [
           <MenuItem key="edit" className={classes.menuItem}
             onClick={() => { onEditCategory(menuCat); closeMenu() }}>
-            <ListItemIcon className={classes.menuIcon}><EditOutlinedIcon className={ui.editOutlinedIcon1} /></ListItemIcon>
+            <ListItemIcon className={classes.menuIcon}><EditOutlinedIcon className={ui.editIcon} /></ListItemIcon>
             Edit Category
           </MenuItem>,
-          <Divider className={ui.divider1} key="d1" />,
+          <Divider className={ui.menuDivider} key="d1" />,
           <MenuItem key="copy" className={classes.menuItem}
             onClick={handleCopyCat}
             disabled={!(monthByCat.get(menuCat?.id) || []).length}>
@@ -478,19 +478,19 @@ export default memo(function ExpensesByCategory({
           <MenuItem key="up" className={classes.menuItem}
             disabled={categories.findIndex(c => c.id === menuCat?.id) === 0}
             onClick={handleMoveUp}>
-            <ListItemIcon className={classes.menuIcon}><ArrowUpwardIcon className={ui.arrowUpwardIcon1} /></ListItemIcon>
+            <ListItemIcon className={classes.menuIcon}><ArrowUpwardIcon className={ui.upIcon} /></ListItemIcon>
             Move Up
           </MenuItem>,
           <MenuItem key="down" className={classes.menuItem}
             disabled={categories.findIndex(c => c.id === menuCat?.id) === categories.length - 1}
             onClick={handleMoveDown}>
-            <ListItemIcon className={classes.menuIcon}><ArrowDownwardIcon className={ui.arrowDownwardIcon1} /></ListItemIcon>
+            <ListItemIcon className={classes.menuIcon}><ArrowDownwardIcon className={ui.downIcon} /></ListItemIcon>
             Move Down
           </MenuItem>,
-          <Divider className={ui.divider2} key="d2" />,
+          <Divider className={ui.menuDividerLower} key="d2" />,
           <MenuItem key="delete" className={classes.menuItemDanger}
             onClick={() => { onDeleteCategory(menuCat); closeMenu() }}>
-            <ListItemIcon className={classes.menuIcon}><DeleteOutlinedIcon className={ui.deleteOutlinedIcon1} /></ListItemIcon>
+            <ListItemIcon className={classes.menuIcon}><DeleteOutlinedIcon className={ui.deleteIcon} /></ListItemIcon>
             Delete Category
           </MenuItem>
         ]}

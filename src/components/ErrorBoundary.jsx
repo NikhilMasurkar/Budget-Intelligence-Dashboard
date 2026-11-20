@@ -5,14 +5,14 @@ import { useErrorBoundaryUi } from './styles/ErrorBoundary.styles'
 function ErrorFallback({ error, resetErrorBoundary }) {
   const { classes: ui } = useErrorBoundaryUi()
   return (
-    <Box className={ui.box1}>
-      <Typography className={ui.typography1} variant="h6">
+    <Box className={ui.fallback}>
+      <Typography className={ui.title} variant="h6">
         Something went wrong
       </Typography>
-      <Typography className={ui.typography2} variant="body2">
+      <Typography className={ui.message} variant="body2">
         {error?.message}
       </Typography>
-      <Button className={ui.button1}
+      <Button className={ui.retryButton}
         variant="outlined"
         size="small"
         onClick={resetErrorBoundary}

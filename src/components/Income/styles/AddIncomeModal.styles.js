@@ -2,33 +2,30 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for AddIncomeModal.jsx.
 export const useAddIncomeModalUi = makeStyles()((theme) => ({
-  trendingUpIcon1: {
+  headerIcon: {
     fontSize: 28,
     color: 'var(--income)',
   },
-  formControl1: {
+  halfField: {
     flex: 1,
   },
-  inputLabel1: {
+  yearLabel: {
     color: theme.palette.text.secondary,
   },
-  formControl2: {
-    flex: 1,
-  },
-  inputLabel2: {
+  monthLabel: {
     color: theme.palette.text.secondary,
   },
-  inputLabel3: {
+  sourceLabel: {
     color: theme.palette.text.secondary,
   },
-  inputAdornment1: {
+  rupeeAdornment: {
     "& .MuiTypography-root": {
       color: theme.palette.text.secondary,
       fontWeight: 600,
       fontSize: 13,
     },
   },
-  box1: {
+  sumPreview: {
     width: '100%',
     marginTop: '-4px',
     background: 'rgb(var(--income-rgb) / 0.10)',
@@ -36,18 +33,18 @@ export const useAddIncomeModalUi = makeStyles()((theme) => ({
     borderRadius: '8px',
     padding: '8px 12px',
   },
-  typography1: {
+  sumPreviewText: {
     fontSize: 12,
     color: 'var(--income-soft)',
     fontVariantNumeric: 'tabular-nums',
   },
-  typography2: {
+  amountError: {
     width: '100%',
     marginTop: '-4px',
     fontSize: 11.5,
     color: 'var(--danger-soft)',
   },
-  box2: {
+  applyGroup: {
     display: 'flex',
     flexDirection: 'column',
     width: '100%',

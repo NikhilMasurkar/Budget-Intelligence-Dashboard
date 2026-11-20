@@ -44,14 +44,14 @@ export default function AmountKeypad({ value, onChange, onDone, onEquals, result
   )
 
   return (
-    <Box className={ui.box1}>
+    <Box className={ui.resultBar}>
       {resultLabel && (
-        <Typography className={ui.typography1}>
+        <Typography className={ui.resultText}>
           {resultLabel}
         </Typography>
       )}
 
-      <Box className={ui.box2}>
+      <Box className={ui.keys}>
         {['1', '2', '3'].map(d => <Key key={d} label={d} onClick={() => press(d)} />)}
         <Key label="×" variant="op" onClick={() => press('*')} />
 
@@ -59,7 +59,7 @@ export default function AmountKeypad({ value, onChange, onDone, onEquals, result
         <Key label="÷" variant="op" onClick={() => press('/')} />
 
         {['7', '8', '9'].map(d => <Key key={d} label={d} onClick={() => press(d)} />)}
-        <Key label={<BackspaceOutlinedIcon className={ui.backspaceOutlinedIcon1} />} ariaLabel="Backspace"
+        <Key label={<BackspaceOutlinedIcon className={ui.backspaceIcon} />} ariaLabel="Backspace"
           onClick={() => onChange(String(value || '').slice(0, -1))} />
 
         <Key label="." onClick={() => press('.')} />

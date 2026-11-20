@@ -8,7 +8,7 @@ export const useStyles = makeStyles()(() => ({
 
 // Moved from inline sx/style in index.jsx.
 export const useDashboardUi = makeStyles()((theme) => ({
-  box1: {
+  periodSummary: {
     display: 'flex',
     alignItems: 'center',
     flexWrap: 'wrap',
@@ -17,53 +17,45 @@ export const useDashboardUi = makeStyles()((theme) => ({
     paddingLeft: '2px',
     paddingRight: '2px',
   },
-  box2: {
+  periodLine: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
   },
-  box3: {
+  periodDot: {
     width: 6,
     height: 6,
     borderRadius: '50%',
     background: 'var(--accent)',
   },
-  typography1: {
+  periodLabel: {
     fontSize: 12,
     fontWeight: 700,
     color: 'var(--text-muted)',
   },
-  typography2: {
+  separator: {
     fontSize: 12,
     color: 'var(--line)',
   },
-  typography3: {
+  earned: {
     fontSize: 12,
     color: 'var(--accent2)',
     fontVariantNumeric: 'tabular-nums',
     fontWeight: 600,
   },
-  typography4: {
-    fontSize: 12,
-    color: 'var(--line)',
-  },
-  typography5: {
+  spent: {
     fontSize: 12,
     color: 'var(--danger)',
     fontVariantNumeric: 'tabular-nums',
     fontWeight: 600,
   },
-  typography6: {
-    fontSize: 12,
-    color: 'var(--line)',
-  },
-  typography7: {
+  invested: {
     fontSize: 12,
     color: 'var(--purple)',
     fontVariantNumeric: 'tabular-nums',
     fontWeight: 600,
   },
-  box4: {
+  summaryDivider: {
     width: '1px',
     height: 12,
     background: 'rgb(var(--ink-rgb) / 0.07)',
@@ -72,15 +64,15 @@ export const useDashboardUi = makeStyles()((theme) => ({
       display: 'block',
     },
   },
-  typography8: {
+  monthNow: {
     fontSize: 11,
     color: 'var(--line)',
   },
-  box5: {
+  monthIn: {
     color: 'var(--text2)',
     fontVariantNumeric: 'tabular-nums',
   },
-  box6: {
+  monthOut: {
     color: 'var(--text2)',
     fontVariantNumeric: 'tabular-nums',
   },

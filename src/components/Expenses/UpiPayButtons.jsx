@@ -32,13 +32,13 @@ export default function UpiPayButtons({ caption, disabled, onPay }) {
   const { classes: ui } = useUpiPayButtonsUi()
   const last = lastUpi()
   return (
-    <Box className={ui.box1}>
-      <Typography className={ui.typography1} variant="caption">
+    <Box className={ui.upiBlock}>
+      <Typography className={ui.caption} variant="caption">
         {caption}
       </Typography>
-      <Box className={ui.box2}>
+      <Box className={ui.appList}>
         {[...UPI_APPS].sort((a, b) => (b.id === last) - (a.id === last)).map(app => (
-          <Button className={ui.button1}
+          <Button className={ui.appButton}
             key={app.id}
             size="small"
             variant={app.id === last ? 'contained' : 'outlined'}

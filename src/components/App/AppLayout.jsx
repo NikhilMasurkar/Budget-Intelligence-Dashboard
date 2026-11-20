@@ -21,8 +21,6 @@ function Page({ app }) {
   return (
     <>
       {app.offline && <OfflineBanner />}
-      {/* Full-screen loading only on the very first load — after that, keep
-          content mounted so the UI doesn't blank out on every save/refresh. */}
       {app.loading && !didInitialLoad && <Loading text="Loading your budget…" />}
       {didInitialLoad && (
         <ErrorBoundary key={view}>

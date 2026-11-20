@@ -56,24 +56,24 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
   return (
     <Box className={uiCx(classes.expenseRow, isSelected && ui.rowSelected)}>
       {canEdit && (
-        <Checkbox className={ui.checkbox1}
+        <Checkbox className={ui.selectBox}
           size="small"
           checked={isSelected}
           onChange={e => onToggle(exp.id, e.target.checked)}
         />
       )}
-      <Box className={ui.box1}>
-        <Typography className={uiCx(classes.expenseName, ui.typography1)}>{exp.itemName}</Typography>
+      <Box className={ui.details}>
+        <Typography className={uiCx(classes.expenseName, ui.name)}>{exp.itemName}</Typography>
         {/* Latest note right under the name, so it's readable without opening the thread. */}
         {lastComment && (
-          <Typography className={ui.typography2}
+          <Typography className={ui.lastComment}
             onClick={() => onComment(exp)}
           >
             💬 {lastComment}
           </Typography>
         )}
         {updated && (
-          <Typography className={ui.typography3}>
+          <Typography className={ui.updatedText}>
             Updated {updated}
           </Typography>
         )}
@@ -95,9 +95,9 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
           onClick={() => onComment(exp)}
           className={uiCx(ui.commentBtn, commentCount > 0 && ui.commentBtnHas)}
         >
-          <ChatBubbleOutlinedIcon className={ui.chatBubbleOutlinedIcon1} />
+          <ChatBubbleOutlinedIcon className={ui.commentIcon} />
           {commentCount > 0 && (
-            <Box className={ui.box2} component="span">
+            <Box className={ui.commentBadge} component="span">
               {commentCount > 9 ? '9+' : commentCount}
             </Box>
           )}
@@ -107,12 +107,12 @@ const ExpenseRow = memo(function ExpenseRow({ exp, classes, canEdit, isSelected,
         <>
           <Tooltip title="Edit" arrow>
             <IconButton size="small" className={classes.rowAction} onClick={() => onEdit(exp)}>
-              <EditOutlinedIcon className={ui.editOutlinedIcon1} />
+              <EditOutlinedIcon className={ui.editIcon} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Delete" arrow>
             <IconButton size="small" className={classes.rowDelete} onClick={() => onDelete(exp)}>
-              <DeleteOutlinedIcon className={ui.deleteOutlinedIcon1} />
+              <DeleteOutlinedIcon className={ui.deleteIcon} />
             </IconButton>
           </Tooltip>
         </>

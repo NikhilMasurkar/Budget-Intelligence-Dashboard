@@ -2,35 +2,32 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for AddExpenseModal.jsx.
 export const useAddExpenseModalUi = makeStyles()((theme) => ({
-  receiptLongOutlinedIcon1: {
+  headerIcon: {
     fontSize: 28,
   },
-  formControl1: {
+  halfField: {
     flex: 1,
   },
-  inputLabel1: {
+  yearLabel: {
     color: theme.palette.text.secondary,
   },
-  formControl2: {
-    flex: 1,
-  },
-  inputLabel2: {
+  monthLabel: {
     color: theme.palette.text.secondary,
   },
-  inputLabel3: {
+  categoryLabel: {
     color: theme.palette.text.secondary,
   },
-  inputLabel4: {
+  itemLabel: {
     color: theme.palette.text.secondary,
   },
-  inputAdornment1: {
+  rupeeAdornment: {
     "& .MuiTypography-root": {
       color: theme.palette.text.secondary,
       fontWeight: 600,
       fontSize: 13,
     },
   },
-  box1: {
+  sumPreview: {
     width: '100%',
     marginTop: '-4px',
     background: 'rgb(var(--accent-rgb) / 0.08)',
@@ -38,23 +35,23 @@ export const useAddExpenseModalUi = makeStyles()((theme) => ({
     borderRadius: '8px',
     padding: '8px 12px',
   },
-  typography1: {
+  sumPreviewText: {
     fontSize: 12,
     color: 'var(--accent-soft)',
     fontVariantNumeric: 'tabular-nums',
   },
-  typography2: {
+  amountError: {
     width: '100%',
     marginTop: '-4px',
     fontSize: 11.5,
     color: 'var(--danger-soft)',
   },
-  typography3: {
+  fixedHint: {
     fontSize: 11,
     color: 'var(--text2)',
     marginTop: '2px',
   },
-  switch1: {
+  fixedSwitch: {
     "& .MuiSwitch-switchBase.Mui-checked": {
       color: 'var(--accent)',
     },
@@ -62,12 +59,12 @@ export const useAddExpenseModalUi = makeStyles()((theme) => ({
       backgroundColor: 'var(--accent)',
     },
   },
-  box2: {
+  moreOptions: {
     display: 'flex',
     flexDirection: 'column',
     width: '100%',
   },
-  button1: {
+  moreOptionsToggle: {
     alignSelf: 'flex-start',
     textTransform: 'none',
     color: 'var(--text2)',
@@ -76,7 +73,7 @@ export const useAddExpenseModalUi = makeStyles()((theme) => ({
     paddingRight: '4px',
     minWidth: 0,
   },
-  typography4: {
+  applyToLabel: {
     marginTop: '6px',
   },
   fixedBox: {

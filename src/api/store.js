@@ -1,5 +1,6 @@
 import { getSheetId, uid } from './session'
-import { readItems, writeItems, upsertItems } from './firestoreMonths'
+import { readItems, writeItems, upsertItems, replaceItems } from './firestoreMonths'
+import { replaceCategoriesFS } from './firestoreCategories'
 
 // ── Expenses and income (Firestore) ──────────────────────────────────────────
 // The one place screens read and write them (item shapes: firestoreMonths.js).
@@ -68,4 +69,12 @@ export async function autoFixedCopyToMonth(toYear, toMonth) {
   const all = await readAllExpenses()
   const [py, pm] = prev(toYear, toMonth)
   return copyInto(all.filter(x => inMonth(x, py, pm) && x.isFixed), all, toYear, toMonth, true)
+}
+
+// Replace everything — categories, expenses, income — with a parsed backup
+// (utils/backupFile.js). Anything not in the backup is deleted.
+export async function restoreBackup({ categories, expenses, income }) {
+  await replaceCategoriesFS(sid(), categories)
+  await replaceItems(sid(), 'expenses', expenses)
+  await replaceItems(sid(), 'income', income)
 }

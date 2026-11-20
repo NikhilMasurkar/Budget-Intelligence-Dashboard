@@ -259,53 +259,53 @@ export const usePinScreenStyles = makeStyles()((theme) => ({
 
 // Moved from inline sx/style in PinScreen.jsx.
 export const usePinScreenUi = makeStyles()(() => ({
-  box1: {
+  fingerprintEmoji: {
     fontSize: 52,
     margin: '4px 0 8px',
   },
-  typography1: {
+  bioOfferText: {
     marginBottom: '32px',
   },
-  box2: {
+  bioSpinnerBox: {
     padding: '16px 0',
   },
-  circularProgress1: {
+  bioSpinner: {
     color: 'var(--accent)',
   },
-  typography2: {
+  bioMessage: {
     marginBottom: '32px',
   },
-  typography3: {
+  pinSubtitle: {
     marginBottom: '28px',
   },
-  box3: {
+  pinSpinnerBox: {
     padding: '40px 0',
     display: 'flex',
     justifyContent: 'center',
   },
-  circularProgress2: {
+  pinSpinner: {
     color: 'var(--accent)',
   },
-  checkbox1: {
+  bioCheckbox: {
     color: 'rgb(var(--ink-rgb) / 0.25)',
     padding: '4px 6px 4px 0',
     "&.Mui-checked": {
       color: 'var(--accent)',
     },
   },
-  box4: {
+  bioOptInRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
   },
-  span1: {
+  bioOptInLabel: {
     marginLeft: 6,
   },
-  button1: {
+  forgotButton: {
     color: 'var(--line)',
     fontSize: 12,
   },
-  button2: {
+  cancelResetButton: {
     marginTop: '16px',
     color: 'var(--line)',
     fontSize: 12,

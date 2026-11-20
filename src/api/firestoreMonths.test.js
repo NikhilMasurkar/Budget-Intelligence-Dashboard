@@ -94,3 +94,21 @@ describe('store', () => {
     expect(await store.fetchIncome()).toEqual([])
   })
 })
+
+describe('restoreBackup', () => {
+  it('replaces everything: backup entries written, the rest deleted, categories swapped', async () => {
+    await upsertItems('S', 'expenses', [E('old', 10, 'Old', 1), E('keep', 11, 'Tea', 40)])
+    fake.docs.set('sheets/S/categories/gone', { id: 'gone', name: 'Gone' })
+    await store.restoreBackup({
+      categories: [{ id: 'food', name: 'Food' }],
+      expenses: [E('keep', 11, 'Tea', 45), E('new', 9, 'Bus', 20)],
+      income: [{ id: 'i1', year: '2026', month: '11', source: 'Salary', amount: 1000, date: '' }],
+    })
+    const rows = await readItems('S', 'expenses')
+    expect(rows.map(r => r.id).sort()).toEqual(['keep', 'new'])
+    expect(rows.find(r => r.id === 'keep').amount).toBe(45)
+    expect((await readItems('S', 'income')).map(r => r.source)).toEqual(['Salary'])
+    expect(fake.docs.has('sheets/S/categories/gone')).toBe(false)
+    expect(fake.docs.get('sheets/S/categories/food')).toMatchObject({ name: 'Food', order: 0 })
+  })
+})

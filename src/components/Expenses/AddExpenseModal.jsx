@@ -218,7 +218,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
 
         {/* Top Icon Badge */}
         <Box className={classes.iconBadge}>
-          <ReceiptLongOutlinedIcon className={ui.receiptLongOutlinedIcon1} color="error" />
+          <ReceiptLongOutlinedIcon className={ui.headerIcon} color="error" />
         </Box>
 
         {/* Title */}
@@ -232,8 +232,8 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
         <Box className={classes.formContainer}>
           {/* Year & Month Grid */}
           <Box className={classes.rowGrid}>
-            <FormControl size="small" className={uiCx(classes.fieldStyles, ui.formControl1)}>
-              <InputLabel className={ui.inputLabel1} id="expense-year-label" shrink>
+            <FormControl size="small" className={uiCx(classes.fieldStyles, ui.halfField)}>
+              <InputLabel className={ui.yearLabel} id="expense-year-label" shrink>
                 Year
               </InputLabel>
               <Select
@@ -248,8 +248,8 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
               </Select>
             </FormControl>
 
-            <FormControl size="small" className={uiCx(classes.fieldStyles, ui.formControl2)}>
-              <InputLabel className={ui.inputLabel2} id="expense-month-label" shrink>
+            <FormControl size="small" className={uiCx(classes.fieldStyles, ui.halfField)}>
+              <InputLabel className={ui.monthLabel} id="expense-month-label" shrink>
                 Month
               </InputLabel>
               <Select
@@ -267,7 +267,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
 
           {/* Category Select */}
           <FormControl size="small" fullWidth className={classes.fieldStyles}>
-            <InputLabel className={ui.inputLabel3} id="expense-category-label" shrink>
+            <InputLabel className={ui.categoryLabel} id="expense-category-label" shrink>
               Category
             </InputLabel>
             <Select
@@ -286,7 +286,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
           {/* Already this month in the chosen category: pick one to add to it. */}
           {!isWithdraw && existingItems.length > 0 && (
             <FormControl size="small" fullWidth className={classes.fieldStyles}>
-              <InputLabel className={ui.inputLabel4} id="expense-item-label" shrink>
+              <InputLabel className={ui.itemLabel} id="expense-item-label" shrink>
                 Item
               </InputLabel>
               <Select
@@ -362,7 +362,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
             // the system keyboard still covered the on-screen pad.
             slotProps={{ htmlInput: { inputMode: 'none' } }}
             InputProps={{
-              startAdornment: <InputAdornment className={ui.inputAdornment1} position="start">₹</InputAdornment>,
+              startAdornment: <InputAdornment className={ui.rupeeAdornment} position="start">₹</InputAdornment>,
             }}
             className={classes.fieldStyles}
           />
@@ -370,14 +370,14 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
           {/* Show the resolved sum before it is saved, so an expression is never
               a guess. Also flags input the parser could not read at all. */}
           {expr?.label && (
-            <Box className={ui.box1}>
-              <Typography className={ui.typography1}>
+            <Box className={ui.sumPreview}>
+              <Typography className={ui.sumPreviewText}>
                 {expr.label} = <b>{inr(amt)}</b>
               </Typography>
             </Box>
           )}
           {form.amount.trim() && !expr && (
-            <Typography className={ui.typography2}>
+            <Typography className={ui.amountError}>
               Can't read that — type a number, a sum like 200+150, or +200 to add to the current amount.
             </Typography>
           )}
@@ -421,11 +421,11 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
                 <Typography className={uiCx(ui.fixedLabel, form.isFixed && ui.fixedLabelOn)}>
                   📌 Fixed / Recurring
                 </Typography>
-                <Typography className={ui.typography3}>
+                <Typography className={ui.fixedHint}>
                   Auto-copied to next month at start
                 </Typography>
               </Box>
-              <Switch className={ui.switch1}
+              <Switch className={ui.fixedSwitch}
                 checked={form.isFixed}
                 onChange={e => set('isFixed', e.target.checked)}
                 size="small"
@@ -434,10 +434,10 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
           )}
 
           {!isWithdraw && (
-            <Box className={ui.box2}>
+            <Box className={ui.moreOptions}>
               {/* Rarely used, so tucked away — but a non-default choice stays
                   named on the toggle so a save never fans out invisibly. */}
-              <Button className={ui.button1}
+              <Button className={ui.moreOptionsToggle}
                 variant="text"
                 size="small"
                 onClick={() => setMoreOpen(o => !o)}
@@ -447,7 +447,7 @@ export default function AddExpenseModal({ initial, categories, year, month, avai
                 {applyMode !== 'single' && ` · ${applyOptions.find(o => o.value === applyMode).label}`}
               </Button>
               <Collapse in={moreOpen}>
-                <Typography variant="caption" component="div" className={uiCx(classes.applyLabel, ui.typography4)}>
+                <Typography variant="caption" component="div" className={uiCx(classes.applyLabel, ui.applyToLabel)}>
                   Apply to
                 </Typography>
                 <Box className={classes.applyButtonContainer}>

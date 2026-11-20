@@ -93,7 +93,7 @@ export default function TopBar({
   // Each action is defined once: an icon button at md+, an avatar-menu item on phones.
   const install = installPrompt ? {
     key: 'install', label: 'Install app', tip: 'Install BudgetIQ as an app',
-    icon: <GetAppIcon className={ui.getAppIcon1} />,
+    icon: <GetAppIcon className={ui.installIcon} />,
     className: ui.actionOn,
     onClick: async () => {
       installPrompt.prompt()
@@ -103,7 +103,7 @@ export default function TopBar({
   } : isIOS ? {
     // Safari doesn't fire beforeinstallprompt, so explain the manual route.
     key: 'install', label: 'Install app', tip: IOS_HINT,
-    icon: <GetAppIcon className={ui.getAppIcon2} />,
+    icon: <GetAppIcon className={ui.installIosIcon} />,
     onClick: () => toast(IOS_HINT, { id: 'ios-install', duration: 6000 })
   } : null
 
@@ -114,9 +114,9 @@ export default function TopBar({
     tip: notifStatus === 'subscribed' ? '10 PM daily reminder ON — click to disable'
       : notifStatus === 'denied' ? 'Notifications blocked — enable in browser settings'
       : 'Enable daily 10 PM expense reminder',
-    icon: notifStatus === 'subscribed' ? <NotificationsActiveIcon className={ui.notificationsActiveIcon1} />
-      : notifStatus === 'denied' ? <NotificationsOffIcon className={ui.notificationsOffIcon1} />
-      : <NotificationsNoneIcon className={ui.notificationsNoneIcon1} />,
+    icon: notifStatus === 'subscribed' ? <NotificationsActiveIcon className={ui.reminderOnIcon} />
+      : notifStatus === 'denied' ? <NotificationsOffIcon className={ui.reminderBlockedIcon} />
+      : <NotificationsNoneIcon className={ui.reminderOffIcon} />,
     onClick: notifStatus !== 'denied' ? onToggleNotifications : undefined,
     disabled: notifStatus === 'loading',
     className: notifStatus === 'subscribed' ? ui.actionOn : notifStatus === 'denied' ? ui.actionDenied : undefined
@@ -177,9 +177,9 @@ export default function TopBar({
 
           {authd && hasAIKey && (
             <Tooltip title="AI Budget Insights — get simple tips on your spending" arrow>
-              <IconButton onClick={onAIInsights} className={uiCx(classes.actionButton, ui.iconButton1)} aria-label="AI Budget Insights"
+              <IconButton onClick={onAIInsights} className={uiCx(classes.actionButton, ui.aiButton)} aria-label="AI Budget Insights"
                >
-                <AutoAwesomeIcon className={ui.autoAwesomeIcon1} />
+                <AutoAwesomeIcon className={ui.aiIcon} />
               </IconButton>
             </Tooltip>
           )}
@@ -253,7 +253,7 @@ export default function TopBar({
                   className={classes.menuItem}
                 >
                   <ListItemIcon className={classes.menuItemIcon}>
-                    {themeMode === 'dark' ? <LightModeOutlinedIcon className={ui.lightModeOutlinedIcon1} /> : <DarkModeOutlinedIcon className={ui.darkModeOutlinedIcon1} />}
+                    {themeMode === 'dark' ? <LightModeOutlinedIcon className={ui.lightModeIcon} /> : <DarkModeOutlinedIcon className={ui.darkModeIcon} />}
                   </ListItemIcon>
                   <ListItemText
                     primary={themeMode === 'dark' ? 'Light theme' : 'Dark theme'}
@@ -276,7 +276,7 @@ export default function TopBar({
                   />
                 </MenuItem>
 
-                <Typography className={ui.typography1}
+                <Typography className={ui.versionText}
                   variant="caption"
                 >
                   BudgetIQ v{APP_VERSION}

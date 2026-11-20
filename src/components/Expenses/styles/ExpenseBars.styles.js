@@ -2,22 +2,22 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for ExpenseBars.jsx.
 export const useExpenseBarsUi = makeStyles()((theme) => ({
-  box1: {
+  usage: {
     flex: 1,
     minWidth: 120,
   },
-  box2: {
+  usageTrack: {
     height: 6,
     borderRadius: theme.shape.borderRadius * 3,
     background: 'rgb(var(--ink-rgb) / 0.08)',
     overflow: 'hidden',
   },
-  typography1: {
+  usageText: {
     fontSize: 10,
     color: 'var(--text2)',
     marginTop: '4px',
   },
-  box3: {
+  bulkBar: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
@@ -32,31 +32,31 @@ export const useExpenseBarsUi = makeStyles()((theme) => ({
     zIndex: 5,
     backdropFilter: 'blur(6px)',
   },
-  typography2: {
+  bulkCount: {
     fontSize: 13,
     fontWeight: 700,
     color: 'var(--accent-soft)',
   },
-  box4: {
+  bulkSpacer: {
     flex: 1,
   },
-  typography3: {
+  deleteQuestion: {
     fontSize: 12,
     color: 'var(--danger-soft)',
   },
-  button1: {
+  bulkCancel: {
     fontSize: 12,
     color: 'var(--text2)',
     textTransform: 'none',
     minWidth: 0,
   },
-  pushPinIcon1: {
+  pinIcon: {
     fontSize: 15,
   },
-  deleteOutlinedIcon1: {
+  deleteIcon: {
     fontSize: 15,
   },
-  button2: {
+  bulkClear: {
     fontSize: 12,
     color: 'var(--text2)',
     textTransform: 'none',

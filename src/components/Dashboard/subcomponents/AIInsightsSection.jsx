@@ -90,7 +90,7 @@ function ScoreHero({ score, summary, employment, isEstimate }) {
   const { classes: ui, cx } = useAIInsightsSectionUi()
   const emp = employment ? EMPLOYMENT_CONFIG[employment] || EMPLOYMENT_CONFIG.general : null
   return (
-    <Box className={ui.box1}>
+    <Box className={ui.scoreHero}>
       <Box className={cx(ui.scoreRing, ui[SCORE_TONE(score)])}>
         <Typography className={ui.scoreNum}>
           {score}
@@ -100,23 +100,23 @@ function ScoreHero({ score, summary, employment, isEstimate }) {
         </Typography>
       </Box>
 
-      <Box className={ui.box2}>
+      <Box className={ui.scoreText}>
         {isEstimate ? (
-          <Box className={ui.box3}>
-            <Typography className={ui.typography1}>
+          <Box className={ui.estimateBadge}>
+            <Typography className={ui.estimateText}>
               ⚡ Quick estimate
             </Typography>
           </Box>
         ) : emp ? (
           <Box className={cx(ui.empBadge, ui[emp.tone])}>
-            <span className={ui.span1}>{emp.icon}</span>
+            <span className={ui.empIcon}>{emp.icon}</span>
             <Typography className={ui.empLabel}>
               {emp.label}
             </Typography>
           </Box>
         ) : null}
 
-        <Typography className={ui.typography2}>{summary}</Typography>
+        <Typography className={ui.summary}>{summary}</Typography>
       </Box>
     </Box>
   )
@@ -269,33 +269,33 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
         borderRadius: '18px', boxShadow: '0 32px 80px rgba(0,0,0,0.7)', maxHeight: '92vh',
       }
     }}>
-      <DialogContent className={ui.dialogContent1}>
+      <DialogContent className={ui.content}>
 
         {/* ── Header ── */}
-        <Box className={ui.box4}>
-          <AutoAwesomeIcon className={ui.autoAwesomeIcon1} />
-          <Box className={ui.box5}>
-            <Typography className={ui.typography3}>AI Budget Analysis</Typography>
-            <Typography className={ui.typography4}>
+        <Box className={ui.header}>
+          <AutoAwesomeIcon className={ui.headerIcon} />
+          <Box className={ui.headerText}>
+            <Typography className={ui.title}>AI Budget Analysis</Typography>
+            <Typography className={ui.period}>
               {periodLabel}{result?._model ? ` · ${result._model}` : ''}
             </Typography>
           </Box>
           {activeTab === 'analysis' && (
-            <IconButton className={ui.iconButton1} size="small" onClick={() => runAnalysis(true)} disabled={state === 'loading'}
+            <IconButton className={ui.refreshButton} size="small" onClick={() => runAnalysis(true)} disabled={state === 'loading'}
              >
               {state === 'loading'
-                ? <CircularProgress className={ui.circularProgress1} size={12} />
-                : <RefreshIcon className={ui.refreshIcon1} />}
+                ? <CircularProgress className={ui.refreshSpinner} size={12} />
+                : <RefreshIcon className={ui.refreshIcon} />}
             </IconButton>
           )}
-          <IconButton className={ui.iconButton2} size="small" onClick={onClose}
+          <IconButton className={ui.closeButton} size="small" onClick={onClose}
            >
-            <CloseIcon className={ui.closeIcon1} />
+            <CloseIcon className={ui.closeIcon} />
           </IconButton>
         </Box>
 
         {/* ── Tabs ── */}
-        <Box className={ui.box6}>
+        <Box className={ui.tabs}>
           {[{ key: 'analysis', label: '📊 Analysis' }, { key: 'chat', label: '💬 Ask AI' }].map(t => (
             <Box key={t.key} onClick={() => setActiveTab(t.key)}
               className={cx(ui.tab, activeTab === t.key && ui.tabActive)}>
@@ -308,7 +308,7 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
             ANALYSIS TAB
         ═══════════════════════════════════════ */}
         {activeTab === 'analysis' && (
-          <Box className={ui.box7}>
+          <Box className={ui.analysis}>
 
             {/* Loading — show instant score + skeleton cards */}
             {state === 'loading' && (
@@ -322,10 +322,10 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
                   />
                 )}
                 {/* Skeleton insight cards */}
-                <Box className={ui.box8}>
-                  <Box className={ui.box9}>
-                    <CircularProgress className={ui.circularProgress2} size={12} />
-                    <Typography className={ui.typography5}>AI building detailed insights…</Typography>
+                <Box className={ui.skeletonList}>
+                  <Box className={ui.loadingRow}>
+                    <CircularProgress className={ui.loadingSpinner} size={12} />
+                    <Typography className={ui.loadingText}>AI building detailed insights…</Typography>
                   </Box>
 
                   {[0, 1, 2].map(i => (
@@ -337,10 +337,10 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
 
             {/* Error */}
             {state === 'error' && (
-              <Box className={ui.box10}>
-                <Box className={ui.box11}>
-                  <Typography className={ui.typography6}>⚠️ {errorMsg}</Typography>
-                  <Typography className={ui.typography7} onClick={() => runAnalysis(true)}
+              <Box className={ui.errorArea}>
+                <Box className={ui.errorBox}>
+                  <Typography className={ui.errorText}>⚠️ {errorMsg}</Typography>
+                  <Typography className={ui.retryLink} onClick={() => runAnalysis(true)}
                    >
                     Retry
                   </Typography>
@@ -357,15 +357,15 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
                   employment={result._employment}
                   isEstimate={false}
                 />
-                <Box className={ui.box12}>
+                <Box className={ui.insightList}>
                   {(result.insights || []).map((ins, i) => {
                     const t   = TYPE[ins.type]        || TYPE.tip
                     const pri = PRIORITY[ins.priority] || PRIORITY.low
                     return (
                       <Box key={i} className={cx(ui.insightCard, ui[t.tone])}>
                         <Box className={ui.insightHead}>
-                          <Box className={ui.box13}>
-                            <span className={ui.span2}>{t.icon}</span>
+                          <Box className={ui.insightTitleRow}>
+                            <span className={ui.insightIcon}>{t.icon}</span>
                             <Typography className={ui.insightTitle}>
                               {ins.title}
                             </Typography>
@@ -381,8 +381,8 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
                         {ins.numbers?.length > 0 && (
                           <Box className={ui.insightNumbers}>
                             {ins.numbers.map((n, j) => (
-                              <Box className={ui.box14} key={j}>
-                                <Typography className={ui.typography8}>{n.label}</Typography>
+                              <Box className={ui.numberRow} key={j}>
+                                <Typography className={ui.numberLabel}>{n.label}</Typography>
                                 <Typography className={cx(ui.numberValue, ui[NUM_TONE[n.color] || NUM_TONE.neutral])}>
                                   {n.value}
                                 </Typography>
@@ -390,8 +390,8 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
                             ))}
                           </Box>
                         )}
-                        <Box className={ui.box15}>
-                          <Typography className={ui.typography9}>{ins.action}</Typography>
+                        <Box className={ui.insightActionBox}>
+                          <Typography className={ui.insightAction}>{ins.action}</Typography>
                         </Box>
                       </Box>
                     )
@@ -402,21 +402,21 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
           </Box>
         )}
         {activeTab === 'chat' && (
-          <Box className={ui.box16}>
+          <Box className={ui.chat}>
 
             {/* Messages */}
-            <Box className={ui.box17}>
+            <Box className={ui.messages}>
 
               {/* Empty state */}
               {chatMessages.length === 0 && !chatLoading && (
-                <Box className={ui.box18}>
-                  <Typography className={ui.typography10}>
+                <Box className={ui.emptyChat}>
+                  <Typography className={ui.chatIntro}>
                     Ask me anything about your{' '}
-                    <span className={ui.span3}>{periodLabel}</span> finances
+                    <span className={ui.chatPeriod}>{periodLabel}</span> finances
                   </Typography>
-                  <Box className={ui.box19}>
+                  <Box className={ui.quickQuestions}>
                     {QUICK_QUESTIONS.map(q => (
-                      <Box className={ui.box20} key={q} onClick={() => handleSendChat(q)}>
+                      <Box className={ui.quickQuestion} key={q} onClick={() => handleSendChat(q)}>
                         {q}
                       </Box>
                     ))}
@@ -427,21 +427,21 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
               {/* Message bubbles */}
               {chatMessages.map((msg, i) =>
                 msg.role === 'user' ? (
-                  <Box className={ui.box21} key={i}>
-                    <Box className={ui.box22}>
-                      <Typography className={ui.typography11}>{msg.text}</Typography>
+                  <Box className={ui.userRow} key={i}>
+                    <Box className={ui.userBubble}>
+                      <Typography className={ui.userText}>{msg.text}</Typography>
                     </Box>
                   </Box>
                 ) : (
-                  <Box className={ui.box23} key={i}>
-                    <Box className={ui.box24}>
-                      <AutoAwesomeIcon className={ui.autoAwesomeIcon2} />
+                  <Box className={ui.aiRow} key={i}>
+                    <Box className={ui.aiAvatar}>
+                      <AutoAwesomeIcon className={ui.aiAvatarIcon} />
                     </Box>
-                    <Box className={ui.box25}>
-                      <Typography className={ui.typography12}>
+                    <Box className={ui.aiBubble}>
+                      <Typography className={ui.aiText}>
                         {msg.text}
                         {msg.streaming && (
-                          <Box className={ui.box26} component="span" />
+                          <Box className={ui.cursor} component="span" />
                         )}
                       </Typography>
                     </Box>
@@ -453,9 +453,9 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
             </Box>
 
             {/* Input */}
-            <Box className={ui.box27}>
-              <Box className={ui.box28}>
-                <TextField className={ui.textField1}
+            <Box className={ui.inputBar}>
+              <Box className={ui.inputRow}>
+                <TextField className={ui.chatInput}
                   fullWidth multiline maxRows={3}
                   value={chatInput}
                   onChange={e => setChatInput(e.target.value)}
@@ -467,7 +467,7 @@ export default function AIInsightsSection({ open, onClose, expenses, income, cat
                   onClick={() => handleSendChat()}
                   disabled={!chatInput.trim() || chatLoading}
                   className={cx(ui.send, chatInput.trim() && !chatLoading && ui.sendReady)}>
-                  <SendIcon className={ui.sendIcon1} />
+                  <SendIcon className={ui.sendIcon} />
                 </IconButton>
               </Box>
             </Box>

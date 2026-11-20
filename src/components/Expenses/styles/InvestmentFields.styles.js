@@ -2,42 +2,42 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for InvestmentFields.jsx.
 export const useInvestmentFieldsUi = makeStyles()((theme) => ({
-  box1: {
+  directionField: {
     display: 'flex',
     flexDirection: 'column',
     width: '100%',
   },
-  typography1: {
+  directionHint: {
     fontSize: 11,
     color: 'var(--text2)',
     marginTop: '6px',
   },
-  inputLabel1: {
+  withdrawFromLabel: {
     color: theme.palette.text.secondary,
   },
-  box2: {
+  partsPreview: {
     width: '100%',
     background: 'rgb(var(--ink-rgb) / 0.03)',
     border: '1px solid rgb(var(--ink-rgb) / 0.07)',
     borderRadius: '8px',
     padding: '10px 12px',
   },
-  typography2: {
+  partsTitle: {
     fontSize: 11,
     color: 'var(--text2)',
     marginBottom: '6px',
   },
-  box3: {
+  partRow: {
     display: 'flex',
     justifyContent: 'space-between',
     paddingTop: '2px',
     paddingBottom: '2px',
   },
-  typography3: {
+  partName: {
     fontSize: 12,
     color: 'var(--text-soft)',
   },
-  typography4: {
+  partAmount: {
     fontSize: 12,
     color: 'var(--danger)',
     fontVariantNumeric: 'tabular-nums',

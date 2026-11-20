@@ -85,6 +85,17 @@ const dropOp = (sid, kind, mid, id) => b =>
 // read they came from are written, and only ids that read had are deleted.
 export async function writeItems(sid, kind, items) {
   const base = items.map(x => readFrom.get(x)).find(Boolean) || (items.length ? new Map() : lastRead[kind] || new Map())
+  await commit(diffOps(sid, kind, items, base))
+}
+
+// Make `items` the whole list, whatever is stored now — restoring a backup.
+// Reads the server copy first so everything not in `items` is deleted.
+export async function replaceItems(sid, kind, items) {
+  await readItems(sid, kind, { server: typeof navigator === 'undefined' || navigator.onLine !== false })
+  await commit(diffOps(sid, kind, items, lastRead[kind]))
+}
+
+function diffOps(sid, kind, items, base) {
   const ops = []
   const seen = new Set()
   items.forEach(x => {
@@ -98,7 +109,7 @@ export async function writeItems(sid, kind, items) {
     if (was && was.mid !== mid) ops.push(dropOp(sid, kind, was.mid, id))   // moved month
   })
   base.forEach((was, id) => { if (!seen.has(id)) ops.push(dropOp(sid, kind, was.mid, id)) })
-  await commit(ops)
+  return ops
 }
 
 // Add or replace items without deleting anything.

@@ -46,3 +46,13 @@ export async function saveAllCategoriesFS(sheetId, categories) {
   })
   await settle(batch.commit())
 }
+
+// Make `categories` the whole list (restoring a backup): deletes the rest.
+export async function replaceCategoriesFS(sheetId, categories) {
+  const keep = new Set(categories.map(c => c.id))
+  const snap = await getDocs(catCol(sheetId))
+  const batch = writeBatch(db)
+  snap.docs.forEach(d => { if (!keep.has(d.id)) batch.delete(d.ref) })
+  categories.forEach((cat, i) => batch.set(doc(db, 'sheets', sheetId, 'categories', cat.id), { ...cat, order: cat.order ?? i }))
+  await settle(batch.commit())
+}

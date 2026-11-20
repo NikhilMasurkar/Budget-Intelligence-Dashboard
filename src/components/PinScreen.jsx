@@ -196,15 +196,15 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
       <Box className={classes.wrapper}>
         <Card className={classes.pinCard} elevation={0}>
           <LogoBox />
-          <Box className={ui.box1}>
+          <Box className={ui.fingerprintEmoji}>
             <FingerprintIcon size={56} color="var(--accent)" />
           </Box>
           <Typography className={classes.title}>Enable fingerprint?</Typography>
-          <Typography className={uiCx(classes.subtitle, ui.typography1)}>
+          <Typography className={uiCx(classes.subtitle, ui.bioOfferText)}>
             Use fingerprint or Face ID on this device instead of your PIN next time.
           </Typography>
           {loading ? (
-            <Box className={ui.box2}><CircularProgress className={ui.circularProgress1} size={28} /></Box>
+            <Box className={ui.bioSpinnerBox}><CircularProgress className={ui.bioSpinner} size={28} /></Box>
           ) : (
             <>
               <Button onClick={handleEnableBiometric} className={classes.primaryBtn}>
@@ -229,7 +229,7 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
         <Card className={classes.pinCard} elevation={0}>
           <LogoBox />
           <Typography className={classes.title}>Welcome back{userName ? `, ${userName}` : ''}!</Typography>
-          <Typography className={uiCx(classes.subtitle, ui.typography2)}>
+          <Typography className={uiCx(classes.subtitle, ui.bioMessage)}>
             {isError
               ? (bioError || 'Fingerprint not recognised.')
               : 'Tap the fingerprint below to unlock.'}
@@ -280,7 +280,7 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
       <Card className={classes.pinCard} elevation={0}>
         <LogoBox />
         <Typography className={classes.title}>{title}</Typography>
-        <Typography className={uiCx(classes.subtitle, ui.typography3)}>{subtitle}</Typography>
+        <Typography className={uiCx(classes.subtitle, ui.pinSubtitle)}>{subtitle}</Typography>
 
         <PinDots count={current.length} shake={shake} />
 
@@ -289,8 +289,8 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
         </Typography>
 
         {loading ? (
-          <Box className={ui.box3}>
-            <CircularProgress className={ui.circularProgress2} size={28} />
+          <Box className={ui.pinSpinnerBox}>
+            <CircularProgress className={ui.pinSpinner} size={28} />
           </Box>
         ) : (
           <NumPad
@@ -306,7 +306,7 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
           <FormControlLabel
             className={classes.bioOptIn}
             control={
-              <Checkbox className={ui.checkbox1}
+              <Checkbox className={ui.bioCheckbox}
                 checked={wantBio}
                 onChange={e => setWantBio(e.target.checked)}
                 disableRipple
@@ -314,7 +314,7 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
               />
             }
             label={
-              <Box className={ui.box4}>
+              <Box className={ui.bioOptInRow}>
                 <FingerprintIcon size={14} color={wantBio ? 'var(--accent)' : 'var(--text-muted)'} />
                 <span>Enable fingerprint / Face ID</span>
               </Box>
@@ -328,17 +328,17 @@ export default function PinScreen({ mode, userName, sheetId, onVerify, onUnlock,
             {hasCred && biometricAvail && (
               <Button onClick={() => setScreen('biometric')} className={classes.ghostBtn}>
                 <FingerprintIcon size={16} color="var(--accent)" />
-                <span className={ui.span1}>Use fingerprint</span>
+                <span className={ui.bioOptInLabel}>Use fingerprint</span>
               </Button>
             )}
-            <Button onClick={() => setScreen('forgot')} className={uiCx(classes.ghostBtn, ui.button1)}>
+            <Button onClick={() => setScreen('forgot')} className={uiCx(classes.ghostBtn, ui.forgotButton)}>
               Forgot PIN?
             </Button>
           </Box>
         )}
 
         {isReset && (
-          <Button onClick={() => setScreen('pin')} className={uiCx(classes.ghostBtn, ui.button2)}>
+          <Button onClick={() => setScreen('pin')} className={uiCx(classes.ghostBtn, ui.cancelResetButton)}>
             Cancel reset
           </Button>
         )}

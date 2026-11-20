@@ -2,37 +2,37 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for PinReset.jsx.
 export const usePinResetUi = makeStyles()(() => ({
-  typography1: {
+  sendIntro: {
     marginBottom: '24px',
   },
-  typography2: {
+  sendError: {
     fontSize: 12,
     color: 'var(--danger)',
     marginBottom: '12px',
     textAlign: 'center',
   },
-  box1: {
+  sendSpinnerBox: {
     padding: '12px 0',
   },
-  circularProgress1: {
+  sendSpinner: {
     color: 'var(--accent)',
   },
-  typography3: {
+  codeSubtitle: {
     marginBottom: '8px',
   },
-  typography4: {
+  codeEmail: {
     fontSize: 12,
     color: 'var(--accent)',
     marginBottom: '20px',
   },
-  box2: {
+  codeFooter: {
     marginTop: '20px',
     display: 'flex',
     gap: '16px',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  button1: {
+  resendButton: {
     fontSize: 12,
   },
 }))

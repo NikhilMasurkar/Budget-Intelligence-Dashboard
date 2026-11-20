@@ -2,7 +2,7 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for index.jsx.
 export const useBalanceSheetUi = makeStyles()((theme) => ({
-  box1: {
+  card: {
     background: 'var(--surface2)',
     border: '1px solid rgb(var(--ink-rgb) / 0.07)',
     borderRadius: '14px',
@@ -10,111 +10,139 @@ export const useBalanceSheetUi = makeStyles()((theme) => ({
     marginBottom: '18px',
     overflowX: 'auto',
   },
-  typography1: {
+  cardTitle: {
     fontSize: 13,
     fontWeight: 700,
     color: 'var(--text)',
   },
-  typography2: {
+  cardSubtitle: {
     fontSize: 11,
     color: 'var(--text-faint)',
     marginTop: '2px',
     marginBottom: '10px',
   },
-  typography3: {
+  emptyText: {
     padding: theme.spacing(5),
     color: 'var(--text-faint)',
     fontSize: 13,
   },
-  box2: {
+  rule: {
     height: '1px',
     background: 'rgb(var(--ink-rgb) / 0.08)',
     marginTop: '8px',
     marginBottom: '8px',
   },
-  box3: {
+  page: {
     paddingBottom: theme.spacing(3),
   },
-  typography4: {
+  pageTitle: {
     fontSize: 20,
     fontWeight: 700,
     color: 'var(--text)',
     marginBottom: '4px',
   },
-  typography5: {
+  pageSubtitle: {
     fontSize: 12,
     color: 'var(--text-muted)',
     marginBottom: '18px',
   },
-  typography6: {
+  cashLabel: {
     fontSize: 13,
     fontWeight: 600,
     color: 'var(--text-soft)',
   },
-  typography7: {
+  investedLabel: {
     fontSize: 13,
     fontWeight: 600,
     color: 'var(--text-soft)',
   },
-  typography8: {
+  totalKeptLabel: {
     fontSize: 14,
     fontWeight: 800,
     color: 'var(--text)',
   },
-  grid1: {
+  holdingsHead: {
     paddingBottom: '8px',
     borderBottom: '1px solid rgb(var(--ink-rgb) / 0.05)',
   },
-  grid2: {
+  holdingRow: {
     paddingTop: '9px',
     paddingBottom: '9px',
     borderBottom: '1px solid rgb(var(--ink-rgb) / 0.03)',
   },
-  typography9: {
+  holdingName: {
     fontSize: 13,
     color: 'var(--text-soft)',
     fontWeight: 600,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
   },
-  typography10: {
+  stillInvestedLabel: {
     fontSize: 13,
     fontWeight: 700,
     color: 'var(--text-soft)',
   },
-  grid3: {
+  withdrawnRow: {
     paddingTop: '9px',
     paddingBottom: '9px',
   },
-  typography11: {
+  withdrawnName: {
     fontSize: 13,
     color: 'var(--text-soft)',
     fontWeight: 600,
   },
-  typography12: {
+  withdrawnNote: {
     fontSize: 10.5,
     color: 'var(--text-faint)',
   },
-  typography13: {
+  holdingsTotalLabel: {
     fontSize: 14,
     fontWeight: 800,
     color: 'var(--text)',
   },
-  grid4: {
+  yearsHead: {
     paddingBottom: '8px',
     borderBottom: '1px solid rgb(var(--ink-rgb) / 0.05)',
   },
-  grid5: {
+  yearRow: {
     paddingTop: '10px',
     paddingBottom: '10px',
     borderBottom: '1px solid rgb(var(--ink-rgb) / 0.03)',
   },
-  typography14: {
+  yearLabel: {
     fontSize: 13,
     fontWeight: 700,
     color: 'var(--text-soft)',
   },
-  typography15: {
+  stack: {
+    paddingTop: '10px',
+    paddingBottom: '10px',
+    borderBottom: '1px solid rgb(var(--ink-rgb) / 0.05)',
+    '&:last-of-type': { borderBottom: 'none' },
+  },
+  stackTitle: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: 'var(--text-soft)',
+    overflowWrap: 'anywhere',
+  },
+  stackTitleStrong: {
+    fontSize: 14,
+    fontWeight: 800,
+    color: 'var(--text)',
+  },
+  stackParts: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    columnGap: '18px',
+    rowGap: '4px',
+    marginTop: '6px',
+  },
+  stackLabel: {
+    fontSize: 11,
+    color: 'var(--text-faint)',
+  },
+  allYearsLabel: {
     fontSize: 13,
     fontWeight: 800,
     color: 'var(--text)',

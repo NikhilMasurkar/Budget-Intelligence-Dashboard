@@ -2,19 +2,19 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for ErrorBoundary.jsx.
 export const useErrorBoundaryUi = makeStyles()((theme) => ({
-  box1: {
+  fallback: {
     padding: theme.spacing(4),
     textAlign: 'center',
   },
-  typography1: {
+  title: {
     marginBottom: theme.spacing(1),
     color: 'var(--danger-soft)',
   },
-  typography2: {
+  message: {
     marginBottom: theme.spacing(2),
     color: 'var(--text2)',
   },
-  button1: {
+  retryButton: {
     color: 'var(--accent)',
     borderColor: 'var(--accent)',
   },

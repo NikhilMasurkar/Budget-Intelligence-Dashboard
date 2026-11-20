@@ -153,10 +153,10 @@ export const useStyles = makeStyles()((theme) => ({
 
 // Moved from inline sx/style in CategoryDetailsDialog.jsx.
 export const useCategoryDetailsDialogUi = makeStyles()(() => ({
-  box1: {
+  totalBox: {
     textAlign: 'right',
   },
-  tableRow1: {
+  itemRow: {
     "& th": {
       borderBottom: '1px solid rgb(var(--ink-rgb) / 0.08)',
     },

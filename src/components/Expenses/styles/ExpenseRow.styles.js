@@ -2,7 +2,7 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for ExpenseRow.jsx.
 export const useExpenseRowUi = makeStyles()((theme) => ({
-  checkbox1: {
+  selectBox: {
     padding: '8px',
     marginRight: '2px',
     color: 'var(--line)',
@@ -13,14 +13,14 @@ export const useExpenseRowUi = makeStyles()((theme) => ({
       padding: theme.spacing(0),
     },
   },
-  box1: {
+  details: {
     flex: 1,
     minWidth: 0,
   },
-  typography1: {
+  name: {
     flex: 'unset',
   },
-  typography2: {
+  lastComment: {
     fontSize: 11,
     color: 'var(--text2)',
     lineHeight: 1.4,
@@ -29,19 +29,19 @@ export const useExpenseRowUi = makeStyles()((theme) => ({
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
-  typography3: {
+  updatedText: {
     fontSize: 10,
     color: 'var(--line)',
     display: 'block',
     lineHeight: 1.4,
   },
-  chatBubbleOutlinedIcon1: {
+  commentIcon: {
     fontSize: 18,
     [theme.breakpoints.up('sm')]: {
       fontSize: 14,
     },
   },
-  box2: {
+  commentBadge: {
     position: 'absolute',
     top: 0,
     right: 0,
@@ -57,13 +57,13 @@ export const useExpenseRowUi = makeStyles()((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  editOutlinedIcon1: {
+  editIcon: {
     fontSize: 18,
     [theme.breakpoints.up('sm')]: {
       fontSize: 14,
     },
   },
-  deleteOutlinedIcon1: {
+  deleteIcon: {
     fontSize: 18,
     [theme.breakpoints.up('sm')]: {
       fontSize: 14,

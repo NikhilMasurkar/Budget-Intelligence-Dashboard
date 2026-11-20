@@ -2,10 +2,10 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for IncomeTable.jsx.
 export const useIncomeTableUi = makeStyles()((theme) => ({
-  box1: {
+  page: {
     width: '100%',
   },
-  box2: {
+  summary: {
     display: 'flex',
     alignItems: 'center',
     gap: theme.spacing(1.5),
@@ -16,20 +16,20 @@ export const useIncomeTableUi = makeStyles()((theme) => ({
     border: '1px solid rgb(var(--income-rgb) / 0.2)',
     borderRadius: '10px',
   },
-  trendingUpIcon1: {
+  summaryIcon: {
     fontSize: 18,
     color: 'var(--accent2)',
   },
-  typography1: {
+  summaryText: {
     fontSize: 13,
     color: 'var(--text2)',
   },
-  box3: {
+  summaryTotal: {
     color: 'var(--accent2)',
     fontWeight: 800,
     fontVariantNumeric: 'tabular-nums',
   },
-  box4: {
+  emptyText: {
     textAlign: 'center',
     paddingTop: theme.spacing(6),
     paddingBottom: theme.spacing(6),
@@ -39,18 +39,18 @@ export const useIncomeTableUi = makeStyles()((theme) => ({
     border: '1px dashed rgb(var(--ink-rgb) / 0.08)',
     borderRadius: '12px',
   },
-  box5: {
+  rows: {
     display: 'flex',
     flexDirection: 'column',
     border: '1px solid rgb(var(--ink-rgb) / 0.07)',
     borderRadius: '12px',
     overflow: 'hidden',
   },
-  box6: {
+  rowText: {
     flex: 1,
     minWidth: 0,
   },
-  typography2: {
+  source: {
     fontWeight: 600,
     fontSize: '13.5px',
     color: 'var(--text)',
@@ -58,13 +58,13 @@ export const useIncomeTableUi = makeStyles()((theme) => ({
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
-  typography3: {
+  date: {
     fontSize: '11px',
     color: 'var(--text-faint)',
     marginTop: '1px',
     fontVariantNumeric: 'tabular-nums',
   },
-  typography4: {
+  amount: {
     fontWeight: 700,
     fontSize: '14px',
     color: 'var(--accent2)',
@@ -72,7 +72,7 @@ export const useIncomeTableUi = makeStyles()((theme) => ({
     whiteSpace: 'nowrap',
     flexShrink: 0,
   },
-  iconButton1: {
+  editButton: {
     color: 'var(--text2)',
     padding: '9px',
     "&:hover": {
@@ -83,13 +83,13 @@ export const useIncomeTableUi = makeStyles()((theme) => ({
       padding: '4px',
     },
   },
-  editOutlinedIcon1: {
+  editIcon: {
     fontSize: 18,
     [theme.breakpoints.up('sm')]: {
       fontSize: 15,
     },
   },
-  iconButton2: {
+  deleteButton: {
     color: 'var(--text2)',
     padding: '9px',
     "&:hover": {
@@ -100,7 +100,7 @@ export const useIncomeTableUi = makeStyles()((theme) => ({
       padding: '4px',
     },
   },
-  deleteOutlinedIcon1: {
+  deleteIcon: {
     fontSize: 18,
     [theme.breakpoints.up('sm')]: {
       fontSize: 15,

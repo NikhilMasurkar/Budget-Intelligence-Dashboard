@@ -67,38 +67,38 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving,
         }
       }}
     >
-      <DialogTitle className={ui.dialogTitle1}>
-        <ChatBubbleOutlinedIcon className={ui.chatBubbleOutlinedIcon1} />
-        <Box className={ui.box1}>
-          <Typography className={ui.typography1}>Comments</Typography>
-          <Typography className={ui.typography2}>
+      <DialogTitle className={ui.header}>
+        <ChatBubbleOutlinedIcon className={ui.headerIcon} />
+        <Box className={ui.headerText}>
+          <Typography className={ui.headerTitle}>Comments</Typography>
+          <Typography className={ui.headerItemName}>
             {expense?.itemName}
           </Typography>
         </Box>
-        <IconButton className={ui.iconButton1} size="small" onClick={onClose} disabled={saving}>
-          <CloseIcon className={ui.closeIcon1} />
+        <IconButton className={ui.closeButton} size="small" onClick={onClose} disabled={saving}>
+          <CloseIcon className={ui.closeIcon} />
         </IconButton>
       </DialogTitle>
 
-      <Divider className={ui.divider1} />
+      <Divider className={ui.headerDivider} />
 
-      <DialogContent className={ui.dialogContent1} ref={listRef}>
+      <DialogContent className={ui.content} ref={listRef}>
         {comments.length === 0 ? (
-          <Typography className={ui.typography3}>
+          <Typography className={ui.emptyText}>
             {canEdit ? 'No comments yet — add a note below' : 'No comments'}
           </Typography>
         ) : (
-          <Box className={ui.box2}>
+          <Box className={ui.commentList}>
             {comments.map((c, i) => (
-              <Box className={ui.box3} key={c.ts || `legacy-${i}`}>
+              <Box className={ui.comment} key={c.ts || `legacy-${i}`}>
                 <Typography className={uiCx(ui.commentText, canEdit && ui.commentTextEditable)}>
                   {c.text}
                 </Typography>
-                <Typography className={ui.typography4}>
+                <Typography className={ui.commentTime}>
                   {fmtTs(c.ts)}
                 </Typography>
                 {canEdit && (confirmIdx === i ? (
-                  <Button className={ui.button1}
+                  <Button className={ui.confirmDeleteButton}
                     size="small"
                     onClick={() => handleDelete(i)}
                     onBlur={() => setConfirmIdx(null)}
@@ -109,13 +109,13 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving,
                   </Button>
                 ) : (
                   <IconButton
-                    className={uiCx("comment-delete", ui.iconButton2)}
+                    className={uiCx("comment-delete", ui.deleteButton)}
                     size="small"
                     aria-label="Delete comment"
                     onClick={() => handleDelete(i)}
                     disabled={saving}
                   >
-                    <DeleteIcon className={ui.deleteIcon1} />
+                    <DeleteIcon className={ui.deleteIcon} />
                   </IconButton>
                 ))}
               </Box>
@@ -124,15 +124,15 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving,
         )}
       </DialogContent>
 
-      <Divider className={ui.divider2} />
+      <Divider className={ui.footerDivider} />
 
       {!canEdit ? (
-        <Typography className={ui.typography5}>
+        <Typography className={ui.readOnlyNote}>
           {readOnlyNote}
         </Typography>
       ) : (
-      <Box className={ui.box4}>
-        <TextField className={ui.textField1}
+      <Box className={ui.composer}>
+        <TextField className={ui.composerInput}
           // Straight to typing when there is nothing to read yet; otherwise
           // don't throw a phone keyboard over the thread.
           autoFocus={comments.length === 0}
@@ -146,7 +146,7 @@ export default function ExpenseCommentsModal({ expense, onClose, onSave, saving,
           fullWidth
           disabled={saving}
         />
-        <Button className={ui.button2}
+        <Button className={ui.addButton}
           variant="contained"
           onClick={handleAdd}
           disabled={saving || !text.trim()}

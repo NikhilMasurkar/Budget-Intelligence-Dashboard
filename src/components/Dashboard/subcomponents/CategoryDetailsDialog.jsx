@@ -74,7 +74,7 @@ export default function CategoryDetailsDialog({ detailModal, onClose, selMonths,
               {fmt(detailModal.total)}
             </Typography>
           </Box>
-          <Box className={ui.box1}>
+          <Box className={ui.totalBox}>
             <Typography variant="caption" className={classes.bannerLabel}>
               Period
             </Typography>
@@ -88,7 +88,7 @@ export default function CategoryDetailsDialog({ detailModal, onClose, selMonths,
         <TableContainer component={Paper} className={classes.tableContainer}>
           <Table stickyHeader size="small" className={classes.table}>
             <TableHead>
-              <TableRow className={ui.tableRow1}>
+              <TableRow className={ui.itemRow}>
                 <TableCell className={classes.thCell}>
                   Month
                 </TableCell>

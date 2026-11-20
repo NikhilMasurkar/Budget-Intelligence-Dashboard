@@ -2,38 +2,38 @@ import { makeStyles } from 'tss-react/mui'
 
 // Styles for BudgetProgressSection.jsx.
 export const useBudgetProgressSectionUi = makeStyles()((theme) => ({
-  box1: {
+  section: {
     marginBottom: '18px',
   },
-  box2: {
+  header: {
     display: 'flex',
     alignItems: 'baseline',
     gap: '8px',
     marginBottom: '12px',
   },
-  typography1: {
+  title: {
     color: 'var(--text)',
     fontWeight: 700,
     fontSize: 14,
   },
-  typography2: {
+  subtitle: {
     color: 'var(--text-muted)',
     fontSize: 11,
   },
-  box3: {
+  table: {
     background: 'var(--surface2)',
     border: '1px solid rgb(var(--ink-rgb) / 0.07)',
     borderRadius: '14px',
     overflow: 'hidden',
   },
-  box4: {
+  categoryCell: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
     minWidth: 0,
     paddingRight: '12px',
   },
-  typography3: {
+  categoryName: {
     fontSize: 13,
     fontWeight: 600,
     color: 'var(--text-soft)',
@@ -41,7 +41,7 @@ export const useBudgetProgressSectionUi = makeStyles()((theme) => ({
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
-  box5: {
+  shareCell: {
     display: 'none',
     alignItems: 'center',
     gap: '8px',
@@ -50,14 +50,14 @@ export const useBudgetProgressSectionUi = makeStyles()((theme) => ({
       display: 'flex',
     },
   },
-  box6: {
+  shareTrack: {
     flex: 1,
     height: 5,
     borderRadius: theme.shape.borderRadius * 3,
     background: 'rgb(var(--ink-rgb) / 0.05)',
     overflow: 'hidden',
   },
-  box7: {
+  budgetCell: {
     display: 'none',
     justifyContent: 'flex-end',
     paddingRight: '12px',
@@ -65,12 +65,12 @@ export const useBudgetProgressSectionUi = makeStyles()((theme) => ({
       display: 'flex',
     },
   },
-  typography4: {
+  budgetAmount: {
     fontSize: 12,
     fontVariantNumeric: 'tabular-nums',
     color: 'var(--text-muted)',
   },
-  typography5: {
+  setBudget: {
     fontSize: 11,
     color: 'var(--line)',
     cursor: 'pointer',
@@ -78,50 +78,50 @@ export const useBudgetProgressSectionUi = makeStyles()((theme) => ({
       color: 'var(--accent)',
     },
   },
-  typography6: {
+  noBudget: {
     fontSize: 11,
     color: 'var(--line)',
   },
-  box8: {
+  statusCell: {
     textAlign: 'right',
   },
-  typography7: {
+  overText: {
     fontSize: 12,
     fontWeight: 700,
     color: 'var(--danger)',
     fontVariantNumeric: 'tabular-nums',
     whiteSpace: 'nowrap',
   },
-  box9: {
+  overWord: {
     display: 'none',
     [theme.breakpoints.up('sm')]: {
       display: 'inline',
     },
   },
-  box10: {
+  leftWord: {
     display: 'none',
     [theme.breakpoints.up('sm')]: {
       display: 'inline',
     },
   },
-  typography8: {
+  noStatus: {
     fontSize: 11,
     color: 'var(--line)',
   },
-  typography9: {
+  totalLabel: {
     fontSize: 11,
     fontWeight: 700,
     color: 'var(--line)',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
   },
-  box11: {
+  totalShareGap: {
     display: 'none',
     [theme.breakpoints.up('md')]: {
       display: 'block',
     },
   },
-  typography10: {
+  totalAmount: {
     fontSize: 14,
     fontWeight: 800,
     color: 'var(--accent-soft)',
@@ -129,7 +129,7 @@ export const useBudgetProgressSectionUi = makeStyles()((theme) => ({
     fontVariantNumeric: 'tabular-nums',
     paddingRight: '12px',
   },
-  box12: {
+  totalBudgetGap: {
     display: 'none',
     [theme.breakpoints.up('md')]: {
       display: 'block',
